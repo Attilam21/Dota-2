@@ -1,7 +1,10 @@
+/// <reference types="react" />
+/// <reference types="react-dom" />
+/// <reference types="next" />
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 
 const TEST_PLAYER_ID = 86745912
 
@@ -22,7 +25,7 @@ function renderResult(r: MatchRow['result']): 'Vittoria' | 'Sconfitta' {
 	return r === 'win' ? 'Vittoria' : 'Sconfitta'
 }
 
-export default function MatchesPage() {
+export default function MatchesPage(): React.JSX.Element {
 	const [data, setData] = useState<MatchRow[] | null>(null)
 	const [error, setError] = useState<string | null>(null)
 	const [loading, setLoading] = useState<boolean>(true)
@@ -84,13 +87,13 @@ export default function MatchesPage() {
 							</tr>
 						</thead>
 						<tbody>
-							{data.map((m) => {
+							{(data as MatchRow[]).map((m: MatchRow) => {
 								const durationMinutes = Math.round(m.duration_seconds / 60)
 								const result = renderResult(m.result)
 								return (
 									<tr key={m.match_id} className="border-t border-neutral-800">
 										<td className="px-3 py-2">
-											<Link href={`/dashboard/match/${m.match_id}`} className="text-blue-400 hover:underline">
+											<Link href={`/dashboard/matches/${m.match_id}?playerId=${m.player_account_id}`} className="text-blue-400 hover:underline">
 												{m.match_id}
 											</Link>
 										</td>
