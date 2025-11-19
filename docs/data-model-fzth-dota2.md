@@ -30,9 +30,9 @@ Note:
 - result: text (enum: "win" | "lose")
 - lane: text (es. "safe", "mid", "off", "jungle", "roaming")
 - role: text (es. "core", "support", "hard support", "offlane", "mid")
-- kpi_kda: numeric (opzionale, calcolato)
-- kpi_gpm: integer (opzionale)
-- kpi_xpm: integer (opzionale)
+- kda: numeric (calcolato, es. (kills + assists) / max(1, deaths))
+- gpm: integer (opzionale, futura espansione)
+- xpm: integer (opzionale, futura espansione)
 
 Indici consigliati:
 - idx_matches_digest_player_id
@@ -48,7 +48,7 @@ Indici consigliati:
 - losses: integer
 - avg_kda: numeric
 - avg_duration: integer (seconds)
-- extra_indicators: jsonb (campi aggiuntivi per profilazione/ML)
+- last_played_at: timestamptz
 
 Indici consigliati:
 - unique (player_id, hero_id)
@@ -61,9 +61,8 @@ Indici consigliati:
 - playstyle: text
 - strengths: text
 - weaknesses: text
-- notes: text
-- tags: text[] (es. ["aggressive", "farming", "roamer"])
-- updated_at: timestamptz
+- tags: text | text[] (es. "aggressivo, farming, roamer" oppure array)
+- last_updated_at: timestamptz
 
 Note:
 - Campi testuali liberi per iniziare, normalizzazione opzionale più avanti.
@@ -96,4 +95,14 @@ Indici consigliati:
 - Trigger per aggiornare `updated_at` e calcolare KPI sintetici.
 - Politiche RLS in Supabase per isolare dati per utente autenticato.
 
+---
+
+## Endpoint OpenDota utilizzati in futuro
+- `/players/{id}`: profilo/riassunto giocatore
+- `/players/{id}/recentMatches`: ultimi match (digest)
+- `/players/{id}/matches`: storico partite (paginato/filtrabile)
+- `/players/{id}/heroes`: aggregati per eroe
+- `/players/{id}/totals`: totali e KPI sintetici
+- `/matches/{match_id}`: dettaglio singolo match
+- `/players/{id}/wl`: win/loss complessivo o per periodo
 
