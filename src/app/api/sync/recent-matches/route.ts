@@ -26,11 +26,9 @@ export async function GET(req: Request) {
 			kills: m.kills,
 			deaths: m.deaths,
 			assists: m.assists,
-			duration_seconds: m.duration,
-			start_time: new Date(m.start_time * 1000).toISOString(),
+      duration_minutes: Math.floor(m.duration / 60),			start_time: new Date(m.start_time * 1000).toISOString(),
 			result: computeResult(m),
-			lane: null as string | null,
-			role: null as string | null,
+      lane: m.lane ?? '',			role: m.role ?? '',
 			kda: (m.kills + m.assists) / Math.max(1, m.deaths),
 			updated_at: new Date().toISOString(),
 		}))
