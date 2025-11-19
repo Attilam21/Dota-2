@@ -61,7 +61,12 @@ export type MatchDetailResponse = {
   }
   timeline: {
     goldDiffSeries: Array<{ minute: number; goldDiff: number }>
-    killsByInterval: Array<{ minuteFrom: number; minuteTo: number; teamKills: number; enemyKills: number }>
+    killsByInterval: Array<{
+      minuteFrom: number
+      minuteTo: number
+      teamKills: number
+      enemyKills: number
+    }>
   }
 }
 
@@ -69,8 +74,11 @@ function toISO(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toISOString()
 }
 
-function aggregateKillsByIntervals(players: OpenDotaMatch['players'], playerSlotOfTarget: number, durationSeconds: number) {
-  // 10-minute buckets
+function aggregateKillsByIntervals(
+  players: OpenDotaMatch['players'],
+  playerSlotOfTarget: number,
+  durationSeconds: number,
+) {
   const interval = 600 // seconds
   const numBuckets = Math.max(1, Math.ceil(durationSeconds / interval))
   const buckets = Array.from({ length: numBuckets }, (_, i) => ({
@@ -79,18 +87,37 @@ function aggregateKillsByIntervals(players: OpenDotaMatch['players'], playerSlot
     teamKills: 0,
     enemyKills: 0,
   }))
-  // Determine which side is the player's team (Radiant if slot < 128)
+
   const isTargetRadiant = playerSlotOfTarget < 128
 
   players.forEach((p) => {
-    const isSameTeam = (p.player_slot < 128) === isTargetRadiant
+    const isSameTeam = p.player_slot < 128 === isTargetRadiant
     const logs = p.kills_log ?? []
+
     logs.forEach((log) => {
-      const bucketIdx = Math.min(Math.floor(log.time / interval), numBuckets - 1)
+      // validate log structure
+      if (
+        !log ||
+        typeof (log as any).time !== 'number' ||
+        !Number.isFinite((log as any).time) ||
+        (log as any).time < 0
+      ) {
+        return
+      }
+
+      const rawIdx = Math.floor((log as any).time / interval)
+      if (!Number.isFinite(rawIdx)) {
+        return
+      }
+
+      const bucketIdx = Math.max(0, Math.min(rawIdx, numBuckets - 1))
+      const bucket = buckets[bucketIdx]
+      if (!bucket) return
+
       if (isSameTeam) {
-        buckets[bucketIdx].teamKills += 1
+        bucket.teamKills += 1
       } else {
-        buckets[bucketIdx].enemyKills += 1
+        bucket.enemyKills += 1
       }
     })
   })
@@ -104,7 +131,10 @@ export async function GET(req: Request) {
   const playerId = searchParams.get('playerId')
 
   if (!matchId || !playerId) {
-    return NextResponse.json({ error: 'Missing matchId or playerId' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Missing matchId or playerId' },
+      { status: 400 },
+    )
   }
 
   try {
@@ -112,7 +142,10 @@ export async function GET(req: Request) {
 
     const player = data.players.find((p) => p.account_id === Number(playerId))
     if (!player) {
-      return NextResponse.json({ error: 'Player not found in match' }, { status: 404 })
+      return NextResponse.json(
+        { error: 'Player not found in match' },
+        { status: 404 },
+      )
     }
 
     const kda = (player.kills + player.assists) / Math.max(1, player.deaths)
@@ -123,7 +156,11 @@ export async function GET(req: Request) {
         goldDiff: g ?? 0,
       })) ?? []
 
-    const killsTimeline = aggregateKillsByIntervals(data.players, player.player_slot, data.duration)
+    const killsTimeline = aggregateKillsByIntervals(
+      data.players,
+      player.player_slot,
+      data.duration,
+    )
 
     const response: MatchDetailResponse = {
       match: {
@@ -161,8 +198,9 @@ export async function GET(req: Request) {
     return NextResponse.json(response)
   } catch (e: any) {
     console.error('MATCH_DETAIL_ERROR', e?.message ?? e)
-    return NextResponse.json({ error: e?.message ?? 'Match detail error' }, { status: 502 })
+    return NextResponse.json(
+      { error: e?.message ?? 'Match detail error' },
+      { status: 502 },
+    )
   }
 }
-
-
