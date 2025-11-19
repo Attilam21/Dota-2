@@ -9,7 +9,7 @@ const navItems = [
 	{ label: 'Partite', href: '/dashboard/matches' },
 	{ label: 'Eroi', href: '/dashboard/heroes' },
 	{ label: 'Team & compagni', href: '/dashboard/teams-peers' },
-	{ label: 'Storico & progressi', href: '/dashboard/progression' },
+	{ label: 'Storico & Progressione', href: '/dashboard/progression' },
 	{ label: 'Esplora dati', href: '/dashboard/explorer' },
 	{ label: 'Profilazione FZTH', href: '/dashboard/profiling' },
 	{ label: 'Coaching & task', href: '/dashboard/coaching' },
