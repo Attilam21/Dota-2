@@ -5,25 +5,25 @@ import { useEffect, useState } from 'react'
 
 const TEST_PLAYER_ID = 86745912
 
-type RecentMatch = {
+type MatchRow = {
+	id: string
+	player_account_id: number
 	match_id: number
 	hero_id: number
 	kills: number
 	deaths: number
 	assists: number
-	duration: number
-	start_time: number
-	player_slot: number
-	radiant_win: boolean
+	duration_seconds: number
+	start_time: string // ISO timestamptz
+	result: 'win' | 'lose'
 }
 
-function computeResult(match: RecentMatch): 'Vittoria' | 'Sconfitta' {
-	const isRadiant = match.player_slot < 128
-	return isRadiant === match.radiant_win ? 'Vittoria' : 'Sconfitta'
+function renderResult(r: MatchRow['result']): 'Vittoria' | 'Sconfitta' {
+	return r === 'win' ? 'Vittoria' : 'Sconfitta'
 }
 
 export default function MatchesPage() {
-	const [data, setData] = useState<RecentMatch[] | null>(null)
+	const [data, setData] = useState<MatchRow[] | null>(null)
 	const [error, setError] = useState<string | null>(null)
 	const [loading, setLoading] = useState<boolean>(true)
 
@@ -32,12 +32,19 @@ export default function MatchesPage() {
 		async function load() {
 			try {
 				setLoading(true)
-				const res = await fetch(`/api/opendota/recent-matches?playerId=${TEST_PLAYER_ID}`, { cache: 'no-store' })
-				if (!res.ok) {
-					const msg = await res.json().catch(() => ({}))
-					throw new Error(msg?.error || `HTTP ${res.status}`)
+				// 1) sincronizza OpenDota -> Supabase
+				const syncRes = await fetch(`/api/sync/recent-matches?playerId=${TEST_PLAYER_ID}`, { cache: 'no-store' })
+				if (!syncRes.ok) {
+					const msg = await syncRes.json().catch(() => ({}))
+					throw new Error(msg?.error || `Sync HTTP ${syncRes.status}`)
 				}
-				const json: RecentMatch[] = await res.json()
+				// 2) leggi da Supabase tramite API interna
+				const listRes = await fetch(`/api/matches/list?playerId=${TEST_PLAYER_ID}`, { cache: 'no-store' })
+				if (!listRes.ok) {
+					const msg = await listRes.json().catch(() => ({}))
+					throw new Error(msg?.error || `List HTTP ${listRes.status}`)
+				}
+				const json: MatchRow[] = await listRes.json()
 				if (active) setData(json)
 			} catch (e: any) {
 				if (active) setError(e?.message ?? 'Errore sconosciuto')
@@ -56,7 +63,7 @@ export default function MatchesPage() {
 			<div>
 				<h1 className="text-2xl font-semibold">Partite recenti</h1>
 				<p className="text-neutral-300 text-sm">
-					Dati caricati tramite API interna (server-side) che chiama OpenDota.
+					Dati sincronizzati da OpenDota e letti da Supabase (via API interne).
 				</p>
 			</div>
 
@@ -78,8 +85,8 @@ export default function MatchesPage() {
 						</thead>
 						<tbody>
 							{data.map((m) => {
-								const durationMinutes = Math.round(m.duration / 60)
-								const result = computeResult(m)
+								const durationMinutes = Math.round(m.duration_seconds / 60)
+								const result = renderResult(m.result)
 								return (
 									<tr key={m.match_id} className="border-t border-neutral-800">
 										<td className="px-3 py-2">
@@ -95,7 +102,7 @@ export default function MatchesPage() {
 										<td className="px-3 py-2">
 											<span className={result === 'Vittoria' ? 'text-green-400' : 'text-red-400'}>{result}</span>
 										</td>
-										<td className="px-3 py-2">{new Date(m.start_time * 1000).toLocaleString('it-IT')}</td>
+										<td className="px-3 py-2">{new Date(m.start_time).toLocaleString('it-IT')}</td>
 									</tr>
 								)
 							})}
