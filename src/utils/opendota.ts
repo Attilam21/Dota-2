@@ -1,6 +1,5 @@
 export const OPEN_DOTA_BASE_URL = 'https://api.opendota.com/api'
-export const OPEN_DOTA_API_KEY =
-  process.env.OPENDOTA_API_KEY || process.env.CHIAVE_API_APRIDOTA
+export const OPEN_DOTA_API_KEY = process.env.OPENDOTA_API_KEY
 
 export function buildUrl(path: string): string {
   const url = new URL(OPEN_DOTA_BASE_URL + path)

@@ -11,6 +11,8 @@ export async function GET(req: Request) {
 
 	try {
 		const data = await fetchFromOpenDota<RecentMatch[]>(`/players/${playerId}/recentMatches`)
+		// TEMP LOG per audit
+		console.log('DOTA2_RAW_RESPONSE', JSON.stringify(data?.slice?.(0, 3) ?? data, null, 2))
 		return NextResponse.json(data)
 	} catch (error: any) {
 		return NextResponse.json(

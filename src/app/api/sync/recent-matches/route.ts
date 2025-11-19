@@ -18,6 +18,8 @@ export async function GET(req: Request) {
 
 	try {
 		const recent = await fetchFromOpenDota<RecentMatch[]>(`/players/${playerId}/recentMatches`)
+		// TEMP LOG: payload grezzo per audit
+		console.log('DOTA2_RAW_RESPONSE', JSON.stringify(recent?.slice?.(0, 3) ?? recent, null, 2))
 
 		const rows = recent.map((m) => ({
 			player_account_id: Number(playerId),
@@ -26,9 +28,11 @@ export async function GET(req: Request) {
 			kills: m.kills,
 			deaths: m.deaths,
 			assists: m.assists,
-      duration_minutes: Math.floor(m.duration / 60),			start_time: new Date(m.start_time * 1000).toISOString(),
+			duration_seconds: m.duration,
+			start_time: new Date(m.start_time * 1000).toISOString(),
 			result: computeResult(m),
-      lane: m.lane ?? '',			role: m.role ?? '',
+			lane: null,
+			role: null,
 			kda: (m.kills + m.assists) / Math.max(1, m.deaths),
 			updated_at: new Date().toISOString(),
 		}))
