@@ -1,10 +1,9 @@
 'use client'
 
 import Link from 'next/link'
-import React, { useEffect, useMemo, useState } from 'react'
-
-// Legge playerId esattamente come /dashboard/matches (stesso placeholder di test)
-const TEST_PLAYER_ID = 86745912
+import React, { Suspense, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { getPlayerIdFromSearchParams } from '@/lib/playerId'
 
 type MatchRow = {
   id: string
@@ -39,11 +38,23 @@ type HeroSummary = {
 }
 
 export default function DashboardPage(): React.JSX.Element {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-6 text-neutral-400">Caricamento dati panoramica…</div>
+      }
+    >
+      <DashboardOverview />
+    </Suspense>
+  )
+}
+
+function DashboardOverview(): React.JSX.Element {
+  const searchParams = useSearchParams()
+  const playerId = getPlayerIdFromSearchParams(searchParams)
   const [rows, setRows] = useState<MatchRow[] | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
-
-  const playerId = TEST_PLAYER_ID
 
   useEffect(() => {
     let active = true
@@ -63,12 +74,12 @@ export default function DashboardPage(): React.JSX.Element {
         }
         const json: MatchRow[] = await listRes.json()
         if (!active) return
-        // filtro ultimi 30 giorni
+        // filtro ultimi 180 giorni
         const now = Date.now()
-        const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000
+        const DAYS_180 = 180 * 24 * 60 * 60 * 1000
         const filtered = (json || []).filter((m) => {
           const t = new Date(m.start_time).getTime()
-          return Number.isFinite(t) && now - t <= THIRTY_DAYS
+          return Number.isFinite(t) && now - t <= DAYS_180
         })
         setRows(filtered)
       } catch (e: any) {
@@ -178,7 +189,7 @@ export default function DashboardPage(): React.JSX.Element {
 
       {!loading && !error && (!rows || rows.length === 0) && (
         <div className="rounded-lg border border-neutral-800 p-6 text-neutral-300">
-          Nessuna partita trovata negli ultimi 30 giorni.
+          Nessuna partita trovata negli ultimi 180 giorni.
         </div>
       )}
 
@@ -187,7 +198,7 @@ export default function DashboardPage(): React.JSX.Element {
           {/* KPI */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <KpiCard
-              label="Winrate (ultimi 30 gg)"
+              label="Winrate (ultimi 180 gg)"
               value={`${stats?.winRate ?? 0}%`}
             />
             <KpiCard label="KDA medio" value={`${stats?.kdaAvg ?? 0}`} />
