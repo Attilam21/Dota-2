@@ -15,8 +15,7 @@
     "jsx": "preserve",
     "incremental": true,
     "plugins": [{ "name": "next" }],
-    "paths": { "@/*": ["./src/*"] },
-    "types": ["@testing-library/jest-dom"]
+    "paths": { "@/*": ["./src/*"] }
   },
   "include": [
     "**/*.ts",
