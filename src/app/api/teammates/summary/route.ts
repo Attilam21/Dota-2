@@ -180,7 +180,8 @@ export async function GET(req: Request) {
       .sort((x, y) => y.matches - x.matches)
 
     const topByMatches = teammates[0] ?? null
-    const eligible = teammates.filter((t) => t.matches >= 3)
+    // Considera tutti i compagni con almeno 1 partita insieme
+    const eligible = teammates.filter((t) => t.matches >= 1)
     const topByWinrate =
       eligible.length > 0
         ? [...eligible].sort((a, b) => b.winrate - a.winrate)[0] ?? null

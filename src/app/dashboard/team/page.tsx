@@ -148,6 +148,9 @@ function TeamContent(): React.JSX.Element {
                     <th className="px-3 py-2 text-left font-medium">
                       Partite insieme
                     </th>
+                    <th className="px-3 py-2 text-left font-medium">
+                      Affidabilità
+                    </th>
                     <th className="px-3 py-2 text-left font-medium">Winrate</th>
                     <th className="px-3 py-2 text-left font-medium">
                       KDA medio (giocatore)
@@ -162,6 +165,29 @@ function TeamContent(): React.JSX.Element {
                     >
                       <td className="px-3 py-2">{t.label}</td>
                       <td className="px-3 py-2">{t.matches}</td>
+                      <td className="px-3 py-2">
+                        {(() => {
+                          const lvl =
+                            t.matches >= 10
+                              ? 'alta'
+                              : t.matches >= 5
+                                ? 'media'
+                                : 'bassa'
+                          const cls =
+                            lvl === 'alta'
+                              ? 'bg-green-900/40 text-green-300'
+                              : lvl === 'media'
+                                ? 'bg-yellow-900/40 text-yellow-300'
+                                : 'bg-neutral-800 text-neutral-300'
+                          return (
+                            <span
+                              className={`rounded px-2 py-0.5 text-xs ${cls}`}
+                            >
+                              {lvl}
+                            </span>
+                          )
+                        })()}
+                      </td>
                       <td className="px-3 py-2">
                         <span
                           className={
@@ -182,6 +208,12 @@ function TeamContent(): React.JSX.Element {
               </table>
             </div>
           </div>
+
+          {teammates.length === 0 && (
+            <div className="rounded-lg border border-neutral-800 p-6 text-neutral-300">
+              Nessun compagno con partite insieme nel campione analizzato.
+            </div>
+          )}
         </>
       )}
     </div>
