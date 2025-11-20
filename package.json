@@ -19,6 +19,7 @@
     "start": "next start",
     "lint": "next lint",
     "backfill:fzth-demo": "node scripts/backfill-fzth-demo.mjs",
+    "check:fzth-demo": "node scripts/check-fzth.mjs",
     "format": "prettier --write .",
     "format-check": "prettier --check .",
     "type-check": "tsc --pretty --noEmit",
