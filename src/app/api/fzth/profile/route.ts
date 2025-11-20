@@ -127,26 +127,25 @@ export async function GET(req: Request) {
     }
 
     // Achievements
+    // Real schema uses achievement_id referencing achievement_catalog.id
     const { data: ach } = await supabase
       .from('player_achievements')
-      .select('achievement_code, unlocked_at')
+      .select('achievement_id, unlocked_at')
       .eq('player_id', playerUuid)
     const { data: catalog } = await supabase
       .from('achievement_catalog')
-      .select('code, name, description, category, rarity')
-    const cMap = new Map((catalog ?? []).map((c: any) => [c.code, c]))
+      .select('id, name, description, category, rarity')
+    const cMap = new Map((catalog ?? []).map((c: any) => [c.id, c]))
     const items =
-      (catalog ?? []).map((c: any) => {
-        const unlocked = (ach ?? []).find(
-          (a: any) => a.achievement_code === c.code,
-        )
+      (ach ?? []).map((a: any) => {
+        const c = cMap.get(a.achievement_id) || {}
         return {
-          code: c.code,
-          name: c.name ?? c.code,
+          code: String(a.achievement_id ?? ''),
+          name: c.name ?? 'Achievement',
           description: c.description ?? '',
           category: c.category ?? 'general',
           rarity: c.rarity ?? 'common',
-          unlockedAt: unlocked?.unlocked_at ?? null,
+          unlockedAt: a.unlocked_at ?? null,
         }
       }) ?? []
     items.sort((a, b) => (a.unlockedAt ? -1 : 1) - (b.unlockedAt ? -1 : 1))
@@ -180,17 +179,21 @@ export async function GET(req: Request) {
     // AI insights (latest 5)
     const { data: insightsRows } = await supabase
       .from('ai_insights')
-      .select('id, created_at, title, message')
+      .select('id, created_at, insight_type, content')
       .eq('player_id', playerUuid)
       .order('created_at', { ascending: false })
       .limit(5)
     const insights =
-      (insightsRows ?? []).map((r: any) => ({
-        id: String(r.id),
-        createdAt: r.created_at,
-        title: r.title ?? 'Insight',
-        message: r.message ?? '',
-      })) ?? []
+      (insightsRows ?? []).map((r: any) => {
+        const it = (r.insight_type ?? 'insight') as string
+        const title = it.charAt(0).toUpperCase() + it.slice(1)
+        return {
+          id: String(r.id),
+          createdAt: r.created_at,
+          title,
+          message: r.content ?? '',
+        }
+      }) ?? []
 
     const resp: FzthProfileResponse = {
       player: { dotaAccountId: dotaId, nickname },
