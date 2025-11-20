@@ -1,15 +1,18 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+type FzthKpi = {
+  totalMatches: number
+  winrate: number
+  avgKda: number
+  avgDurationMin: number
+}
+
 type FzthProfileResponse = {
   playerId: number
   internalPlayerId: string
-  kpi: {
-    totalMatches: number
-    winrate: number
-    avgKda: number
-    avgDurationMin: number
-  }
+  hasKpi: boolean
+  kpi: FzthKpi | null
   level: {
     currentLevel: number
     currentXp: number
@@ -85,23 +88,26 @@ export async function GET(req: Request) {
       .select('*')
       .eq('player_id', playerUuid)
       .limit(1)
-    const s = (statsAgg?.[0] as any) || {}
-    const totalMatches = s.total_matches ?? s.matches ?? 0
-    const totalWins =
-      s.total_wins ?? Math.round(((s.winrate ?? 0) * totalMatches) / 100) ?? 0
-    const winrate =
-      s.winrate ??
-      (totalMatches > 0 ? Math.round((totalWins / totalMatches) * 100) : 0)
-    const avgKda = s.avg_kda ?? s.kda_avg ?? s.kda ?? 0
-    const fzthScore = s.performance_index ?? s.fzth_score ?? null
-    const avgDurationMin =
-      s.avg_duration_minutes ?? s.avg_duration_min ?? s.avg_duration ?? 0
+    const s = (statsAgg?.[0] as any) || null
+    const kpi: FzthProfileResponse['kpi'] = s
+      ? {
+          totalMatches: s.total_matches ?? s.matches ?? 0,
+          winrate: s.winrate ?? 0,
+          avgKda: s.kda_avg ?? s.avg_kda ?? s.kda ?? 0,
+          avgDurationMin:
+            s.avg_duration_min ??
+            s.avg_duration_minutes ??
+            (Number.isFinite(s.avg_duration_sec)
+              ? Math.round((s.avg_duration_sec as number) / 60)
+              : s.avg_duration ?? 0),
+        }
+      : null
     // Server log for KPI mapping
     // eslint-disable-next-line no-console
     console.log('FZTH profile KPI', {
       playerId: dotaId,
       row: s,
-      kpi: { totalMatches, winrate, avgKda, avgDurationMin },
+      kpi,
     })
 
     // Level / progression
@@ -158,8 +164,10 @@ export async function GET(req: Request) {
 
     // Playstyle tags (simple rules)
     const tags: string[] = []
-    if (avgKda >= 4) tags.push('Efficiente')
-    if (winrate >= 55) tags.push('Consistente')
+    const kpiWin = kpi?.winrate ?? 0
+    const kpiKda = kpi?.avgKda ?? 0
+    if (kpiKda >= 4) tags.push('Efficiente')
+    if (kpiWin >= 55) tags.push('Consistente')
     // derive from hero stats - specialization
     const { data: heroStats } = await supabase
       .from('player_hero_stats')
@@ -194,12 +202,8 @@ export async function GET(req: Request) {
     const resp: FzthProfileResponse = {
       playerId: dotaId,
       internalPlayerId: playerUuid,
-      kpi: {
-        totalMatches,
-        winrate,
-        avgKda,
-        avgDurationMin,
-      },
+      hasKpi: !!kpi,
+      kpi,
       level,
       achievements,
       insights,

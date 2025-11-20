@@ -157,19 +157,27 @@ function FzthProfileContent(): React.JSX.Element {
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <div className="rounded bg-neutral-900/40 p-3">
                 <div className="text-xs text-neutral-400">Partite</div>
-                <div className="text-lg">{data.kpi.totalMatches}</div>
+                <div className="text-lg">
+                  {data.kpi ? data.kpi.totalMatches : '–'}
+                </div>
               </div>
               <div className="rounded bg-neutral-900/40 p-3">
                 <div className="text-xs text-neutral-400">Winrate</div>
-                <div className="text-lg">{data.kpi.winrate}%</div>
+                <div className="text-lg">
+                  {data.kpi ? `${data.kpi.winrate}%` : '–'}
+                </div>
               </div>
               <div className="rounded bg-neutral-900/40 p-3">
                 <div className="text-xs text-neutral-400">KDA medio</div>
-                <div className="text-lg">{data.kpi.avgKda}</div>
+                <div className="text-lg">
+                  {data.kpi ? data.kpi.avgKda : '–'}
+                </div>
               </div>
               <div className="rounded bg-neutral-900/40 p-3">
                 <div className="text-xs text-neutral-400">Durata media</div>
-                <div className="text-lg">{data.kpi.avgDurationMin}m</div>
+                <div className="text-lg">
+                  {data.kpi ? `${data.kpi.avgDurationMin}m` : '–'}
+                </div>
               </div>
             </div>
           </div>
