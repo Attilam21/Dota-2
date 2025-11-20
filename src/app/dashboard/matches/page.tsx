@@ -46,6 +46,7 @@ function MatchesPageContent(): React.JSX.Element {
   const [data, setData] = useState<MatchRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
+  const [liveFallback, setLiveFallback] = useState<boolean>(false)
 
   useEffect(() => {
     let active = true
@@ -57,9 +58,15 @@ function MatchesPageContent(): React.JSX.Element {
           `/api/sync/recent-matches?playerId=${playerId}`,
           { cache: 'no-store' },
         )
-        if (!syncRes.ok) {
-          const msg = await syncRes.json().catch(() => ({}))
-          throw new Error(msg?.error || `Sync HTTP ${syncRes.status}`)
+        // Se OpenDota non è disponibile, la route risponde 200 con fallback: true
+        if (syncRes.ok) {
+          const syncJson = await syncRes.json().catch(() => ({}))
+          if (syncJson?.fallback === true) {
+            setLiveFallback(true)
+          }
+        } else {
+          // error locale della nostra API: segnala ma non bloccare la lista
+          console.error('Sync API error', syncRes.status)
         }
         // 2) leggi da Supabase tramite API interna
         const listRes = await fetch(`/api/matches/list?playerId=${playerId}`, {
@@ -96,9 +103,15 @@ function MatchesPageContent(): React.JSX.Element {
       {loading && (
         <div className="text-neutral-400">Caricamento partite recenti...</div>
       )}
-      {error && (
+      {error && !liveFallback && (
         <div className="text-red-400">
           Errore nel caricamento delle partite: {error}
+        </div>
+      )}
+      {liveFallback && (
+        <div className="rounded border border-yellow-800 bg-yellow-950/40 p-3 text-xs text-yellow-300">
+          Dati live OpenDota temporaneamente non disponibili. Stai vedendo i
+          dati salvati nello storico.
         </div>
       )}
 
