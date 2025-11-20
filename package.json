@@ -20,6 +20,7 @@
     "lint": "next lint",
     "backfill:fzth-demo": "node scripts/backfill-fzth-demo.mjs",
     "check:fzth-demo": "node scripts/check-fzth.mjs",
+    "inspect:schema": "node scripts/inspect-schema.mjs",
     "format": "prettier --write .",
     "format-check": "prettier --check .",
     "type-check": "tsc --pretty --noEmit",

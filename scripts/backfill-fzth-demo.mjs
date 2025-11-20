@@ -97,7 +97,7 @@ async function main() {
       }
     }
   }
-  // 5) Basic achievements (unlocked only)
+  // 5) Basic achievements (unlocked only) → use achievement_id (uuid) from achievement_catalog
   let streak = 0
   let maxStreak = 0
   for (const m of matches) {
@@ -112,54 +112,123 @@ async function main() {
   const anyZeroDeath = matches.some((m) => (m.deaths ?? 0) === 0)
   const lastN = matches.slice(-20)
   const distinctHeroes = new Set(lastN.map((m) => m.hero_id)).size
-  const unlocked = [
-    { code: 'clutch', cond: anyClutch },
-    { code: 'iron_wall', cond: anyZeroDeath },
-    { code: 'versatile', cond: distinctHeroes >= 6 },
-    { code: 'streaker', cond: maxStreak >= 3 },
-  ].filter((a) => a.cond)
-  if (unlocked.length > 0) {
-    const nowIso = new Date().toISOString()
-    // Try variant A: achievement_code + unlocked_at
-    let errAchFinal = null
-    {
-      const rowsA = unlocked.map((u) => ({
-        player_id: playerId,
-        achievement_code: u.code,
-        unlocked_at: nowIso,
-      }))
-      const { error: errA } = await sb.from('player_achievements').upsert(rowsA, { onConflict: 'player_id,achievement_code' })
-      if (!errA) {
-        errAchFinal = null
-      } else {
-        errAchFinal = errA
-        // Try variant B: code + unlocked_at
-        const rowsB = unlocked.map((u) => ({
-          player_id: playerId,
-          code: u.code,
-          unlocked_at: nowIso,
-        }))
-        const { error: errB } = await sb.from('player_achievements').upsert(rowsB, { onConflict: 'player_id,code' })
-        if (!errB) {
-          errAchFinal = null
-        } else {
-          errAchFinal = errB
-          // Try variant C: achievement_code + unlocked boolean
-          const rowsC = unlocked.map((u) => ({
-            player_id: playerId,
-            achievement_code: u.code,
-            unlocked: true,
-          }))
-          const { error: errC } = await sb.from('player_achievements').upsert(rowsC, { onConflict: 'player_id,achievement_code' })
-          if (!errC) {
-            errAchFinal = null
-          } else {
-            errAchFinal = errC
-          }
+  // Choose achievement_catalog ids deterministically by conditions (no schema change; columns unknown except id)
+  {
+    let insertedAchCount = 0
+    const picks = []
+    if (anyClutch) picks.push(0)
+    if (anyZeroDeath) picks.push(1)
+    if (distinctHeroes >= 6) picks.push(2)
+    if (maxStreak >= 3) picks.push(3)
+    if (picks.length > 0) {
+      const { data: catRows } = await sb.from('achievement_catalog').select('id').limit(8)
+      const ids = []
+      const seen = new Set()
+      for (const idx of picks) {
+        const row = catRows?.[idx]
+        if (row?.id && !seen.has(row.id)) {
+          ids.push(row.id)
+          seen.add(row.id)
         }
       }
+      const nowIso = new Date().toISOString()
+      const targetRows = ids.map((aid) => ({
+        player_id: playerId,
+        achievement_id: aid,
+        unlocked_at: nowIso,
+      }))
+    if (targetRows.length > 0) {
+      // Try UPSERT with onConflict (player_id,achievement_id)
+      const { error: upErr } = await sb
+        .from('player_achievements')
+        .upsert(targetRows, { onConflict: 'player_id,achievement_id' })
+      if (upErr && String(upErr.code) === '42P10') {
+        // Fallback: manual idempotency - update if exists else insert
+        for (const row of targetRows) {
+          const { data: exists } = await sb
+            .from('player_achievements')
+            .select('id, unlocked_at')
+            .eq('player_id', row.player_id)
+            .eq('achievement_id', row.achievement_id)
+            .limit(1)
+          if (exists && exists.length > 0) {
+            await sb
+              .from('player_achievements')
+              .update({ unlocked_at: row.unlocked_at })
+              .eq('id', exists[0].id)
+          } else {
+            await sb.from('player_achievements').insert([row])
+            insertedAchCount += 1
+          }
+        }
+      } else if (upErr) {
+        console.error('UPSERT player_achievements ERROR', upErr)
+      } else {
+        insertedAchCount = targetRows.length
+      }
     }
-    if (errAchFinal) console.error('UPSERT player_achievements ERROR', errAchFinal)
+    }
+    // attach to logging scope
+    globalThis.__achievementsInserted = globalThis.__achievementsInserted ?? 0
+    globalThis.__achievementsInserted += insertedAchCount
+  }
+  // 6) AI insights (deterministic, 2-3 rows) → use insight_type and content
+  {
+    const insights = []
+    const deathsPerGame = sumD / Math.max(1, total)
+    if (deathsPerGame >= 8) {
+      insights.push({
+        insight_type: 'weakness',
+        content: `Morte media alta (${deathsPerGame.toFixed(1)}). Migliora posizionamento e visione.`,
+      })
+    } else {
+      insights.push({
+        insight_type: 'strength',
+        content: `Morte media contenuta (${deathsPerGame.toFixed(1)}). Mantieni il ritmo.`,
+      })
+    }
+    // trend winrate last 10 vs overall
+    const last10 = matches.slice(-10)
+    const last10Wins = last10.filter((m) => m.result === 'win').length
+    const last10Wr = Math.round((last10Wins / Math.max(1, last10.length)) * 100)
+    if (last10Wr < winrate - 5) {
+      insights.push({
+        insight_type: 'momentum',
+        content: `Trend negativo: WR recente ${last10Wr}% sotto la media (${winrate}%). Valuta rotazioni/eroi diversi.`,
+      })
+    } else if (last10Wr > winrate + 5) {
+      insights.push({
+        insight_type: 'momentum',
+        content: `Trend positivo: WR recente ${last10Wr}% sopra la media (${winrate}%). Continua così.`,
+      })
+    } else {
+      insights.push({
+        insight_type: 'momentum',
+        content: `Trend stabile: WR recente in linea con la media (${last10Wr}% vs ${winrate}%).`,
+      })
+    }
+    const poolSize = new Set(matches.map((m) => m.hero_id)).size
+    insights.push({
+      insight_type: 'breadth',
+      content: `Hero pool: ${poolSize} eroi distinti. Bilancia specializzazione e versatilità.`,
+    })
+    // Idempotenza: non inserire insight identici già presenti
+    const { data: existing } = await sb
+      .from('ai_insights')
+      .select('content')
+      .eq('player_id', playerId)
+    const have = new Set((existing ?? []).map((r) => r.content))
+    const rows = insights
+      .filter((i) => !have.has(i.content))
+      .map((i) => ({
+        player_id: playerId,
+        insight_type: i.insight_type,
+        content: i.content,
+      }))
+    if (rows.length > 0) {
+      const { error: insErr } = await sb.from('ai_insights').insert(rows)
+      if (insErr) console.error('INSERT ai_insights ERROR', insErr)
+    }
   }
   console.log(
     JSON.stringify(
@@ -172,7 +241,7 @@ async function main() {
         avgDurMin,
         heroes: heroRows.length,
         estimatedLevel: estLevel,
-        achievementsInserted: unlocked?.length ?? 0,
+        achievementsInserted: globalThis.__achievementsInserted ?? 0,
       },
       null,
       2,

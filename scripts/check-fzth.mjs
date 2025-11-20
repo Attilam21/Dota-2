@@ -32,6 +32,10 @@ async function main() {
     sb.from('player_progression').select('player_id', { count: 'exact', head: true }).eq('player_id', playerId),
     sb.from('player_achievements').select('player_id', { count: 'exact', head: true }).eq('player_id', playerId),
   ])
+  const { count: insights } = await sb
+    .from('ai_insights')
+    .select('player_id', { count: 'exact', head: true })
+    .eq('player_id', playerId)
   console.log(
     JSON.stringify(
       {
@@ -42,6 +46,7 @@ async function main() {
           player_hero_stats: hero ?? 0,
           player_progression: prog ?? 0,
           player_achievements: ach ?? 0,
+          ai_insights: insights ?? 0,
         },
       },
       null,
