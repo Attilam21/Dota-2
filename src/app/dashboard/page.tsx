@@ -74,14 +74,8 @@ function DashboardOverview(): React.JSX.Element {
         }
         const json: MatchRow[] = await listRes.json()
         if (!active) return
-        // filtro ultimi 180 giorni
-        const now = Date.now()
-        const DAYS_180 = 180 * 24 * 60 * 60 * 1000
-        const filtered = (json || []).filter((m) => {
-          const t = new Date(m.start_time).getTime()
-          return Number.isFinite(t) && now - t <= DAYS_180
-        })
-        setRows(filtered)
+        // usa tutte le partite disponibili (nessun filtro data)
+        setRows(json || [])
       } catch (e: any) {
         if (active) setError(e?.message ?? 'Errore sconosciuto')
       } finally {
@@ -189,7 +183,7 @@ function DashboardOverview(): React.JSX.Element {
 
       {!loading && !error && (!rows || rows.length === 0) && (
         <div className="rounded-lg border border-neutral-800 p-6 text-neutral-300">
-          Nessuna partita trovata negli ultimi 180 giorni.
+          Nessuna partita disponibile per questo giocatore.
         </div>
       )}
 
@@ -197,10 +191,7 @@ function DashboardOverview(): React.JSX.Element {
         <>
           {/* KPI */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-            <KpiCard
-              label="Winrate (ultimi 180 gg)"
-              value={`${stats?.winRate ?? 0}%`}
-            />
+            <KpiCard label="Winrate" value={`${stats?.winRate ?? 0}%`} />
             <KpiCard label="KDA medio" value={`${stats?.kdaAvg ?? 0}`} />
             <KpiCard
               label="Partite giocate"
