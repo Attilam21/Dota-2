@@ -17,7 +17,7 @@ export default function DashboardHeader() {
         </div>
         <div className="hidden md:block">
           {/* periodo corrente informativo */}
-          Periodo: Ultimi 180 giorni
+          Periodo: tutte le partite disponibili (dataset di test)
         </div>
       </div>
     </header>

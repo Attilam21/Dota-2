@@ -184,14 +184,8 @@ function PlayerProfileContent(): React.JSX.Element {
         }
         const json: MatchRow[] = await res.json()
         if (!active) return
-        // filtro 180 giorni
-        const now = Date.now()
-        const DAYS_180 = 180 * 24 * 60 * 60 * 1000
-        const filtered = (json || []).filter((m) => {
-          const t = new Date(m.start_time).getTime()
-          return Number.isFinite(t) && now - t <= DAYS_180
-        })
-        setRows(filtered)
+        // Usa tutte le partite disponibili (nessun filtro temporale)
+        setRows(json ?? [])
       } catch (e: any) {
         if (active) setError(e?.message ?? 'Errore sconosciuto')
       } finally {
@@ -258,8 +252,8 @@ function PlayerProfileContent(): React.JSX.Element {
         <div>
           <h1 className="text-2xl font-semibold">Profilo giocatore</h1>
           <p className="text-sm text-neutral-400">
-            Player #{playerId} – profilo aggregato sulle partite degli ultimi
-            180 giorni
+            Player #{playerId} – profilo aggregato su tutte le partite
+            disponibili
           </p>
           <p className="text-xs text-neutral-500">
             {rows?.length ?? 0} partite analizzate
@@ -278,7 +272,7 @@ function PlayerProfileContent(): React.JSX.Element {
 
       {!loading && !error && (!rows || rows.length === 0) && (
         <div className="rounded-lg border border-neutral-800 p-6 text-neutral-300">
-          Nessuna partita trovata per questo giocatore negli ultimi 180 giorni.
+          Nessuna partita disponibile per questo giocatore nel dataset corrente.
         </div>
       )}
 
