@@ -5,6 +5,14 @@ import React, { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { getPlayerIdFromSearchParams } from '@/lib/playerId'
 import { getHeroIconUrl, getHeroName } from '@/lib/dotaHeroes'
+import {
+  buildHeroSnapshot,
+  buildMomentum,
+  buildStrengthsAndWeaknesses,
+  classifyPerformanceLevel,
+  computePerformanceIndex,
+  type HeroSnapshot as HeroSnap,
+} from '@/lib/analytics/overview'
 
 type MatchRow = {
   id: string
@@ -123,26 +131,10 @@ function DashboardOverview(): React.JSX.Element {
     }
   }, [rows])
 
-  const topHeroes: HeroSummary[] = useMemo(() => {
-    if (!rows || rows.length === 0) return []
-    const map = new Map<number, { matches: number; wins: number }>()
-    for (const r of rows) {
-      const cur = map.get(r.hero_id) ?? { matches: 0, wins: 0 }
-      cur.matches += 1
-      if (r.result === 'win') cur.wins += 1
-      map.set(r.hero_id, cur)
-    }
-    const list: HeroSummary[] = Array.from(map.entries()).map(
-      ([heroId, v]) => ({
-        heroId,
-        matches: v.matches,
-        wins: v.wins,
-        winRate: Number(((v.wins / Math.max(1, v.matches)) * 100).toFixed(1)),
-      }),
-    )
-    list.sort((a, b) => b.matches - a.matches)
-    return list.slice(0, 3)
-  }, [rows])
+  const heroSnap: HeroSnap[] = useMemo(
+    () => buildHeroSnapshot(rows ?? [], 5),
+    [rows],
+  )
 
   // Trend performance (ultime 10 partite): score semplice (kills+assists - deaths)
   const trendPoints = useMemo(() => {
@@ -153,6 +145,26 @@ function DashboardOverview(): React.JSX.Element {
       goldDiff: r.kills + r.assists - r.deaths, // riuso SparkLine con campo goldDiff
     }))
   }, [rows])
+
+  const performanceIndex = useMemo(() => {
+    if (!stats) return 0
+    return computePerformanceIndex({
+      winRatePercent: stats.winRate,
+      kdaAvg: stats.kdaAvg,
+    })
+  }, [stats])
+
+  const momentum = useMemo(() => {
+    if (!rows || rows.length === 0)
+      return { last10: [], last5Wr: 0, prev5Wr: 0, trend: 'na' as const }
+    const results = rows.map((r) => r.result)
+    return buildMomentum(results)
+  }, [rows])
+
+  const insights = useMemo(
+    () => buildStrengthsAndWeaknesses(rows ?? []),
+    [rows],
+  )
 
   if (!playerId) {
     return (
@@ -191,7 +203,7 @@ function DashboardOverview(): React.JSX.Element {
       {!loading && !error && rows && rows.length > 0 && (
         <>
           {/* KPI */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
             <KpiCard label="Winrate" value={`${stats?.winRate ?? 0}%`} />
             <KpiCard label="KDA medio" value={`${stats?.kdaAvg ?? 0}`} />
             <KpiCard
@@ -202,21 +214,43 @@ function DashboardOverview(): React.JSX.Element {
               label="Durata media (min)"
               value={`${stats?.avgDurationMinutes ?? 0}`}
             />
+            <div className="rounded-lg border border-neutral-800 p-4">
+              <div className="text-xs text-neutral-400">
+                FZTH Performance Index
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="text-xl font-semibold">{performanceIndex}</div>
+                {(() => {
+                  const lvl = classifyPerformanceLevel(performanceIndex)
+                  const cls =
+                    performanceIndex > 70
+                      ? 'bg-green-900/40 text-green-300'
+                      : performanceIndex >= 40
+                        ? 'bg-yellow-900/40 text-yellow-300'
+                        : 'bg-red-900/40 text-red-300'
+                  return (
+                    <span className={`rounded px-2 py-0.5 text-xs ${cls}`}>
+                      {lvl}
+                    </span>
+                  )
+                })()}
+              </div>
+            </div>
           </div>
 
-          {/* Row 2: Eroi più giocati + Trend */}
+          {/* Row 2: Eroi più giocati + Trend/Momentum */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div className="rounded-lg border border-neutral-800 p-4">
               <h2 className="mb-3 text-sm text-neutral-300">
                 Eroi più giocati
               </h2>
-              {topHeroes.length === 0 ? (
+              {heroSnap.length === 0 ? (
                 <div className="text-sm text-neutral-500">
                   Nessun dato disponibile
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {topHeroes.map((h) => {
+                  {heroSnap.slice(0, 5).map((h) => {
                     const icon = getHeroIconUrl(h.heroId)
                     const name = getHeroName(h.heroId)
                     return (
@@ -248,7 +282,7 @@ function DashboardOverview(): React.JSX.Element {
                           <span>{name}</span>
                         </div>
                         <div className="text-xs text-neutral-400">
-                          {h.matches} partite · {h.winRate}% WR
+                          {h.matches} partite · {h.winRate}% WR · KDA {h.kdaAvg}
                         </div>
                       </div>
                     )
@@ -259,10 +293,98 @@ function DashboardOverview(): React.JSX.Element {
 
             <div className="rounded-lg border border-neutral-800 p-4">
               <h2 className="mb-2 text-sm text-neutral-300">
-                Trend performance (ultime partite)
+                Momentum ultime 10 partite
               </h2>
-              <SparkLine points={trendPoints} />
+              {/* Strip W/L */}
+              <div className="mb-3 flex gap-1">
+                {(momentum.last10.length > 0 ? momentum.last10 : []).map(
+                  (r, idx) => (
+                    <div
+                      key={idx}
+                      className={`h-3 w-3 rounded ${
+                        r === 'win' ? 'bg-green-500' : 'bg-red-500'
+                      }`}
+                      title={r}
+                    />
+                  ),
+                )}
+              </div>
+              <div className="text-xs text-neutral-400">
+                Ultime 5: {momentum.last5Wr}% · Precedenti 5: {momentum.prev5Wr}
+                % ·{' '}
+                {momentum.trend === 'up'
+                  ? 'Trend in crescita'
+                  : momentum.trend === 'down'
+                    ? 'Trend in calo'
+                    : momentum.trend === 'flat'
+                      ? 'Trend stabile'
+                      : 'Trend non valutabile (poche partite)'}
+              </div>
+              <div className="mt-4">
+                <SparkLine points={trendPoints} />
+              </div>
             </div>
+          </div>
+
+          {/* Strengths & Weaknesses */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {insights.map((c, idx) => (
+              <div
+                key={idx}
+                className="rounded-lg border border-neutral-800 p-4"
+              >
+                <div className="mb-1 text-xs uppercase tracking-wide text-neutral-400">
+                  {c.type === 'strength'
+                    ? 'Punto di forza'
+                    : 'Area da migliorare'}
+                </div>
+                <div className="mb-2 text-sm font-medium text-neutral-200">
+                  {c.title}
+                </div>
+                <div className="text-sm text-neutral-300">{c.description}</div>
+                <div className="mt-3">
+                  <Link
+                    href="/dashboard/coaching"
+                    className="text-xs text-blue-400 hover:underline"
+                  >
+                    Vai alla sezione Coaching per un piano dedicato
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* FZTH level */}
+          <div className="rounded-lg border border-neutral-800 p-4">
+            {(() => {
+              const lvl = classifyPerformanceLevel(performanceIndex)
+              const pct = Math.max(0, Math.min(100, performanceIndex))
+              return (
+                <>
+                  <div className="mb-1 text-sm text-neutral-300">
+                    Livello FZTH stimato:{' '}
+                    <span className="font-medium">{lvl}</span> (calcolato sui
+                    tuoi risultati attuali)
+                  </div>
+                  <div className="h-2 w-full rounded bg-neutral-900">
+                    <div
+                      className={`h-2 rounded ${
+                        pct > 70
+                          ? 'bg-green-500'
+                          : pct >= 40
+                            ? 'bg-yellow-500'
+                            : 'bg-red-500'
+                      }`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <div className="mt-2 text-xs text-neutral-400">
+                    Migliora il livello completando task nella sezione Coaching
+                    (in arrivo).
+                  </div>
+                </>
+              )
+            })()}
           </div>
 
           {/* Mini lista ultime partite */}
