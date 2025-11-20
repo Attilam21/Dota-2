@@ -54,7 +54,9 @@ type TeammatesSummaryResponse = {
   teammates: TeammateSummary[]
 }
 
-const MAX_MATCHES = 100
+// Numero massimo di partite più recenti considerate per il riepilogo compagni.
+// Usiamo un limite per contenere le chiamate a OpenDota, senza riferimento a giorni.
+const MAX_TEAM_MATCHES = 50
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -73,7 +75,7 @@ export async function GET(req: Request) {
       .select('*')
       .eq('player_account_id', playerIdNum)
       .order('start_time', { ascending: false })
-      .limit(MAX_MATCHES)
+      .limit(MAX_TEAM_MATCHES)
 
     if (error) {
       throw new Error(error.message)

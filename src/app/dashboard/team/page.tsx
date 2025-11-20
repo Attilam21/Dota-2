@@ -76,8 +76,9 @@ function TeamContent(): React.JSX.Element {
         <div>
           <h1 className="text-2xl font-semibold">Team & compagni</h1>
           <p className="text-sm text-neutral-400">
-            Analisi delle performance insieme ai compagni su tutte le partite
-            disponibili (dataset di test).
+            {data?.totalMatchesConsidered
+              ? `Analisi delle performance per compagno (campione: ultime ${data.totalMatchesConsidered} partite).`
+              : 'Analisi delle performance per compagno sulle ultime partite disponibili (dataset di test).'}
           </p>
         </div>
       </div>
@@ -93,7 +94,8 @@ function TeamContent(): React.JSX.Element {
 
       {!loading && !error && data && data.totalMatchesConsidered === 0 && (
         <div className="rounded-lg border border-neutral-800 p-6 text-neutral-300">
-          Nessuna partita disponibile per questo giocatore (dataset di test).
+          Nessun dato disponibile per questo giocatore sul campione di partite
+          analizzato.
         </div>
       )}
 
