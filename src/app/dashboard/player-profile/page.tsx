@@ -6,6 +6,22 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { getPlayerIdFromSearchParams } from '@/lib/playerId'
 import { getHeroIconUrl, getHeroName } from '@/lib/dotaHeroes'
+import {
+  computePerformanceIndex,
+  classifyPerformanceLevel,
+  buildStrengthsAndWeaknesses,
+  buildMomentum,
+} from '@/lib/analytics/overview'
+import {
+  type ProfileMatch,
+  inferPrimaryRole,
+  topHeroes as profileTopHeroes,
+  estimateFzthLevel,
+  buildPerMatchPerformanceSeries,
+  buildKdaRollingAverage,
+  buildRoleSkillIndex,
+  buildAchievements,
+} from '@/lib/analytics/profile'
 
 type MatchRow = {
   id: string
@@ -247,6 +263,78 @@ function PlayerProfileContent(): React.JSX.Element {
     [rows],
   )
 
+  // Derive profile-level analytics
+  const profileMatches: ProfileMatch[] = useMemo(() => {
+    const list: ProfileMatch[] = (rows ?? []).map((m) => ({
+      matchId: m.match_id,
+      heroId: m.hero_id,
+      result: (m.result === 'win' ? 'win' : 'lose') as 'win' | 'lose',
+      k: m.kills ?? 0,
+      d: m.deaths ?? 0,
+      a: m.assists ?? 0,
+      durationMinutes: Math.round((m.duration_seconds ?? 0) / 60),
+      startTime: m.start_time,
+      lane: m.lane ?? null,
+      role: m.role ?? null,
+    }))
+    // sort desc by start_time just in case
+    list.sort(
+      (a, b) =>
+        new Date(b.startTime).getTime() - new Date(a.startTime).getTime(),
+    )
+    return list
+  }, [rows])
+
+  const perfIndexOverall = useMemo(() => {
+    if (!kpi) return 0
+    return computePerformanceIndex({
+      winRatePercent: kpi.winRate,
+      kdaAvg: kpi.kdaAvg,
+    })
+  }, [kpi])
+  const perfLevelLabel = useMemo(() => {
+    if (perfIndexOverall >= 95) return 'Legendary'
+    return classifyPerformanceLevel(perfIndexOverall)
+  }, [perfIndexOverall])
+  const { primaryRole } = useMemo(
+    () => inferPrimaryRole(profileMatches),
+    [profileMatches],
+  )
+  const top3Heroes = useMemo(
+    () => profileTopHeroes(profileMatches, 3),
+    [profileMatches],
+  )
+  const xp = useMemo(
+    () => estimateFzthLevel(perfIndexOverall, kpi?.totalMatches ?? 0),
+    [perfIndexOverall, kpi],
+  )
+  const perMatchSeries = useMemo(
+    () => buildPerMatchPerformanceSeries(profileMatches, 30),
+    [profileMatches],
+  )
+  const kdaRolling = useMemo(
+    () => buildKdaRollingAverage(profileMatches, 5, 30),
+    [profileMatches],
+  )
+  const roleSkill = useMemo(
+    () => buildRoleSkillIndex(profileMatches),
+    [profileMatches],
+  )
+  const achievements = useMemo(
+    () => buildAchievements(profileMatches),
+    [profileMatches],
+  )
+  const momentum = useMemo(
+    () => buildMomentum(profileMatches.map((m) => m.result)),
+    [profileMatches],
+  )
+  const prev10Wr = useMemo(() => {
+    const prev10 = profileMatches.slice(10, 20)
+    if (prev10.length === 0) return 0
+    const wins = prev10.filter((m) => m.result === 'win').length
+    return Math.round((wins / prev10.length) * 100)
+  }, [profileMatches])
+
   return (
     <div className="space-y-6 p-6 text-white">
       <div className="flex items-center justify-between">
@@ -279,6 +367,207 @@ function PlayerProfileContent(): React.JSX.Element {
 
       {!loading && !error && rows && rows.length > 0 && (
         <>
+          {/* Hero Card FZTH */}
+          <div className="rounded-lg border border-neutral-800 p-4">
+            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+              <div className="text-sm text-neutral-300">Player #{playerId}</div>
+              <div className="flex items-center gap-3">
+                <div className="text-xs text-neutral-400">FZTH Score</div>
+                <div className="text-xl font-semibold">{perfIndexOverall}</div>
+                <span
+                  className={`rounded px-2 py-0.5 text-xs ${
+                    perfIndexOverall >= 95
+                      ? 'bg-purple-900/40 text-purple-300'
+                      : perfIndexOverall > 70
+                        ? 'bg-green-900/40 text-green-300'
+                        : perfIndexOverall >= 40
+                          ? 'bg-yellow-900/40 text-yellow-300'
+                          : 'bg-red-900/40 text-red-300'
+                  }`}
+                >
+                  {perfLevelLabel}
+                </span>
+              </div>
+            </div>
+            <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="text-xs text-neutral-400">
+                Ruolo principale:{' '}
+                <span className="text-neutral-200">{primaryRole}</span>
+              </div>
+              <div className="text-xs text-neutral-400 md:col-span-2">
+                Hero pool principale:{' '}
+                <span className="text-neutral-200">
+                  {top3Heroes
+                    .map((h) => `#${h.heroId} (${h.matches})`)
+                    .join(' · ') || 'N/D'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Barra XP FZTH */}
+          <div className="rounded-lg border border-neutral-800 p-4">
+            <div className="mb-1 text-sm text-neutral-300">
+              Livello FZTH stimato:{' '}
+              <span className="font-semibold">{xp.level}</span>
+            </div>
+            <div className="h-2 w-full rounded bg-neutral-900">
+              <div
+                className="h-2 rounded bg-blue-500"
+                style={{ width: `${Math.max(0, Math.min(100, xp.level))}%` }}
+              />
+            </div>
+            <div className="mt-2 text-xs text-neutral-400">
+              Progresso verso il prossimo livello:{' '}
+              {Math.min(100, xp.level % 100)}% · Livello basato su prestazioni e
+              partite (coaching in arrivo).
+            </div>
+          </div>
+
+          {/* Telemetria evolutiva */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="rounded-lg border border-neutral-800 p-4">
+              <h2 className="mb-2 text-sm text-neutral-300">
+                Trend Performance Index (ultimi 30 match)
+              </h2>
+              <DualLine
+                primary={perMatchSeries.map((p) => ({ x: p.idx, y: p.score }))}
+                secondary={kdaRolling.map((p) => ({ x: p.idx, y: p.kda * 10 }))} // scale kda to 0..100
+                labelPrimary="Score"
+                labelSecondary="KDA x10 (rolling)"
+              />
+              {perMatchSeries.length < 5 && (
+                <div className="mt-2 text-xs text-neutral-500">
+                  Non abbastanza dati per una valutazione completa.
+                </div>
+              )}
+            </div>
+            <div className="rounded-lg border border-neutral-800 p-4">
+              <h2 className="mb-2 text-sm text-neutral-300">
+                Momentum & Stato Form
+              </h2>
+              <div className="mb-3 flex gap-1">
+                {(momentum.last10.length > 0 ? momentum.last10 : []).map(
+                  (r, i) => (
+                    <div
+                      key={i}
+                      className={`h-3 w-3 rounded ${
+                        r === 'win' ? 'bg-green-500' : 'bg-red-500'
+                      }`}
+                      title={r}
+                    />
+                  ),
+                )}
+              </div>
+              <div className="text-xs text-neutral-400">
+                Ultime 10:{' '}
+                {momentum.last10.length > 0
+                  ? momentum.last10.filter((r) => r === 'win').length * 10
+                  : 0}
+                % · Precedenti 10: {prev10Wr}% ·{' '}
+                {momentum.trend === 'up'
+                  ? 'Trend in crescita'
+                  : momentum.trend === 'down'
+                    ? 'Trend in calo'
+                    : momentum.trend === 'flat'
+                      ? 'Trend stabile'
+                      : 'Non abbastanza dati'}
+              </div>
+            </div>
+          </div>
+
+          {/* Strengths & Weaknesses */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {buildStrengthsAndWeaknesses(rows ?? []).map((c, idx) => (
+              <div
+                key={idx}
+                className="rounded-lg border border-neutral-800 p-4"
+              >
+                <div className="mb-1 text-xs uppercase tracking-wide text-neutral-400">
+                  {c.type === 'strength'
+                    ? 'Punto di forza'
+                    : 'Area da migliorare'}
+                </div>
+                <div className="mb-2 text-sm font-medium text-neutral-200">
+                  {c.title}
+                </div>
+                <div className="text-sm text-neutral-300">{c.description}</div>
+                <div className="mt-3">
+                  <Link
+                    href="/dashboard/coaching"
+                    className="text-xs text-blue-400 hover:underline"
+                  >
+                    Vai alla sezione Coaching (in arrivo)
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Role Skill Index */}
+          <div className="rounded-lg border border-neutral-800 p-4">
+            <h2 className="mb-3 text-sm text-neutral-300">Role Skill Index</h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-neutral-900/60 text-neutral-300">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium">Ruolo</th>
+                    <th className="px-3 py-2 text-left font-medium">Partite</th>
+                    <th className="px-3 py-2 text-left font-medium">Winrate</th>
+                    <th className="px-3 py-2 text-left font-medium">
+                      KDA medio
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roleSkill.rows.map((r) => (
+                    <tr key={r.role} className="border-t border-neutral-800">
+                      <td className="px-3 py-2">
+                        <span
+                          className={
+                            r.role === roleSkill.recommendedRole
+                              ? 'font-medium text-neutral-100'
+                              : ''
+                          }
+                        >
+                          {r.role}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2">{r.matches}</td>
+                      <td className="px-3 py-2">{r.winRate}%</td>
+                      <td className="px-3 py-2">{r.kdaAvg}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Achievements */}
+          <div className="rounded-lg border border-neutral-800 p-4">
+            <h2 className="mb-3 text-sm text-neutral-300">
+              Achievement FZTH (beta)
+            </h2>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+              {achievements.map((a) => (
+                <div
+                  key={a.code}
+                  className={`rounded border p-3 ${
+                    a.unlocked
+                      ? 'border-green-800 bg-green-950/30 text-green-300'
+                      : 'border-neutral-800 bg-neutral-900/40 text-neutral-400'
+                  }`}
+                >
+                  <div className="text-sm font-medium">{a.name}</div>
+                  <div className="text-xs">{a.description}</div>
+                  <div className="mt-1 text-[10px] uppercase tracking-wide">
+                    {a.unlocked ? 'Sbloccato' : 'Non sbloccato'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* KPI principali */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-6">
             <KpiCard label="Winrate" value={`${kpi?.winRate ?? 0}%`} />
@@ -581,6 +870,64 @@ function TrendSpark({ points }: { points: TrendPoint[] }) {
         strokeWidth="1"
       />
       <path d={path} fill="none" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  )
+}
+
+function DualLine({
+  primary,
+  secondary,
+  labelPrimary,
+  labelSecondary,
+}: {
+  primary: Array<{ x: number; y: number }>
+  secondary: Array<{ x: number; y: number }>
+  labelPrimary: string
+  labelSecondary: string
+}) {
+  const width = 560
+  const height = 160
+  const allX = [...primary.map((p) => p.x), ...secondary.map((p) => p.x)]
+  const allY = [...primary.map((p) => p.y), ...secondary.map((p) => p.y)]
+  if (allX.length === 0)
+    return <div className="text-sm text-neutral-500">Dati non disponibili</div>
+  const minX = Math.min(...allX)
+  const maxX = Math.max(...allX)
+  const minY = Math.min(...allY, 0)
+  const maxY = Math.max(...allY, 0)
+  const sx = (x: number) =>
+    ((x - minX) / (maxX - minX || 1)) * (width - 40) + 20
+  const sy = (y: number) =>
+    height - (((y - minY) / (maxY - minY || 1)) * (height - 30) + 15)
+  const path1 = primary
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${sx(p.x)} ${sy(p.y)}`)
+    .join(' ')
+  const path2 = secondary
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${sx(p.x)} ${sy(p.y)}`)
+    .join(' ')
+  return (
+    <svg
+      width="100%"
+      viewBox={`0 0 ${width} ${height}`}
+      className="text-neutral-300"
+    >
+      <line
+        x1="0"
+        y1={sy(0)}
+        x2={width}
+        y2={sy(0)}
+        stroke="currentColor"
+        strokeOpacity="0.2"
+        strokeWidth="1"
+      />
+      <path d={path1} fill="none" stroke="#60a5fa" strokeWidth="2" />
+      <path d={path2} fill="none" stroke="#f59e0b" strokeWidth="2" />
+      <text x={20} y={15} fill="#60a5fa" fontSize="10">
+        {labelPrimary}
+      </text>
+      <text x={100} y={15} fill="#f59e0b" fontSize="10">
+        {labelSecondary}
+      </text>
     </svg>
   )
 }
