@@ -72,6 +72,17 @@ type LaneSummary = {
   winRate: number
 }
 type TrendPoint = { idx: number; score: number }
+type FzthAggKpi = {
+  totalMatches: number
+  winrate: number
+  kdaAvg: number
+  avgDurationMinutes: number
+}
+type FzthAggSummary = {
+  hasAggregates: boolean
+  kpi?: FzthAggKpi
+  topHero?: { heroId: number; matches: number; winrate: number; kdaAvg: number }
+}
 export default function PlayerProfilePage(): React.JSX.Element {
   return (
     <Suspense
@@ -186,12 +197,24 @@ function PlayerProfileContent(): React.JSX.Element {
   const [rows, setRows] = useState<MatchRow[] | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+  const [fzthAgg, setFzthAgg] = useState<FzthAggSummary | null>(null)
 
   useEffect(() => {
     let active = true
     async function load() {
       try {
         setLoading(true)
+        // Try FZTH aggregates first
+        const aggRes = await fetch(
+          `/api/fzth/player-summary?dotaAccountId=${playerId}`,
+          { cache: 'no-store' },
+        )
+        if (aggRes.ok) {
+          const agg: FzthAggSummary = await aggRes.json()
+          if (agg?.hasAggregates) setFzthAgg(agg)
+        } else if (aggRes.status === 404) {
+          setFzthAgg({ hasAggregates: false })
+        }
         const res = await fetch(`/api/matches/list?playerId=${playerId}`, {
           cache: 'no-store',
         })
@@ -217,6 +240,19 @@ function PlayerProfileContent(): React.JSX.Element {
 
   const kpi: PlayerKpi | null = useMemo(() => {
     if (!rows || rows.length === 0) return null
+    if (fzthAgg?.hasAggregates && fzthAgg.kpi) {
+      return {
+        winRate: fzthAgg.kpi.winrate,
+        kdaAvg: fzthAgg.kpi.kdaAvg,
+        avgDurationMinutes: fzthAgg.kpi.avgDurationMinutes,
+        avgLastHits: 0,
+        gpmAvg: 0,
+        xpmAvg: 0,
+        damageAvg: 0,
+        towerDamageAvg: 0,
+        totalMatches: fzthAgg.kpi.totalMatches,
+      }
+    }
     const total = rows.length
     const wins = rows.reduce((a, r) => a + (r.result === 'win' ? 1 : 0), 0)
     const winRate = Number(((wins / Math.max(1, total)) * 100).toFixed(1))
