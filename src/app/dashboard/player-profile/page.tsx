@@ -372,8 +372,17 @@ function PlayerProfileContent(): React.JSX.Element {
                                 height={20}
                                 className="h-5 w-5 rounded"
                                 loading="lazy"
+                                onError={(e) => {
+                                  ;(
+                                    e.currentTarget as HTMLImageElement
+                                  ).style.display = 'none'
+                                }}
                               />
-                            ) : null}
+                            ) : (
+                              <div className="flex h-5 w-5 items-center justify-center rounded bg-neutral-700 text-[10px]">
+                                {name.charAt(0)}
+                              </div>
+                            )}
                             <span>{name}</span>
                           </div>
                         </td>
@@ -447,8 +456,17 @@ function PlayerProfileContent(): React.JSX.Element {
                                         height={20}
                                         className="h-5 w-5 rounded"
                                         loading="lazy"
+                                        onError={(e) => {
+                                          ;(
+                                            e.currentTarget as HTMLImageElement
+                                          ).style.display = 'none'
+                                        }}
                                       />
-                                    ) : null}
+                                    ) : (
+                                      <div className="flex h-5 w-5 items-center justify-center rounded bg-neutral-700 text-[10px]">
+                                        {name.charAt(0)}
+                                      </div>
+                                    )}
                                     <span>{name}</span>
                                   </>
                                 )

@@ -134,18 +134,32 @@ function MatchesPageContent(): React.JSX.Element {
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2">
                         {(() => {
+                          const name = getHeroName(m.hero_id)
                           const icon = getHeroIconUrl(m.hero_id)
-                          return icon ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={icon}
-                              alt={getHeroName(m.hero_id)}
-                              width={24}
-                              height={24}
-                              className="h-6 w-6 rounded"
-                              loading="lazy"
-                            />
-                          ) : null
+                          if (icon) {
+                            return (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={icon}
+                                alt={name}
+                                width={24}
+                                height={24}
+                                className="h-6 w-6 rounded"
+                                loading="lazy"
+                                onError={(e) => {
+                                  ;(
+                                    e.currentTarget as HTMLImageElement
+                                  ).style.display = 'none'
+                                }}
+                              />
+                            )
+                          }
+                          const initial = name?.charAt(0) || '?'
+                          return (
+                            <div className="flex h-6 w-6 items-center justify-center rounded bg-neutral-700 text-[10px]">
+                              {initial}
+                            </div>
+                          )
                         })()}
                         <span>{getHeroName(m.hero_id)}</span>
                       </div>
