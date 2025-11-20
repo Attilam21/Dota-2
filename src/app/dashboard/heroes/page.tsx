@@ -70,14 +70,8 @@ function HeroesContent(): React.JSX.Element {
         }
         const json: MatchRow[] = await listRes.json()
         if (!active) return
-        // filtro ultimi 180 giorni come il profilo (periodo analitico)
-        const now = Date.now()
-        const DAYS_180 = 180 * 24 * 60 * 60 * 1000
-        const filtered = (json || []).filter((m) => {
-          const t = new Date(m.start_time).getTime()
-          return Number.isFinite(t) && now - t <= DAYS_180
-        })
-        setRows(filtered)
+        // Usa tutte le partite disponibili (nessun filtro temporale)
+        setRows(json ?? [])
       } catch (e: any) {
         console.error('Heroes load error:', e)
         if (active) setError(e?.message ?? 'Errore sconosciuto')
@@ -184,8 +178,8 @@ function HeroesContent(): React.JSX.Element {
         <div>
           <h1 className="text-2xl font-semibold">Eroi</h1>
           <p className="text-sm text-neutral-400">
-            Panoramica delle performance per eroe negli ultimi 180 giorni (dati
-            di test).
+            Panoramica delle performance per eroe su tutte le partite
+            disponibili (dataset di test).
           </p>
         </div>
       </div>
@@ -201,7 +195,7 @@ function HeroesContent(): React.JSX.Element {
 
       {!loading && !error && rows && rows.length === 0 && (
         <div className="rounded-lg border border-neutral-800 p-6 text-neutral-300">
-          Nessuna partita trovata per questo giocatore negli ultimi 180 giorni.
+          Nessuna partita trovata per questo giocatore nel dataset disponibile.
         </div>
       )}
 
