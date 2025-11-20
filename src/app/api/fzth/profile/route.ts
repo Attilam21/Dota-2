@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@/utils/supabase'
+import { createClient } from '@supabase/supabase-js'
 
 type FzthProfileResponse = {
   playerId: number
@@ -39,15 +40,31 @@ export async function GET(req: Request) {
       { status: 400 },
     )
   }
-  const supabase = createServerClient(cookies())
   try {
+    const url =
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.NEXT_PUBBLIC_SUPABASE_URL
+    const anon =
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBBLIC_SUPABASE_ANON_KEY
+    const supabase =
+      url && anon
+        ? createClient(url, anon, { auth: { persistSession: false } })
+        : createServerClient(cookies())
     // Player
     const { data: players, error: pErr } = await supabase
       .from('fzth_players')
       .select('id, nickname, dota_account_id')
       .eq('dota_account_id', dotaId)
       .limit(1)
-    if (pErr) throw pErr
+    if (pErr) {
+      // eslint-disable-next-line no-console
+      console.error('FZTH_PROFILE_PLAYERS_ERROR', pErr)
+      return NextResponse.json(
+        { error: 'FZTH profile: player lookup error' },
+        { status: 500 },
+      )
+    }
     const player = players?.[0] as any
     if (!player?.id) {
       return NextResponse.json(
@@ -180,6 +197,9 @@ export async function GET(req: Request) {
   } catch (e: any) {
     // eslint-disable-next-line no-console
     console.error('FZTH_PROFILE_ERROR', e)
-    return NextResponse.json({ error: 'FZTH profile error' }, { status: 500 })
+    return NextResponse.json(
+      { error: String(e?.message ?? 'FZTH profile error') },
+      { status: 500 },
+    )
   }
 }
