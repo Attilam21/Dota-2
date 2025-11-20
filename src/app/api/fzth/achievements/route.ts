@@ -29,17 +29,15 @@ export async function GET(req: Request) {
       .eq('player_id', playerUuid)
     const { data: catalog } = await supabase
       .from('achievement_catalog')
-      .select('id, name, description, category, rarity')
+      .select('id, code, title')
     const cMap = new Map((catalog ?? []).map((c: any) => [c.id, c]))
     const items =
       (ach ?? []).map((a: any) => {
         const c = cMap.get(a.achievement_id) || {}
         return {
-          code: String(a.achievement_id ?? ''),
-          name: c.name ?? 'Achievement',
-          description: c.description ?? '',
-          category: c.category ?? 'general',
-          rarity: c.rarity ?? 'common',
+          achievementId: String(a.achievement_id ?? ''),
+          code: c.code ?? String(a.achievement_id ?? ''),
+          title: c.title ?? 'Achievement',
           unlockedAt: a.unlocked_at ?? null,
         }
       }) ?? []

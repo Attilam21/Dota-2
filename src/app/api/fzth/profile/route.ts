@@ -3,46 +3,29 @@ import { cookies } from 'next/headers'
 import { createServerClient } from '@/utils/supabase'
 
 type FzthProfileResponse = {
-  player: {
-    dotaAccountId: number
-    nickname: string | null
-  }
+  playerId: number
+  internalPlayerId: string
   kpi: {
     totalMatches: number
     winrate: number
     avgKda: number
-    fzthScore: number | null
+    avgDurationMin: number
   }
   level: {
     currentLevel: number
-    title: string
     currentXp: number
-    minXp: number
-    maxXp: number
-    xpRatio: number
-    badgeColor?: string | null
+    nextLevelXp: number | null
   } | null
-  achievements: {
-    total: number
-    unlocked: number
-    items: Array<{
-      code: string
-      name: string
-      description: string
-      category: string
-      rarity: string
-      unlockedAt: string | null
-    }>
-  }
-  playstyle: {
-    tags: string[]
-    notes?: string
-  }
-  insights: Array<{
-    id: string
-    createdAt: string
+  achievements: Array<{
+    achievementId: string
+    code: string
     title: string
-    message: string
+    unlockedAt: string
+  }>
+  insights: Array<{
+    type: string
+    content: string
+    createdAt: string
   }>
 }
 
@@ -73,7 +56,7 @@ export async function GET(req: Request) {
       )
     }
     const playerUuid = player.id as string
-    const nickname = player.nickname ?? null
+    // const nickname = player.nickname ?? null
 
     // KPI (stats agg) and score
     const { data: statsAgg } = await supabase
@@ -90,6 +73,8 @@ export async function GET(req: Request) {
       (totalMatches > 0 ? Math.round((totalWins / totalMatches) * 100) : 0)
     const avgKda = s.avg_kda ?? s.kda_avg ?? s.kda ?? 0
     const fzthScore = s.performance_index ?? s.fzth_score ?? null
+    const avgDurationMin =
+      s.avg_duration_minutes ?? s.avg_duration_min ?? s.avg_duration ?? 0
 
     // Level / progression
     let level: FzthProfileResponse['level'] | null = null
@@ -110,50 +95,38 @@ export async function GET(req: Request) {
       const next = lvlRows?.find(
         (l: any) => l.level_number === currentLevel + 1,
       )
-      const title = cur?.title ?? cur?.name ?? `Level ${currentLevel}`
       const minXp = cur?.min_xp ?? cur?.xp_min ?? 0
-      const maxXp = next?.min_xp ?? next?.xp_min ?? minXp + 100
-      const span = Math.max(1, maxXp - minXp)
-      const ratio = Math.max(0, Math.min(1, (currentXp - minXp) / span))
+      const nextLevelXp = next?.min_xp ?? next?.xp_min ?? null
       level = {
         currentLevel,
-        title,
         currentXp,
-        minXp,
-        maxXp,
-        xpRatio: Number(ratio.toFixed(2)),
-        badgeColor: cur?.badge_color ?? null,
+        nextLevelXp,
       }
     }
 
-    // Achievements
-    // Real schema uses achievement_id referencing achievement_catalog.id
+    // Achievements (real schema: player_achievements uses achievement_id referencing achievement_catalog.id)
     const { data: ach } = await supabase
       .from('player_achievements')
       .select('achievement_id, unlocked_at')
       .eq('player_id', playerUuid)
     const { data: catalog } = await supabase
       .from('achievement_catalog')
-      .select('id, name, description, category, rarity')
+      .select('id, code, title')
     const cMap = new Map((catalog ?? []).map((c: any) => [c.id, c]))
-    const items =
-      (ach ?? []).map((a: any) => {
+    const achievements: FzthProfileResponse['achievements'] = (ach ?? [])
+      .map((a: any) => {
         const c = cMap.get(a.achievement_id) || {}
         return {
-          code: String(a.achievement_id ?? ''),
-          name: c.name ?? 'Achievement',
-          description: c.description ?? '',
-          category: c.category ?? 'general',
-          rarity: c.rarity ?? 'common',
+          achievementId: String(a.achievement_id ?? ''),
+          code: c.code ?? String(a.achievement_id ?? ''),
+          title: c.title ?? 'Achievement',
           unlockedAt: a.unlocked_at ?? null,
         }
-      }) ?? []
-    items.sort((a, b) => (a.unlockedAt ? -1 : 1) - (b.unlockedAt ? -1 : 1))
-    const achievements = {
-      total: items.length,
-      unlocked: items.filter((i) => !!i.unlockedAt).length,
-      items,
-    }
+      })
+      .filter((x: any) => !!x.achievementId)
+      .sort(
+        (a: any, b: any) => (a.unlockedAt ? -1 : 1) - (b.unlockedAt ? -1 : 1),
+      )
 
     // Playstyle tags (simple rules)
     const tags: string[] = []
@@ -183,29 +156,24 @@ export async function GET(req: Request) {
       .eq('player_id', playerUuid)
       .order('created_at', { ascending: false })
       .limit(5)
-    const insights =
-      (insightsRows ?? []).map((r: any) => {
-        const it = (r.insight_type ?? 'insight') as string
-        const title = it.charAt(0).toUpperCase() + it.slice(1)
-        return {
-          id: String(r.id),
-          createdAt: r.created_at,
-          title,
-          message: r.content ?? '',
-        }
-      }) ?? []
+    const insights: FzthProfileResponse['insights'] =
+      (insightsRows ?? []).map((r: any) => ({
+        type: r.insight_type ?? 'insight',
+        content: r.content ?? '',
+        createdAt: r.created_at,
+      })) ?? []
 
     const resp: FzthProfileResponse = {
-      player: { dotaAccountId: dotaId, nickname },
+      playerId: dotaId,
+      internalPlayerId: playerUuid,
       kpi: {
         totalMatches,
         winrate,
         avgKda,
-        fzthScore,
+        avgDurationMin,
       },
       level,
       achievements,
-      playstyle: { tags },
       insights,
     }
     return NextResponse.json(resp)
