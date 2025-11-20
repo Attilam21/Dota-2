@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createServerClient } from '@/utils/supabase'
 import { createClient } from '@supabase/supabase-js'
 
 type FzthProfileResponse = {
@@ -41,16 +39,22 @@ export async function GET(req: Request) {
     )
   }
   try {
-    const url =
-      process.env.NEXT_PUBLIC_SUPABASE_URL ||
-      process.env.NEXT_PUBBLIC_SUPABASE_URL
-    const anon =
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.NEXT_PUBBLIC_SUPABASE_ANON_KEY
-    const supabase =
-      url && anon
-        ? createClient(url, anon, { auth: { persistSession: false } })
-        : createServerClient(cookies())
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!url || !serviceKey) {
+      // eslint-disable-next-line no-console
+      console.error('FZTH_PROFILE_ENV_MISSING', {
+        hasUrl: !!url,
+        hasService: !!serviceKey,
+      })
+      return NextResponse.json(
+        { error: 'Missing Supabase env' },
+        { status: 500 },
+      )
+    }
+    const supabase = createClient(url, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
     // Player
     const { data: players, error: pErr } = await supabase
       .from('fzth_players')
