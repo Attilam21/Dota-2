@@ -7,6 +7,7 @@ import Link from 'next/link'
 import React, { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { getPlayerIdFromSearchParams } from '@/lib/playerId'
+import { getHeroIconUrl, getHeroName } from '@/lib/dotaHeroes'
 
 const TEST_PLAYER_ID = 86745912
 
@@ -130,7 +131,25 @@ function MatchesPageContent(): React.JSX.Element {
                         {m.match_id}
                       </Link>
                     </td>
-                    <td className="px-3 py-2">{m.hero_id}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const icon = getHeroIconUrl(m.hero_id)
+                          return icon ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={icon}
+                              alt={getHeroName(m.hero_id)}
+                              width={24}
+                              height={24}
+                              className="h-6 w-6 rounded"
+                              loading="lazy"
+                            />
+                          ) : null
+                        })()}
+                        <span>{getHeroName(m.hero_id)}</span>
+                      </div>
+                    </td>
                     <td className="px-3 py-2">
                       {m.kills} / {m.deaths} / {m.assists}
                     </td>

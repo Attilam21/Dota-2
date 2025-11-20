@@ -4,6 +4,7 @@ import Link from 'next/link'
 import React, { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { getPlayerIdFromSearchParams } from '@/lib/playerId'
+import { getHeroIconUrl, getHeroName } from '@/lib/dotaHeroes'
 
 type MatchRow = {
   id: string
@@ -215,17 +216,34 @@ function DashboardOverview(): React.JSX.Element {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {topHeroes.map((h) => (
-                    <div
-                      key={h.heroId}
-                      className="flex items-center justify-between rounded-md bg-neutral-900/50 px-3 py-2"
-                    >
-                      <div className="text-sm">Eroe #{h.heroId}</div>
-                      <div className="text-xs text-neutral-400">
-                        {h.matches} partite · {h.winRate}% WR
+                  {topHeroes.map((h) => {
+                    const icon = getHeroIconUrl(h.heroId)
+                    const name = getHeroName(h.heroId)
+                    return (
+                      <div
+                        key={h.heroId}
+                        className="flex items-center justify-between rounded-md bg-neutral-900/50 px-3 py-2"
+                      >
+                        <div className="flex items-center gap-2 text-sm">
+                          {icon ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={icon}
+                              alt={name}
+                              width={20}
+                              height={20}
+                              className="h-5 w-5 rounded"
+                              loading="lazy"
+                            />
+                          ) : null}
+                          <span>{name}</span>
+                        </div>
+                        <div className="text-xs text-neutral-400">
+                          {h.matches} partite · {h.winRate}% WR
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -271,7 +289,30 @@ function DashboardOverview(): React.JSX.Element {
                         <td className="px-3 py-2">
                           {new Date(m.start_time).toLocaleString('it-IT')}
                         </td>
-                        <td className="px-3 py-2">Eroe #{m.hero_id}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const icon = getHeroIconUrl(m.hero_id)
+                              const name = getHeroName(m.hero_id)
+                              return (
+                                <>
+                                  {icon ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img
+                                      src={icon}
+                                      alt={name}
+                                      width={20}
+                                      height={20}
+                                      className="h-5 w-5 rounded"
+                                      loading="lazy"
+                                    />
+                                  ) : null}
+                                  <span>{name}</span>
+                                </>
+                              )
+                            })()}
+                          </div>
+                        </td>
                         <td className="px-3 py-2">
                           {m.kills} / {m.deaths} / {m.assists}
                         </td>

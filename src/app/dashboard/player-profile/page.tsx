@@ -5,6 +5,7 @@ import React, { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { getPlayerIdFromSearchParams } from '@/lib/playerId'
+import { getHeroIconUrl, getHeroName } from '@/lib/dotaHeroes'
 
 type MatchRow = {
   id: string
@@ -352,15 +353,37 @@ function PlayerProfileContent(): React.JSX.Element {
                   </tr>
                 </thead>
                 <tbody>
-                  {heroPool.map((h) => (
-                    <tr key={h.heroId} className="border-t border-neutral-800">
-                      <td className="px-3 py-2">Eroe #{h.heroId}</td>
-                      <td className="px-3 py-2">{h.matches}</td>
-                      <td className="px-3 py-2">{h.winRate}%</td>
-                      <td className="px-3 py-2">{h.kdaAvg}</td>
-                      <td className="px-3 py-2">{h.avgDurationMinutes}</td>
-                    </tr>
-                  ))}
+                  {heroPool.map((h) => {
+                    const icon = getHeroIconUrl(h.heroId)
+                    const name = getHeroName(h.heroId)
+                    return (
+                      <tr
+                        key={h.heroId}
+                        className="border-t border-neutral-800"
+                      >
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            {icon ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={icon}
+                                alt={name}
+                                width={20}
+                                height={20}
+                                className="h-5 w-5 rounded"
+                                loading="lazy"
+                              />
+                            ) : null}
+                            <span>{name}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2">{h.matches}</td>
+                        <td className="px-3 py-2">{h.winRate}%</td>
+                        <td className="px-3 py-2">{h.kdaAvg}</td>
+                        <td className="px-3 py-2">{h.avgDurationMinutes}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
@@ -408,7 +431,30 @@ function PlayerProfileContent(): React.JSX.Element {
                           <td className="px-3 py-2">
                             {new Date(m.start_time).toLocaleString('it-IT')}
                           </td>
-                          <td className="px-3 py-2">Eroe #{m.hero_id}</td>
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              {(() => {
+                                const icon = getHeroIconUrl(m.hero_id)
+                                const name = getHeroName(m.hero_id)
+                                return (
+                                  <>
+                                    {icon ? (
+                                      // eslint-disable-next-line @next/next/no-img-element
+                                      <img
+                                        src={icon}
+                                        alt={name}
+                                        width={20}
+                                        height={20}
+                                        className="h-5 w-5 rounded"
+                                        loading="lazy"
+                                      />
+                                    ) : null}
+                                    <span>{name}</span>
+                                  </>
+                                )
+                              })()}
+                            </div>
+                          </td>
                           <td className="px-3 py-2">
                             {m.kills} / {m.deaths} / {m.assists}
                           </td>
