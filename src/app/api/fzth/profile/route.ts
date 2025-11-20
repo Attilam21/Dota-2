@@ -96,6 +96,13 @@ export async function GET(req: Request) {
     const fzthScore = s.performance_index ?? s.fzth_score ?? null
     const avgDurationMin =
       s.avg_duration_minutes ?? s.avg_duration_min ?? s.avg_duration ?? 0
+    // Server log for KPI mapping
+    // eslint-disable-next-line no-console
+    console.log('FZTH profile KPI', {
+      playerId: dotaId,
+      row: s,
+      kpi: { totalMatches, winrate, avgKda, avgDurationMin },
+    })
 
     // Level / progression
     let level: FzthProfileResponse['level'] | null = null
@@ -197,6 +204,14 @@ export async function GET(req: Request) {
       achievements,
       insights,
     }
+    // eslint-disable-next-line no-console
+    console.log('FZTH profile payload', {
+      playerId: resp.playerId,
+      internalPlayerId: resp.internalPlayerId,
+      kpi: resp.kpi,
+      achievements: achievements?.length ?? 0,
+      insights: insights?.length ?? 0,
+    })
     return NextResponse.json(resp)
   } catch (e: any) {
     // eslint-disable-next-line no-console

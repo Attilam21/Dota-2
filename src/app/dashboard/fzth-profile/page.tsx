@@ -64,6 +64,10 @@ function FzthProfileContent(): React.JSX.Element {
         }
         const j: FzthProfileResponse = await res.json()
         if (!active) return
+        if (process.env.NODE_ENV !== 'production') {
+          // eslint-disable-next-line no-console
+          console.log('FZTH profile data', j)
+        }
         setData(j)
       } catch (e: any) {
         console.error('FZTH profile load error', e?.message ?? e)
