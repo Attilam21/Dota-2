@@ -10,14 +10,13 @@ import {
   buildMomentum,
   type HeroSnapshot as HeroSnap,
 } from '@/lib/analytics/overview'
+import {
+  calculatePlayerTelemetry,
+  type MatchRow as TelemetryMatchRow,
+} from '@/lib/analytics/playerTelemetry'
 import MultiLineChart from '@/components/charts/MultiLineChart'
 import type { PlayerOverviewKPI } from '@/services/dota/kpiService'
 import SyncPlayerPanel from '@/components/SyncPlayerPanel'
-import TelemetryPills from '@/components/dota/overview/TelemetryPills'
-import SparklineKpi from '@/components/dota/overview/SparklineKpi'
-import WowInsights from '@/components/dota/overview/WowInsights'
-import GamePhasesMatrix from '@/components/dota/overview/GamePhasesMatrix'
-import ConsistencyPill from '@/components/dota/overview/ConsistencyPill'
 
 type MatchRow = {
   id: string
@@ -208,64 +207,21 @@ function DashboardOverview(): React.JSX.Element {
     }
   }, [rows, overviewKPI])
 
-  // Calcola micro-KPI per Blocco C
-  const microKPI = useMemo(() => {
-    if (!rows || rows.length === 0 || !overviewKPI) return null
+  // Calcola telemetria completa del giocatore usando i nuovi helper
+  const playerTelemetry = useMemo(() => {
+    if (!rows || rows.length === 0) return null
 
-    const last20 = rows.slice(0, 20)
-    const kdas = last20.map((r) => {
-      const kda = (r.kills + r.assists) / Math.max(1, r.deaths)
-      return kda
-    })
+    const matchesForTelemetry: TelemetryMatchRow[] = rows.map((r) => ({
+      hero_id: r.hero_id,
+      kills: r.kills,
+      deaths: r.deaths,
+      assists: r.assists,
+      duration_seconds: r.duration_seconds,
+      result: r.result,
+    }))
 
-    const calcStdDev = (values: number[]) => {
-      if (values.length === 0) return null
-      const mean = values.reduce((a, b) => a + b, 0) / values.length
-      const variance =
-        values.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) /
-        values.length
-      return Math.sqrt(variance)
-    }
-
-    const kdaStdDev = calcStdDev(kdas)
-
-    // Stile di gioco dominante
-    const avgKills =
-      last20.reduce((acc, r) => acc + (r.kills ?? 0), 0) / last20.length
-    const avgAssists =
-      last20.reduce((acc, r) => acc + (r.assists ?? 0), 0) / last20.length
-    const playstyleLabel =
-      avgKills > 5 && avgAssists > 8
-        ? 'Aggressivo'
-        : avgKills < 3 && avgAssists < 5
-          ? 'Difensivo'
-          : 'Equilibrato'
-
-    // Lane più frequente (placeholder - da calcolare da hero pool se disponibile)
-    const laneMostFrequent = 'Mid' // placeholder
-
-    // Peak Performance
-    const peakKDA = kdas.length > 0 ? Math.max(...kdas) : 0
-    const peakGPM =
-      overviewKPI.gpmSeries.length > 0
-        ? Math.max(
-            ...(overviewKPI.gpmSeries
-              .map((s) => s.gpm)
-              .filter((g) => g > 0) || [0]),
-          )
-        : 0
-    const peakPerformance =
-      peakKDA > peakGPM / 100
-        ? `KDA: ${peakKDA.toFixed(2)}`
-        : `GPM: ${Math.round(peakGPM)}`
-
-    return {
-      consistencyStdDev: kdaStdDev,
-      playstyleLabel,
-      laneMostFrequent,
-      peakPerformance,
-    }
-  }, [rows, overviewKPI])
+    return calculatePlayerTelemetry(matchesForTelemetry, overviewKPI, styleKPI)
+  }, [rows, overviewKPI, styleKPI])
 
   // Calcola stato forma (ultimi 10 match)
   const formStatus = useMemo(() => {
@@ -613,9 +569,14 @@ function DashboardOverview(): React.JSX.Element {
           <div className="space-y-4 lg:col-span-2">
             {/* 🔷 BLOCCO B — TREND PRESTAZIONI */}
             <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-              <h2 className="mb-3 text-lg font-semibold text-neutral-200">
-                Trend Ultime 20 Partite
-              </h2>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-neutral-200">
+                  Trend Ultime 20 Partite
+                </h2>
+                <div className="text-xs text-neutral-400">
+                  {rows.length} partite analizzate
+                </div>
+              </div>
               {trendData.length > 0 ? (
                 <div className="h-[280px]">
                   <MultiLineChart
@@ -688,69 +649,162 @@ function DashboardOverview(): React.JSX.Element {
                   tooltip="Experience guadagnata al minuto: indica la velocità di leveling"
                 />
               </div>
+              {/* Hero Pool Snapshot - Top 3 */}
+              {heroSnap.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="mb-2 text-xs font-semibold text-neutral-300">
+                    Top 3 Eroi più Giocati
+                  </h3>
+                  <div className="space-y-2">
+                    {heroSnap.slice(0, 3).map((hero) => (
+                      <Link
+                        key={hero.heroId}
+                        href={`/dashboard/heroes?playerId=${playerId}`}
+                        className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900/70 p-2 transition-colors hover:bg-neutral-900/90"
+                      >
+                        {getHeroIconUrl(hero.heroId) && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={getHeroIconUrl(hero.heroId)}
+                            alt={getHeroName(hero.heroId)}
+                            width={24}
+                            height={24}
+                            className="h-6 w-6 rounded"
+                          />
+                        )}
+                        <div className="flex-1">
+                          <div className="text-xs font-medium text-neutral-200">
+                            {getHeroName(hero.heroId)}
+                          </div>
+                          <div className="text-[10px] text-neutral-400">
+                            {hero.matches} partite • {hero.winRate}% WR • KDA{' '}
+                            {hero.kdaAvg.toFixed(2)}
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                  <Link
+                    href={`/dashboard/heroes?playerId=${playerId}`}
+                    className="mt-2 block text-center text-xs text-blue-400 hover:underline"
+                  >
+                    Vedi Hero Pool completo →
+                  </Link>
+                </div>
+              )}
             </div>
 
-            {/* 🔷 BLOCCO C — TELEMETRIA RAPIDA DEL GIOCATORE */}
-            {microKPI && (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-                <h2 className="mb-3 text-sm font-semibold text-neutral-200">
-                  Telemetria Rapida
-                </h2>
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Consistenza */}
-                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
-                    <div className="mb-1 text-xs text-neutral-400">
-                      Consistenza
+            {/* 🔷 BLOCCO C — TELEMETRIA ESTESA */}
+            {playerTelemetry && (
+              <div className="space-y-4">
+                {/* Statistiche aggiuntive */}
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+                  <h2 className="mb-3 text-sm font-semibold text-neutral-200">
+                    Statistiche Aggiuntive
+                  </h2>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
+                      <div className="mb-1 text-xs text-neutral-400">
+                        Partite totali
+                      </div>
+                      <div className="text-base font-semibold text-neutral-200">
+                        {formatValueOrNA(playerTelemetry.totalMatches)}
+                      </div>
                     </div>
-                    <div className="mb-1 text-base font-semibold text-neutral-200">
-                      {microKPI.consistencyStdDev !== null
-                        ? microKPI.consistencyStdDev.toFixed(2)
-                        : formatValueOrNA(null)}
+                    <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
+                      <div className="mb-1 text-xs text-neutral-400">
+                        Hero Pool
+                      </div>
+                      <div className="text-base font-semibold text-neutral-200">
+                        {formatValueOrNA(playerTelemetry.heroPoolSize)} eroi
+                      </div>
                     </div>
-                    <div className="text-[10px] text-neutral-500">
-                      Dev. standard KDA
+                    <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
+                      <div className="mb-1 text-xs text-neutral-400">
+                        Aggressività
+                      </div>
+                      <div className="text-base font-semibold text-neutral-200">
+                        {formatValueOrNA(playerTelemetry.aggressivenessIndex)}
+                        /100
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Stile di gioco dominante */}
-                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
-                    <div className="mb-1 text-xs text-neutral-400">
-                      Stile di gioco
-                    </div>
-                    <div className="mb-1 text-base font-semibold text-neutral-200">
-                      {microKPI.playstyleLabel}
-                    </div>
-                    <div className="text-[10px] text-neutral-500">
-                      Basato su kills e assist
-                    </div>
-                  </div>
-
-                  {/* Lane più frequente */}
-                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
-                    <div className="mb-1 text-xs text-neutral-400">
-                      Lane più frequente
-                    </div>
-                    <div className="mb-1 text-base font-semibold text-neutral-200">
-                      {microKPI.laneMostFrequent}
-                    </div>
-                    <div className="text-[10px] text-neutral-500">
-                      Ultime 20 partite
+                    <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
+                      <div className="mb-1 text-xs text-neutral-400">
+                        Consistenza
+                      </div>
+                      <div className="text-base font-semibold text-neutral-200">
+                        {formatValueOrNA(playerTelemetry.consistencyIndex)}/100
+                      </div>
                     </div>
                   </div>
-
-                  {/* Peak Performance */}
-                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
-                    <div className="mb-1 text-xs text-neutral-400">
-                      Peak Performance
+                  {/* Streak recente */}
+                  {playerTelemetry.recentStreak.count > 0 && (
+                    <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
+                      <div className="mb-1 text-xs text-neutral-400">
+                        Streak recente
+                      </div>
+                      <div className="text-base font-semibold text-neutral-200">
+                        <span
+                          className={
+                            playerTelemetry.recentStreak.type === 'win'
+                              ? 'text-green-400'
+                              : 'text-red-400'
+                          }
+                        >
+                          {playerTelemetry.recentStreak.type === 'win'
+                            ? 'Vittorie'
+                            : 'Sconfitte'}{' '}
+                          consecutive: {playerTelemetry.recentStreak.count}
+                        </span>
+                      </div>
                     </div>
-                    <div className="mb-1 text-base font-semibold text-neutral-200">
-                      {microKPI.peakPerformance}
-                    </div>
-                    <div className="text-[10px] text-neutral-500">
-                      Migliore performance
-                    </div>
-                  </div>
+                  )}
                 </div>
+
+                {/* Insight FZTH - Punti di forza e debolezze */}
+                {(playerTelemetry.strengths.length > 0 ||
+                  playerTelemetry.weaknesses.length > 0) && (
+                  <div className="space-y-3">
+                    {playerTelemetry.strengths.length > 0 && (
+                      <div className="rounded-lg border border-green-800/50 bg-green-900/20 p-4 backdrop-blur-sm">
+                        <h3 className="mb-2 text-sm font-semibold text-green-300">
+                          ✓ Punti di Forza
+                        </h3>
+                        <div className="space-y-2">
+                          {playerTelemetry.strengths.map((strength, idx) => (
+                            <div key={idx}>
+                              <div className="text-xs font-medium text-green-200">
+                                {strength.title}
+                              </div>
+                              <div className="text-[10px] text-green-300/80">
+                                {strength.description}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {playerTelemetry.weaknesses.length > 0 && (
+                      <div className="rounded-lg border border-yellow-800/50 bg-yellow-900/20 p-4 backdrop-blur-sm">
+                        <h3 className="mb-2 text-sm font-semibold text-yellow-300">
+                          ⚠ Aree di Miglioramento
+                        </h3>
+                        <div className="space-y-2">
+                          {playerTelemetry.weaknesses.map((weakness, idx) => (
+                            <div key={idx}>
+                              <div className="text-xs font-medium text-yellow-200">
+                                {weakness.title}
+                              </div>
+                              <div className="text-[10px] text-yellow-300/80">
+                                {weakness.description}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
