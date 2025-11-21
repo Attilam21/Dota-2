@@ -8,9 +8,8 @@ import LineChart from '@/components/charts/LineChart'
 import MultiLineChart from '@/components/charts/MultiLineChart'
 import BarChart from '@/components/charts/BarChart'
 import ExplanationCard from '@/components/charts/ExplanationCard'
-import PlaystyleRadar from '@/components/dota/performance/PlaystyleRadar'
-import RecoveryScore from '@/components/dota/performance/RecoveryScore'
-import FightPositioning from '@/components/dota/performance/FightPositioning'
+// [REMOVED - TIER 2] PlaystyleRadar, RecoveryScore, FightPositioning
+// Questi componenti mostrano indici sintetici avanzati non direttamente derivati da KPI Tier-1
 import type {
   PlayerOverviewKPI,
   StyleOfPlayKPI,
@@ -336,124 +335,17 @@ function PerformanceContent(): React.JSX.Element {
               )}
             </div>
 
-            {/* 3.2. Stile di Gioco – Radar Chart */}
-            {styleKPI && (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-                <h3 className="mb-3 text-sm font-semibold text-neutral-200">
-                  Stile di Gioco – Radar
-                </h3>
-                <PlaystyleRadar
-                  aggression={Math.min(
-                    100,
-                    Math.max(0, styleKPI.killsPerMinute * 20),
-                  )}
-                  kp={Math.min(100, Math.max(0, styleKPI.fightParticipation))}
-                  farm={Math.min(
-                    100,
-                    Math.max(
-                      0,
-                      ((styleKPI.farmingEfficiency.avgGpm || 0) / 600) * 100,
-                    ),
-                  )}
-                  macro={Math.min(
-                    100,
-                    Math.max(0, ((styleKPI.avgTowerDamage || 0) / 3000) * 100),
-                  )}
-                />
-                <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
-                  <div className="mb-2 text-xs font-medium text-neutral-200">
-                    Interpretazione Radar
-                  </div>
-                  <div className="mb-3 text-[10px] text-neutral-300">
-                    Il radar mostra il tuo profilo di gioco su 4 assi:
-                    Aggressività (capacità di generare kill e pressione), Farm
-                    (efficienza nella raccolta risorse), Macro (gestione degli
-                    obiettivi), KP% (partecipazione ai combattimenti).
-                  </div>
-                  <Link
-                    href={`/dashboard/coaching?playerId=${playerId}`}
-                    className="block rounded bg-blue-600/80 px-3 py-1.5 text-center text-[10px] font-medium text-white transition-colors hover:bg-blue-600"
-                  >
-                    Genera Task per ottimizzare lo stile →
-                  </Link>
-                </div>
-              </div>
-            )}
+            {/* [REMOVED - TIER 2] Stile di Gioco – Radar Chart
+                Rimossa perché mostra indici sintetici avanzati (0-100) non direttamente derivati da KPI Tier-1
+            */}
 
-            {/* Indice di Aggressività */}
-            {styleKPI && overviewKPI && (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-                <h3 className="mb-3 text-sm font-semibold text-neutral-200">
-                  Indice di Aggressività
-                </h3>
-                <div className="mb-3">
-                  <div className="mb-1 text-xs text-neutral-400">
-                    Score: {Math.round(styleKPI.killsPerMinute * 20)} / 100
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-neutral-900">
-                    <div
-                      className="h-2 rounded-full bg-blue-500"
-                      style={{
-                        width: `${Math.min(
-                          100,
-                          styleKPI.killsPerMinute * 20,
-                        )}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="mb-3 text-[10px] text-neutral-300">
-                  {styleKPI.killsPerMinute > 0.3
-                    ? 'Stile di gioco aggressivo: generi molte kill e pressione costante.'
-                    : styleKPI.killsPerMinute > 0.15
-                      ? 'Stile equilibrato: mix tra aggressività e farm.'
-                      : 'Stile passivo: concentrato su farm e posizionamento sicuro.'}
-                </div>
-                <Link
-                  href={`/dashboard/coaching?playerId=${playerId}`}
-                  className="block rounded bg-blue-600/80 px-3 py-1.5 text-center text-[10px] font-medium text-white transition-colors hover:bg-blue-600"
-                >
-                  Genera Task per aggressività →
-                </Link>
-              </div>
-            )}
+            {/* [REMOVED - TIER 2] Indice di Aggressività
+                Rimossa perché mostra indice composito (0-100) non direttamente derivato da KPI Tier-1
+            */}
 
-            {/* Recovery Index */}
-            {overviewKPI && (
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-                <RecoveryScore
-                  score={(() => {
-                    // Calcolo recovery score (approssimato)
-                    const recoveryGpm =
-                      Math.max(0, (overviewKPI.avgGpm || 0) - 300) / 2
-                    const recoveryXpm =
-                      Math.max(0, (overviewKPI.avgXpm || 0) - 400) / 2
-                    const comebackKills = 50 // placeholder
-                    return Math.round(
-                      (recoveryGpm + recoveryXpm + comebackKills) / 3,
-                    )
-                  })()}
-                  recoveryGpm={overviewKPI.avgGpm}
-                  recoveryXpm={overviewKPI.avgXpm}
-                />
-                <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
-                  <div className="mb-2 text-xs font-medium text-neutral-200">
-                    Interpretazione Recovery
-                  </div>
-                  <div className="mb-3 text-[10px] text-neutral-300">
-                    Il Recovery Index misura la tua capacità di scalare mid/late
-                    game. Un indice alto indica buona capacità di recupero anche
-                    dopo un early game difficile.
-                  </div>
-                  <Link
-                    href={`/dashboard/coaching?playerId=${playerId}`}
-                    className="block rounded bg-blue-600/80 px-3 py-1.5 text-center text-[10px] font-medium text-white transition-colors hover:bg-blue-600"
-                  >
-                    Genera Task per recovery →
-                  </Link>
-                </div>
-              </div>
-            )}
+            {/* [REMOVED - TIER 2] Recovery Index
+                Rimossa perché mostra indice composito (0-100) non direttamente derivato da KPI Tier-1
+            */}
           </div>
         </div>
       )}

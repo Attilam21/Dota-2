@@ -10,10 +10,8 @@ import {
   buildMomentum,
   type HeroSnapshot as HeroSnap,
 } from '@/lib/analytics/overview'
-import {
-  calculatePlayerTelemetry,
-  type MatchRow as TelemetryMatchRow,
-} from '@/lib/analytics/playerTelemetry'
+// [REMOVED - TIER 2] calculatePlayerTelemetry, TelemetryMatchRow
+// Rimossi perché utilizzati solo per componenti Tier-2 rimossi
 import MultiLineChart from '@/components/charts/MultiLineChart'
 import type { PlayerOverviewKPI } from '@/services/dota/kpiService'
 import SyncPlayerPanel from '@/components/SyncPlayerPanel'
@@ -207,21 +205,9 @@ function DashboardOverview(): React.JSX.Element {
     }
   }, [rows, overviewKPI])
 
-  // Calcola telemetria completa del giocatore usando i nuovi helper
-  const playerTelemetry = useMemo(() => {
-    if (!rows || rows.length === 0) return null
-
-    const matchesForTelemetry: TelemetryMatchRow[] = rows.map((r) => ({
-      hero_id: r.hero_id,
-      kills: r.kills,
-      deaths: r.deaths,
-      assists: r.assists,
-      duration_seconds: r.duration_seconds,
-      result: r.result,
-    }))
-
-    return calculatePlayerTelemetry(matchesForTelemetry, overviewKPI, styleKPI)
-  }, [rows, overviewKPI, styleKPI])
+  // [REMOVED - TIER 2] playerTelemetry
+  // Rimossa perché utilizzata solo per componenti Tier-2 (Statistiche Aggiuntive, Punti di Forza/Debolezze)
+  // che sono stati rimossi. I dati base (partite totali, hero pool) sono già disponibili direttamente da rows.
 
   // Calcola stato forma (ultimi 10 match)
   const formStatus = useMemo(() => {
@@ -431,30 +417,46 @@ function DashboardOverview(): React.JSX.Element {
   }, [rows, overviewKPI])
 
   // Trend prestazioni per grafico (ultime 10-20 partite)
+  // Fix: gestisce NaN e valori mancanti per evitare crollo verticale
   const trendData = useMemo(() => {
     if (!rows || rows.length === 0 || !overviewKPI) return []
     const last20 = rows.slice(0, 20).reverse() // cronologico crescente
 
-    return last20.map((r, idx) => {
-      const matchesUpToIdx = last20.slice(0, idx + 1)
-      const wins = matchesUpToIdx.filter((m) => m.result === 'win').length
-      const winrate =
-        matchesUpToIdx.length > 0 ? (wins / matchesUpToIdx.length) * 100 : 0
-      const avgKda =
-        matchesUpToIdx.length > 0
-          ? matchesUpToIdx.reduce((acc, m) => {
-              const kda = (m.kills + m.assists) / Math.max(1, m.deaths)
-              return acc + kda
-            }, 0) / matchesUpToIdx.length
-          : 0
+    let lastValidKda = 0
+    let lastValidGpm = 0
 
-      return {
-        x: idx,
-        winrate: Number(winrate.toFixed(1)),
-        kda: Number(avgKda.toFixed(2)),
-        gpm: overviewKPI.gpmSeries?.[idx]?.gpm || 0,
-      }
-    })
+    return last20
+      .map((r, idx) => {
+        const matchesUpToIdx = last20.slice(0, idx + 1)
+        const wins = matchesUpToIdx.filter((m) => m.result === 'win').length
+        const winrate =
+          matchesUpToIdx.length > 0 ? (wins / matchesUpToIdx.length) * 100 : 0
+
+        // Calcola KDA con gestione NaN
+        const kda =
+          matchesUpToIdx.length > 0
+            ? matchesUpToIdx.reduce((acc, m) => {
+                const kda = (m.kills + m.assists) / Math.max(1, m.deaths)
+                return acc + (isNaN(kda) ? 0 : kda)
+              }, 0) / matchesUpToIdx.length
+            : 0
+
+        // Usa ultimo valore valido se NaN o 0
+        const validKda = isNaN(kda) || kda === 0 ? lastValidKda : kda
+        if (validKda > 0) lastValidKda = validKda
+
+        // GPM da serie (gestisce valori mancanti)
+        const gpm = overviewKPI.gpmSeries?.[idx]?.gpm || lastValidGpm || 0
+        if (gpm > 0) lastValidGpm = gpm
+
+        return {
+          x: idx,
+          winrate: Number(winrate.toFixed(1)),
+          kda: Number(validKda.toFixed(2)),
+          gpm: Number(gpm.toFixed(0)),
+        }
+      })
+      .filter((d) => !isNaN(d.kda) && !isNaN(d.gpm) && !isNaN(d.winrate))
   }, [rows, overviewKPI])
 
   // Insights sintetici (logiche statiche basate su dati reali)
@@ -594,7 +596,7 @@ function DashboardOverview(): React.JSX.Element {
                 <div className="text-sm text-neutral-500">
                   {kpiLoading
                     ? 'Caricamento dati trend...'
-                    : 'Dati trend non disponibili'}
+                    : 'Dati non disponibili per questa sezione (dataset limitato per questo account).'}
                 </div>
               )}
             </div>
@@ -700,119 +702,19 @@ function DashboardOverview(): React.JSX.Element {
               )}
             </div>
 
-            {/* 🔷 BLOCCO C — TELEMETRIA ESTESA */}
-            {playerTelemetry && (
-              <div className="space-y-4">
-                {/* Statistiche aggiuntive */}
-                <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-                  <h2 className="mb-3 text-sm font-semibold text-neutral-200">
-                    Statistiche Aggiuntive
-                  </h2>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
-                      <div className="mb-1 text-xs text-neutral-400">
-                        Partite totali
-                      </div>
-                      <div className="text-base font-semibold text-neutral-200">
-                        {formatValueOrNA(playerTelemetry.totalMatches)}
-                      </div>
-                    </div>
-                    <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
-                      <div className="mb-1 text-xs text-neutral-400">
-                        Hero Pool
-                      </div>
-                      <div className="text-base font-semibold text-neutral-200">
-                        {formatValueOrNA(playerTelemetry.heroPoolSize)} eroi
-                      </div>
-                    </div>
-                    <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
-                      <div className="mb-1 text-xs text-neutral-400">
-                        Aggressività
-                      </div>
-                      <div className="text-base font-semibold text-neutral-200">
-                        {formatValueOrNA(playerTelemetry.aggressivenessIndex)}
-                        /100
-                      </div>
-                    </div>
-                    <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
-                      <div className="mb-1 text-xs text-neutral-400">
-                        Consistenza
-                      </div>
-                      <div className="text-base font-semibold text-neutral-200">
-                        {formatValueOrNA(playerTelemetry.consistencyIndex)}/100
-                      </div>
-                    </div>
-                  </div>
-                  {/* Streak recente */}
-                  {playerTelemetry.recentStreak.count > 0 && (
-                    <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
-                      <div className="mb-1 text-xs text-neutral-400">
-                        Streak recente
-                      </div>
-                      <div className="text-base font-semibold text-neutral-200">
-                        <span
-                          className={
-                            playerTelemetry.recentStreak.type === 'win'
-                              ? 'text-green-400'
-                              : 'text-red-400'
-                          }
-                        >
-                          {playerTelemetry.recentStreak.type === 'win'
-                            ? 'Vittorie'
-                            : 'Sconfitte'}{' '}
-                          consecutive: {playerTelemetry.recentStreak.count}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
+            {/* [REMOVED - TIER 2] Statistiche Aggiuntive
+                Rimossa perché contiene:
+                - Aggressività X/100 (indice composito non direttamente derivato da KPI Tier-1)
+                - Consistenza X/100 (indice composito non direttamente derivato da KPI Tier-1)
+                - Streak recente (non basato su tabelle attuali)
+                
+                Mantenute solo statistiche base (Partite totali, Hero Pool) se necessarie, ma integrate nel blocco principale.
+            */}
 
-                {/* Insight FZTH - Punti di forza e debolezze */}
-                {(playerTelemetry.strengths.length > 0 ||
-                  playerTelemetry.weaknesses.length > 0) && (
-                  <div className="space-y-3">
-                    {playerTelemetry.strengths.length > 0 && (
-                      <div className="rounded-lg border border-green-800/50 bg-green-900/20 p-4 backdrop-blur-sm">
-                        <h3 className="mb-2 text-sm font-semibold text-green-300">
-                          ✓ Punti di Forza
-                        </h3>
-                        <div className="space-y-2">
-                          {playerTelemetry.strengths.map((strength, idx) => (
-                            <div key={idx}>
-                              <div className="text-xs font-medium text-green-200">
-                                {strength.title}
-                              </div>
-                              <div className="text-[10px] text-green-300/80">
-                                {strength.description}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    {playerTelemetry.weaknesses.length > 0 && (
-                      <div className="rounded-lg border border-yellow-800/50 bg-yellow-900/20 p-4 backdrop-blur-sm">
-                        <h3 className="mb-2 text-sm font-semibold text-yellow-300">
-                          ⚠ Aree di Miglioramento
-                        </h3>
-                        <div className="space-y-2">
-                          {playerTelemetry.weaknesses.map((weakness, idx) => (
-                            <div key={idx}>
-                              <div className="text-xs font-medium text-yellow-200">
-                                {weakness.title}
-                              </div>
-                              <div className="text-[10px] text-yellow-300/80">
-                                {weakness.description}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
+            {/* [REMOVED - TIER 2] Insight FZTH - Punti di forza e debolezze
+                Rimossa perché contiene insight generici non allineati a dati reali delle tabelle attuali.
+                Gli insight devono essere basati su KPI Tier-1 specifici (KDA, GPM, winrate, ecc.) non su logiche compositive.
+            */}
           </div>
         </div>
       )}
