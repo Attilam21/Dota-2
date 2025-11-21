@@ -156,7 +156,9 @@ function FzthProfileContent(): React.JSX.Element {
           <div className="rounded-lg border border-neutral-800 p-4">
             {!data.kpi && (
               <div className="mb-2 text-xs text-yellow-400">
-                Nessun dato aggregato disponibile, esegui la sincronizzazione.
+                Nessuna partita disponibile per questo giocatore. I dati
+                verranno mostrati quando saranno disponibili partite da
+                OpenDota.
               </div>
             )}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

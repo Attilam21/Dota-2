@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getRecentMatches } from '@/services/dota/opendotaAdapter'
 
 type FzthKpi = {
   totalMatches: number
@@ -82,20 +83,80 @@ export async function GET(req: Request) {
     const playerUuid = player.id as string
     // const nickname = player.nickname ?? null
 
-    // KPI (stats agg) and score
-    const { data: statsAgg } = await supabase
-      .from('player_stats_agg')
-      .select('*')
-      .eq('player_id', playerUuid)
-      .limit(1)
-    const s = (statsAgg?.[0] as any) || null
-    const kpi: FzthProfileResponse['kpi'] =
-      s &&
-      (s.total_matches != null ||
-        s.winrate != null ||
-        s.avg_kda != null ||
-        s.avg_duration_sec != null)
-        ? {
+    // KPI: calcolati dalle partite reali di OpenDota tramite opendotaAdapter
+    // Questo garantisce che i dati siano sempre aggiornati e mostrino le partite più recenti
+    let kpi: FzthProfileResponse['kpi'] = null
+    try {
+      // Chiama direttamente l'adapter che usa OpenDota come sorgente primaria
+      // Limite aumentato a 1000 per avere statistiche più accurate
+      const matches = await getRecentMatches(dotaId, 1000)
+
+      if (matches && matches.length > 0) {
+        // Calcola KPI dalle partite reali
+        const totalMatches = matches.length
+        const wins = matches.filter((m) => m.result === 'win').length
+        const winrate = totalMatches > 0 ? (wins / totalMatches) * 100 : 0
+
+        const sumKills = matches.reduce((acc, m) => acc + (m.kills ?? 0), 0)
+        const sumDeaths = matches.reduce((acc, m) => acc + (m.deaths ?? 0), 0)
+        const sumAssists = matches.reduce((acc, m) => acc + (m.assists ?? 0), 0)
+        const avgKills = totalMatches > 0 ? sumKills / totalMatches : 0
+        const avgDeaths = totalMatches > 0 ? sumDeaths / totalMatches : 0
+        const avgAssists = totalMatches > 0 ? sumAssists / totalMatches : 0
+        const avgKda =
+          avgDeaths > 0
+            ? (avgKills + avgAssists) / avgDeaths
+            : avgKills + avgAssists
+
+        const sumDuration = matches.reduce(
+          (acc, m) => acc + (m.duration_seconds ?? 0),
+          0,
+        )
+        const avgDurationSec = totalMatches > 0 ? sumDuration / totalMatches : 0
+        const avgDurationMin = Math.round(avgDurationSec / 60)
+
+        kpi = {
+          totalMatches,
+          winrate: Number(winrate.toFixed(1)),
+          avgKda: Number(avgKda.toFixed(2)),
+          avgDurationMin,
+        }
+
+        // eslint-disable-next-line no-console
+        console.log('FZTH PROFILE: KPI calculated from OpenDota matches', {
+          playerId: dotaId,
+          totalMatches,
+          kpi,
+        })
+      } else {
+        // Nessuna partita disponibile - KPI rimane null
+        // La UI gestirà questo caso mostrando valori 0 o messaggio appropriato
+        // eslint-disable-next-line no-console
+        console.log('FZTH PROFILE: no matches found for player', dotaId)
+      }
+    } catch (kpiError: any) {
+      // Se OpenDota fallisce, prova fallback a Supabase come ultima risorsa
+      // eslint-disable-next-line no-console
+      console.error(
+        'FZTH PROFILE: OpenDota error, trying Supabase fallback',
+        kpiError,
+      )
+
+      try {
+        const { data: statsAgg } = await supabase
+          .from('player_stats_agg')
+          .select('*')
+          .eq('player_id', playerUuid)
+          .limit(1)
+        const s = (statsAgg?.[0] as any) || null
+        if (
+          s &&
+          (s.total_matches != null ||
+            s.winrate != null ||
+            s.avg_kda != null ||
+            s.avg_duration_sec != null)
+        ) {
+          kpi = {
             totalMatches: s.total_matches ?? 0,
             winrate: s.winrate ?? 0,
             avgKda: s.avg_kda ?? 0,
@@ -104,14 +165,21 @@ export async function GET(req: Request) {
                 ? Math.round((s.avg_duration_sec as number) / 60)
                 : 0,
           }
-        : null
-    // Server log for KPI mapping
-    // eslint-disable-next-line no-console
-    console.log('FZTH PROFILE: using player_stats_agg row', {
-      playerId: dotaId,
-      row: s,
-      kpi,
-    })
+          // eslint-disable-next-line no-console
+          console.log('FZTH PROFILE: using Supabase fallback', {
+            playerId: dotaId,
+            kpi,
+          })
+        }
+      } catch (fallbackError: any) {
+        // eslint-disable-next-line no-console
+        console.error(
+          'FZTH PROFILE: Supabase fallback also failed',
+          fallbackError,
+        )
+        // KPI rimane null se entrambi falliscono
+      }
+    }
 
     // Level / progression
     let level: FzthProfileResponse['level'] | null = null
