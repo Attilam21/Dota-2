@@ -15,6 +15,9 @@ import {
 import MultiLineChart from '@/components/charts/MultiLineChart'
 import type { PlayerOverviewKPI } from '@/services/dota/kpiService'
 import SyncPlayerPanel from '@/components/SyncPlayerPanel'
+import PlayerFormSnapshotSection from '@/components/dota/dashboard/PlayerFormSnapshotSection'
+import { calculatePlayerFormSnapshot } from '@/lib/dota/formSnapshot'
+import type { PlayerFormSnapshot } from '@/types/dotaSnapshot'
 
 type MatchRow = {
   id: string
@@ -76,6 +79,9 @@ function DashboardOverview(): React.JSX.Element {
     fightParticipation: number
     earlyDeathsAvg: number
   } | null>(null)
+  const [formSnapshot, setFormSnapshot] = useState<PlayerFormSnapshot | null>(
+    null,
+  )
 
   // Unica chiamata API per caricare le partite recenti
   useEffect(() => {
@@ -459,6 +465,46 @@ function DashboardOverview(): React.JSX.Element {
       .filter((d) => !isNaN(d.kda) && !isNaN(d.gpm) && !isNaN(d.winrate))
   }, [rows, overviewKPI])
 
+  // Calcola Snapshot Stato Forma (ultime 5 vs 20 partite)
+  useEffect(() => {
+    if (!rows || rows.length === 0) {
+      setFormSnapshot(null)
+      return
+    }
+
+    // Prepara dati per calcolo snapshot (usa dati disponibili)
+    const matchesForSnapshot = rows.map((r) => ({
+      kills: r.kills ?? 0,
+      deaths: r.deaths ?? 0,
+      assists: r.assists ?? 0,
+      result: r.result,
+      start_time: r.start_time,
+      // GPM/XPM possono non essere disponibili direttamente in rows,
+      // quindi li prenderemo da overviewKPI se disponibile
+      gpm: null,
+      xpm: null,
+    }))
+
+    // Calcola snapshot
+    const snapshot = calculatePlayerFormSnapshot(
+      matchesForSnapshot,
+      overviewKPI?.gpmSeries,
+      overviewKPI?.xpmSeries,
+    )
+
+    // Debug log (light)
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[D2-SNAPSHOT] snapshot computed', {
+        sampleSizeTotal: snapshot.sampleSizeTotal,
+        sampleSizeRecent: snapshot.sampleSizeRecent,
+        winrateRecent: snapshot.winrateRecent,
+        winrateTotal: snapshot.winrateTotal,
+      })
+    }
+
+    setFormSnapshot(snapshot)
+  }, [rows, overviewKPI])
+
   // Insights sintetici (logiche statiche basate su dati reali)
   const insights = useMemo(() => {
     if (!rows || rows.length === 0 || !overviewKPI) return null
@@ -566,143 +612,155 @@ function DashboardOverview(): React.JSX.Element {
       )}
 
       {!loading && !error && rows && rows.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {/* Colonna sinistra - Trend principale (2/3 su desktop) */}
-          <div className="space-y-4 lg:col-span-2">
-            {/* 🔷 BLOCCO B — TREND PRESTAZIONI */}
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-neutral-200">
-                  Trend Ultime 20 Partite
-                </h2>
-                <div className="text-xs text-neutral-400">
-                  {rows.length} partite analizzate
+        <>
+          {/* Snapshot Stato Forma */}
+          {formSnapshot && (
+            <PlayerFormSnapshotSection snapshot={formSnapshot} />
+          )}
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            {/* Colonna sinistra - Trend principale (2/3 su desktop) */}
+            <div className="space-y-4 lg:col-span-2">
+              {/* 🔷 BLOCCO B — TREND PRESTAZIONI */}
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-neutral-200">
+                    Trend Ultime 20 Partite
+                  </h2>
+                  <div className="text-xs text-neutral-400">
+                    {rows.length} partite analizzate
+                  </div>
                 </div>
+                {trendData.length > 0 ? (
+                  <div className="h-[280px]">
+                    <MultiLineChart
+                      data={trendData}
+                      lines={[
+                        {
+                          key: 'winrate',
+                          color: '#22c55e',
+                          label: 'Winrate %',
+                        },
+                        { key: 'kda', color: '#60a5fa', label: 'KDA' },
+                        { key: 'gpm', color: '#f59e0b', label: 'GPM' },
+                      ]}
+                      width={800}
+                      height={280}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-sm text-neutral-500">
+                    {kpiLoading
+                      ? 'Caricamento dati trend...'
+                      : 'Dati non disponibili per questa sezione (dataset limitato per questo account).'}
+                  </div>
+                )}
               </div>
-              {trendData.length > 0 ? (
-                <div className="h-[280px]">
-                  <MultiLineChart
-                    data={trendData}
-                    lines={[
-                      { key: 'winrate', color: '#22c55e', label: 'Winrate %' },
-                      { key: 'kda', color: '#60a5fa', label: 'KDA' },
-                      { key: 'gpm', color: '#f59e0b', label: 'GPM' },
-                    ]}
-                    width={800}
-                    height={280}
+            </div>
+
+            {/* Colonna destra - KPI e Telemetria (1/3 su desktop) */}
+            <div className="space-y-4">
+              {/* 🔷 BLOCCO A — IDENTITÀ GIOCATORE */}
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+                <h2 className="mb-3 text-lg font-semibold text-neutral-200">
+                  Identità Giocatore
+                </h2>
+                <div className="mb-3">
+                  <div className="text-sm text-neutral-400">Nome giocatore</div>
+                  <div className="text-lg font-semibold">
+                    Giocatore #{playerId}
+                  </div>
+                  <div className="mt-1">
+                    <span className="text-xs text-neutral-500">
+                      Player ID:{' '}
+                    </span>
+                    <span className="cursor-pointer text-xs text-blue-400 hover:underline">
+                      {playerId}
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Winrate complessivo */}
+                  <KpiCardWithTooltip
+                    label="Winrate complessivo"
+                    value={globalStats?.winRate ?? null}
+                    suffix="%"
+                    tooltip="Percentuale di vittorie su tutte le partite disponibili"
+                  />
+
+                  {/* KDA medio */}
+                  <KpiCardWithTooltip
+                    label="KDA medio"
+                    value={globalStats?.kdaAvg ?? null}
+                    tooltip="Kill/Death/Assist Ratio medio: misura l'efficienza nelle partite"
+                  />
+
+                  {/* GPM medio */}
+                  <KpiCardWithTooltip
+                    label="Gold per Minuto (GPM)"
+                    value={globalStats?.avgGpm ?? null}
+                    tooltip="Gold guadagnato al minuto: indica l'efficienza nel farming"
+                  />
+
+                  {/* XPM medio */}
+                  <KpiCardWithTooltip
+                    label="Experience per Minuto (XPM)"
+                    value={globalStats?.avgXpm ?? null}
+                    tooltip="Experience guadagnata al minuto: indica la velocità di leveling"
                   />
                 </div>
-              ) : (
-                <div className="text-sm text-neutral-500">
-                  {kpiLoading
-                    ? 'Caricamento dati trend...'
-                    : 'Dati non disponibili per questa sezione (dataset limitato per questo account).'}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Colonna destra - KPI e Telemetria (1/3 su desktop) */}
-          <div className="space-y-4">
-            {/* 🔷 BLOCCO A — IDENTITÀ GIOCATORE */}
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-              <h2 className="mb-3 text-lg font-semibold text-neutral-200">
-                Identità Giocatore
-              </h2>
-              <div className="mb-3">
-                <div className="text-sm text-neutral-400">Nome giocatore</div>
-                <div className="text-lg font-semibold">
-                  Giocatore #{playerId}
-                </div>
-                <div className="mt-1">
-                  <span className="text-xs text-neutral-500">Player ID: </span>
-                  <span className="cursor-pointer text-xs text-blue-400 hover:underline">
-                    {playerId}
-                  </span>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                {/* Winrate complessivo */}
-                <KpiCardWithTooltip
-                  label="Winrate complessivo"
-                  value={globalStats?.winRate ?? null}
-                  suffix="%"
-                  tooltip="Percentuale di vittorie su tutte le partite disponibili"
-                />
-
-                {/* KDA medio */}
-                <KpiCardWithTooltip
-                  label="KDA medio"
-                  value={globalStats?.kdaAvg ?? null}
-                  tooltip="Kill/Death/Assist Ratio medio: misura l'efficienza nelle partite"
-                />
-
-                {/* GPM medio */}
-                <KpiCardWithTooltip
-                  label="Gold per Minuto (GPM)"
-                  value={globalStats?.avgGpm ?? null}
-                  tooltip="Gold guadagnato al minuto: indica l'efficienza nel farming"
-                />
-
-                {/* XPM medio */}
-                <KpiCardWithTooltip
-                  label="Experience per Minuto (XPM)"
-                  value={globalStats?.avgXpm ?? null}
-                  tooltip="Experience guadagnata al minuto: indica la velocità di leveling"
-                />
-              </div>
-              {/* Hero Pool Snapshot - Top 3 */}
-              {heroSnap.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="mb-2 text-xs font-semibold text-neutral-300">
-                    Top 3 Eroi più Giocati
-                  </h3>
-                  <div className="space-y-2">
-                    {heroSnap.slice(0, 3).map((hero) => (
-                      <Link
-                        key={hero.heroId}
-                        href={`/dashboard/heroes?playerId=${playerId}`}
-                        className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900/70 p-2 transition-colors hover:bg-neutral-900/90"
-                      >
-                        {(() => {
-                          const iconUrl = getHeroIconUrl(hero.heroId)
-                          return iconUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={iconUrl}
-                              alt={getHeroName(hero.heroId)}
-                              width={24}
-                              height={24}
-                              className="h-6 w-6 rounded"
-                            />
-                          ) : null
-                        })()}
-                        <div className="min-w-0 flex-1">
-                          <div
-                            className="truncate text-xs font-medium text-neutral-200"
-                            title={getHeroName(hero.heroId)}
-                          >
-                            {getHeroName(hero.heroId)}
+                {/* Hero Pool Snapshot - Top 3 */}
+                {heroSnap.length > 0 && (
+                  <div className="mt-4">
+                    <h3 className="mb-2 text-xs font-semibold text-neutral-300">
+                      Top 3 Eroi più Giocati
+                    </h3>
+                    <div className="space-y-2">
+                      {heroSnap.slice(0, 3).map((hero) => (
+                        <Link
+                          key={hero.heroId}
+                          href={`/dashboard/heroes?playerId=${playerId}`}
+                          className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900/70 p-2 transition-colors hover:bg-neutral-900/90"
+                        >
+                          {(() => {
+                            const iconUrl = getHeroIconUrl(hero.heroId)
+                            return iconUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={iconUrl}
+                                alt={getHeroName(hero.heroId)}
+                                width={24}
+                                height={24}
+                                className="h-6 w-6 rounded"
+                              />
+                            ) : null
+                          })()}
+                          <div className="min-w-0 flex-1">
+                            <div
+                              className="truncate text-xs font-medium text-neutral-200"
+                              title={getHeroName(hero.heroId)}
+                            >
+                              {getHeroName(hero.heroId)}
+                            </div>
+                            <div className="text-[10px] text-neutral-400">
+                              {hero.matches} partite • {hero.winRate}% WR • KDA{' '}
+                              {hero.kdaAvg.toFixed(2)}
+                            </div>
                           </div>
-                          <div className="text-[10px] text-neutral-400">
-                            {hero.matches} partite • {hero.winRate}% WR • KDA{' '}
-                            {hero.kdaAvg.toFixed(2)}
-                          </div>
-                        </div>
-                      </Link>
-                    ))}
+                        </Link>
+                      ))}
+                    </div>
+                    <Link
+                      href={`/dashboard/heroes?playerId=${playerId}`}
+                      className="mt-2 block text-center text-xs text-blue-400 hover:underline"
+                    >
+                      Vedi Hero Pool completo →
+                    </Link>
                   </div>
-                  <Link
-                    href={`/dashboard/heroes?playerId=${playerId}`}
-                    className="mt-2 block text-center text-xs text-blue-400 hover:underline"
-                  >
-                    Vedi Hero Pool completo →
-                  </Link>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            {/* [REMOVED - TIER 2] Statistiche Aggiuntive
+              {/* [REMOVED - TIER 2] Statistiche Aggiuntive
                 Rimossa perché contiene:
                 - Aggressività X/100 (indice composito non direttamente derivato da KPI Tier-1)
                 - Consistenza X/100 (indice composito non direttamente derivato da KPI Tier-1)
@@ -711,12 +769,13 @@ function DashboardOverview(): React.JSX.Element {
                 Mantenute solo statistiche base (Partite totali, Hero Pool) se necessarie, ma integrate nel blocco principale.
             */}
 
-            {/* [REMOVED - TIER 2] Insight FZTH - Punti di forza e debolezze
+              {/* [REMOVED - TIER 2] Insight FZTH - Punti di forza e debolezze
                 Rimossa perché contiene insight generici non allineati a dati reali delle tabelle attuali.
                 Gli insight devono essere basati su KPI Tier-1 specifici (KDA, GPM, winrate, ecc.) non su logiche compositive.
             */}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )
