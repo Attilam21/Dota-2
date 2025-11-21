@@ -294,6 +294,9 @@ async function calculateAnalysisFromOpenDota(
 /**
  * Upsert death events for a match+player
  * Deletes existing events and inserts new ones (idempotent)
+ *
+ * IMPORTANT: This function throws errors and does NOT silence them.
+ * The caller must handle errors appropriately.
  */
 async function upsertDeathEvents(
   matchId: number,
@@ -302,8 +305,15 @@ async function upsertDeathEvents(
 ): Promise<void> {
   const supabaseAdmin = getAdminClient()
 
+  console.log(
+    `[DOTA2] upsertDeathEvents: matchId=${matchId}, accountId=${accountId}, eventsCount=${events.length}`,
+  )
+
   if (events.length === 0) {
     // No events to store, but ensure old ones are deleted
+    console.log(
+      `[DOTA2] No death events to insert for match ${matchId}, player ${accountId}. Cleaning up old events.`,
+    )
     const { error: deleteError } = await supabaseAdmin
       .from('dota_player_death_events')
       .delete()
@@ -311,7 +321,7 @@ async function upsertDeathEvents(
       .eq('account_id', accountId)
 
     if (deleteError) {
-      console.error('dota_player_death_events delete error:', deleteError)
+      console.error('[DOTA2] Error deleting old death events:', deleteError)
       throw new Error(
         `Failed to delete existing death events: ${deleteError.message}`,
       )
@@ -327,37 +337,75 @@ async function upsertDeathEvents(
     .eq('account_id', accountId)
 
   if (deleteError) {
-    console.error('dota_player_death_events delete error:', deleteError)
+    console.error('[DOTA2] Error deleting existing death events:', deleteError)
     throw new Error(
       `Failed to delete existing death events: ${deleteError.message}`,
     )
   }
 
-  // Insert new events
-  const eventsToInsert = events.map((event) => ({
-    match_id: event.matchId,
-    account_id: event.accountId,
-    time_seconds: event.timeSeconds,
-    phase: event.phase,
-    level_at_death: event.levelAtDeath,
-    downtime_seconds: event.downtimeSeconds,
-    gold_lost: event.goldLost,
-    xp_lost: event.xpLost,
-    cs_lost: event.csLost,
-    killer_hero_id: event.killerHeroId ?? null,
-    killer_role_position: event.killerRolePosition ?? null,
-    pos_x: event.posX ?? null,
-    pos_y: event.posY ?? null,
-  }))
+  // Prepare events for insertion
+  // Ensure all required fields are present, use 0 for missing cost calculations
+  const eventsToInsert = events.map((event, idx) => {
+    // Validate required fields
+    if (event.timeSeconds === undefined || event.timeSeconds < 0) {
+      console.warn(
+        `[DOTA2] Warning: Event ${idx} has invalid timeSeconds: ${event.timeSeconds}`,
+      )
+    }
+    if (!event.phase || !['early', 'mid', 'late'].includes(event.phase)) {
+      console.warn(
+        `[DOTA2] Warning: Event ${idx} has invalid phase: ${event.phase}`,
+      )
+    }
 
-  const { error: insertError } = await supabaseAdmin
+    return {
+      match_id: event.matchId,
+      account_id: event.accountId,
+      time_seconds: event.timeSeconds,
+      phase: event.phase, // 'early' | 'mid' | 'late' (lowercase, matches database CHECK constraint)
+      level_at_death: event.levelAtDeath ?? 1, // Default to 1 if missing
+      downtime_seconds: event.downtimeSeconds ?? 0, // Default to 0 if missing
+      gold_lost: event.goldLost ?? 0, // Default to 0 if missing
+      xp_lost: event.xpLost ?? 0, // Default to 0 if missing
+      cs_lost: event.csLost ?? 0, // Default to 0 if missing
+      killer_hero_id: event.killerHeroId ?? null,
+      killer_role_position: event.killerRolePosition ?? null,
+      pos_x: event.posX ?? null,
+      pos_y: event.posY ?? null,
+    }
+  })
+
+  console.log(
+    `[DOTA2] Inserting ${eventsToInsert.length} death events into dota_player_death_events`,
+  )
+
+  // Insert new events
+  const { data: insertedData, error: insertError } = await supabaseAdmin
     .from('dota_player_death_events')
     .insert(eventsToInsert)
+    .select()
 
   if (insertError) {
-    console.error('dota_player_death_events insert error:', insertError)
-    throw new Error(`Failed to insert death events: ${insertError.message}`)
+    console.error('[DOTA2] Error saving death events:', insertError)
+    console.error(
+      `[DOTA2] Failed to insert ${eventsToInsert.length} events for match ${matchId}, player ${accountId}`,
+    )
+    console.error(
+      '[DOTA2] First event sample:',
+      JSON.stringify(eventsToInsert[0], null, 2),
+    )
+    throw new Error(
+      `Failed to insert death events: ${
+        insertError.message
+      }. Details: ${JSON.stringify(insertError)}`,
+    )
   }
+
+  console.log(
+    `[DOTA2] Successfully inserted ${
+      insertedData?.length ?? eventsToInsert.length
+    } death events`,
+  )
 }
 
 /**
@@ -680,11 +728,60 @@ export async function GET(
 
       // Store in Supabase using admin client (synchronous, blocking)
       // This ensures data is saved before returning response
+      // IMPORTANT: We handle errors separately for death events vs analysis
+      // Death events errors are critical and should be reported
       try {
-        // First store death events, then match analysis, then matches_digest
-        await upsertDeathEvents(matchId, accountId, analysis.deathEvents ?? [])
+        // First store death events (critical: must not fail silently)
+        const deathEventsCount = analysis.deathEvents?.length ?? 0
+        console.log(
+          `[DOTA2] Storing ${deathEventsCount} death events for match ${matchId}, player ${accountId}`,
+        )
+
+        if (deathEventsCount > 0) {
+          await upsertDeathEvents(matchId, accountId, analysis.deathEvents!)
+          console.log(
+            `[DOTA2] Successfully stored ${deathEventsCount} death events`,
+          )
+        } else {
+          console.log(
+            `[DOTA2] No death events to store (player had ${player.deaths} deaths, but deaths_log may be empty)`,
+          )
+          // Still call upsertDeathEvents to clean up old events
+          await upsertDeathEvents(matchId, accountId, [])
+        }
+      } catch (deathEventsError: any) {
+        console.error(
+          '[DOTA2] CRITICAL: Failed to store death events. This error will be returned to client.',
+          deathEventsError,
+        )
+        // Death events are critical - return error to client
+        return NextResponse.json(
+          {
+            error: 'Failed to store death events in database',
+            details: deathEventsError.message,
+            matchId,
+            accountId,
+          },
+          { status: 500 },
+        )
+      }
+
+      // Store match analysis (less critical, can fail gracefully)
+      try {
         await upsertMatchAnalysis(matchId, accountId, analysis)
-        // Also update matches_digest with extended data
+        console.log(
+          `[DOTA2] Successfully stored match analysis for match ${matchId}, player ${accountId}`,
+        )
+      } catch (analysisError: any) {
+        console.error(
+          '[DOTA2] Error storing match analysis (non-fatal):',
+          analysisError,
+        )
+        // Continue even if analysis storage fails
+      }
+
+      // Update matches_digest (least critical, can fail gracefully)
+      try {
         await upsertMatchesDigest(
           matchId,
           accountId,
@@ -692,13 +789,12 @@ export async function GET(
           player,
           analysis.rolePosition,
         )
-      } catch (storeError: any) {
+      } catch (digestError: any) {
         console.error(
-          'Error storing analysis in Supabase (non-fatal, returning analysis anyway):',
-          storeError,
+          '[DOTA2] Error updating matches_digest (non-fatal):',
+          digestError,
         )
-        // Continue and return analysis even if storage fails
-        // This ensures the API still returns data even if DB write fails
+        // Continue even if matches_digest update fails
       }
     }
 
