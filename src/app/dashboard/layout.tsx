@@ -16,10 +16,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             backgroundPosition: 'center top',
             backgroundSize: 'cover',
             backgroundRepeat: 'no-repeat',
+            backgroundColor: 'rgb(10, 10, 10)', // Fallback color
           }}
         >
-          {/* Dark overlay for readability */}
-          <div className="via-neutral-950/85 absolute inset-0 bg-gradient-to-b from-neutral-950/90 to-neutral-950/90" />
+          {/* Dark overlay for readability - ridotto opacità per mostrare l'immagine */}
+          <div className="absolute inset-0 bg-gradient-to-b from-neutral-950/50 via-neutral-950/40 to-neutral-950/50" />
         </div>
 
         {/* Content above background */}
