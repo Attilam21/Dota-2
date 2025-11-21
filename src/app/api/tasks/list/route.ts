@@ -32,10 +32,19 @@ export async function GET(req: Request) {
 
     if (error) {
       console.error('Error fetching tasks:', error)
-      return NextResponse.json(
-        { error: 'Error fetching tasks', details: error.message },
-        { status: 500 },
-      )
+      // Ritorna sempre formato consistente: { tasks: [], error: "..." }
+      // Se la tabella non esiste, ritorna array vuoto con errore descrittivo
+      if (error.code === '42P01' || error.message?.includes('does not exist')) {
+        return NextResponse.json({
+          tasks: [],
+          error:
+            'Tabella dota_tasks non trovata. Esegui la migration SQL per crearla.',
+        })
+      }
+      return NextResponse.json({
+        tasks: [],
+        error: `Errore nel recupero dei task: ${error.message}`,
+      })
     }
 
     // Ordina manualmente per status (open > completed > failed)
@@ -50,12 +59,14 @@ export async function GET(req: Request) {
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     })
 
-    return NextResponse.json(sorted)
+    // Ritorna sempre formato consistente: { tasks: [...], error: null }
+    return NextResponse.json({ tasks: sorted, error: null })
   } catch (error: any) {
     console.error('Unexpected error in tasks/list:', error)
-    return NextResponse.json(
-      { error: error?.message ?? 'Unexpected error' },
-      { status: 500 },
-    )
+    // Ritorna sempre formato consistente anche in caso di errore inatteso
+    return NextResponse.json({
+      tasks: [],
+      error: error?.message ?? 'Errore inatteso nel recupero dei task',
+    })
   }
 }

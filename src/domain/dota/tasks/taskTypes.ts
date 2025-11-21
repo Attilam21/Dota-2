@@ -11,6 +11,7 @@ export type DotaTaskType =
   | 'IMPROVE_FARMING'
   | 'PLAY_MAIN_HERO'
   | 'IMPROVE_WINRATE'
+  | 'IMPROVE_CONSISTENCY'
   | 'INCREASE_AGGRESSIVITY'
   | 'IMPROVE_KDA'
   | 'REDUCE_DEATHS'
@@ -133,5 +134,16 @@ export const TASK_DEFINITIONS: Record<
       distinctHeroes: 10, // Obiettivo: almeno 10 eroi diversi giocati
     },
     priority: 'low',
+  },
+  IMPROVE_CONSISTENCY: {
+    type: 'IMPROVE_CONSISTENCY',
+    title: 'Migliora la consistenza',
+    description:
+      'Riduci la varianza nelle tue prestazioni per avere risultati più prevedibili e migliorare il winrate complessivo.',
+    suggestedThresholds: {
+      kdaStdDev: 1.0, // Obiettivo: deviazione standard KDA < 1.0
+      winrateRecent: 50, // Winrate recente >= winrate globale
+    },
+    priority: 'medium',
   },
 }

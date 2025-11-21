@@ -124,6 +124,26 @@ export function evaluateTasks(
     })
   }
 
+  // IMPROVE_CONSISTENCY
+  // Se winrate recente < winrate globale e varianza KDA è alta
+  const recentWinrate = momentum?.last10WinRate ?? 0
+  const globalWinrate = overview?.winRate ?? 0
+  const kdaTrend = momentum?.kdaTrend ?? []
+  if (kdaTrend.length > 1) {
+    const kdas = kdaTrend.map((t) => t.kda)
+    const mean = kdas.reduce((a, b) => a + b, 0) / kdas.length
+    const variance =
+      kdas.reduce((acc, kda) => acc + Math.pow(kda - mean, 2), 0) / kdas.length
+    const kdaStdDev = Math.sqrt(variance)
+
+    if (recentWinrate < globalWinrate && kdaStdDev > 1.0) {
+      tasks.push({
+        ...TASK_DEFINITIONS.IMPROVE_CONSISTENCY,
+        kpiKeys: ['kdaStdDev', 'winrateRecent', 'winrateGlobal'],
+      })
+    }
+  }
+
   // Ordina per priorità
   const priorityOrder = { high: 0, medium: 1, low: 2 }
   tasks.sort((a, b) => {
@@ -186,6 +206,27 @@ export function getKpiValuesForTask(
         break
       case 'distinctHeroes':
         values[kpiKey] = kpis.heroPool?.heroes?.length ?? 0
+        break
+      case 'winrateRecent':
+        values[kpiKey] = kpis.momentum?.last10WinRate ?? 0
+        break
+      case 'winrateGlobal':
+        values[kpiKey] = kpis.overview?.winRate ?? 0
+        break
+      case 'kdaStdDev':
+        // Calcola deviazione standard KDA dalle ultime partite
+        // Per semplicità, usiamo una stima basata sulla varianza del trend
+        const kdaTrend = kpis.momentum?.kdaTrend ?? []
+        if (kdaTrend.length > 1) {
+          const kdas = kdaTrend.map((t) => t.kda)
+          const mean = kdas.reduce((a, b) => a + b, 0) / kdas.length
+          const variance =
+            kdas.reduce((acc, kda) => acc + Math.pow(kda - mean, 2), 0) /
+            kdas.length
+          values[kpiKey] = Math.sqrt(variance)
+        } else {
+          values[kpiKey] = 0
+        }
         break
       default:
         values[kpiKey] = 0

@@ -44,17 +44,38 @@ function CoachingContent(): React.JSX.Element {
     try {
       setLoading(true)
       setError(null)
+      setMessage(null)
       const res = await fetch(`/api/tasks/list?playerId=${playerId}`, {
         cache: 'no-store',
       })
-      if (!res.ok) {
-        const msg = await res.json().catch(() => ({}))
-        throw new Error(msg?.error || `HTTP ${res.status}`)
+
+      // Anche se la risposta non è ok, prova a leggere il JSON
+      const responseData = await res
+        .json()
+        .catch(() => ({ tasks: [], error: 'Errore di parsing' }))
+
+      // Il formato atteso è { tasks: [...], error: null | "..." }
+      if (responseData.tasks !== undefined) {
+        setTasks(responseData.tasks || [])
+        // Mostra errore solo se c'è un errore E non ci sono task
+        if (responseData.error && responseData.tasks.length === 0) {
+          setError(responseData.error)
+        } else if (responseData.error) {
+          // Se ci sono task ma c'è anche un errore, mostra solo un warning
+          setMessage(`Attenzione: ${responseData.error}`)
+        }
+      } else {
+        // Fallback per formato vecchio (array diretto)
+        if (Array.isArray(responseData)) {
+          setTasks(responseData)
+        } else {
+          throw new Error(responseData?.error || `HTTP ${res.status}`)
+        }
       }
-      const data: DotaTask[] = await res.json()
-      setTasks(data || [])
     } catch (e: any) {
+      console.error('Error loading tasks:', e)
       setError(e?.message ?? 'Errore nel caricamento dei task')
+      setTasks([]) // Assicura che tasks sia sempre un array
     } finally {
       setLoading(false)
     }
@@ -138,12 +159,51 @@ function CoachingContent(): React.JSX.Element {
       const current = task.kpi_payload[key] ?? 0
       const target = task.params[key]
       if (target !== undefined) {
-        return `${key}: ${current.toFixed(1)} → target: ${target.toFixed(1)}`
+        // Formatta in modo più leggibile
+        const keyLabel = getKpiLabel(key)
+        return `${keyLabel}: ${formatKpiValue(
+          key,
+          current,
+        )} → Target: ${formatKpiValue(key, target)}`
       }
-      return `${key}: ${current.toFixed(1)}`
+      return `${getKpiLabel(key)}: ${formatKpiValue(key, current)}`
     })
 
-    return summaries.join(', ')
+    return summaries.join(' • ')
+  }
+
+  const getKpiLabel = (key: string): string => {
+    const labels: Record<string, string> = {
+      earlyDeathsAvg: 'Morti early (media)',
+      fightParticipation: 'KP%',
+      avgGpm: 'GPM medio',
+      avgXpm: 'XPM medio',
+      heroWinrate: 'Winrate eroe principale',
+      winRate: 'Winrate generale',
+      killsPerMinute: 'Kill/minuto',
+      kdaAvg: 'KDA medio',
+      avgDeaths: 'Morti medie',
+      avgTowerDamage: 'Danni alle torri',
+      distinctHeroes: 'Eroi distinti',
+    }
+    return labels[key] || key
+  }
+
+  const formatKpiValue = (key: string, value: number): string => {
+    if (
+      key.includes('winrate') ||
+      key.includes('Winrate') ||
+      key.includes('Participation')
+    ) {
+      return `${value.toFixed(1)}%`
+    }
+    if (key.includes('PerMin') || key.includes('PerMinute')) {
+      return value.toFixed(2)
+    }
+    if (key.includes('Damage') || key.includes('Gpm') || key.includes('Xpm')) {
+      return Math.round(value).toLocaleString('it-IT')
+    }
+    return value.toFixed(1)
   }
 
   return (
@@ -199,12 +259,24 @@ function CoachingContent(): React.JSX.Element {
       {/* Lista Task */}
       {loading && <div className="text-neutral-400">Caricamento task…</div>}
 
-      {!loading && tasks.length === 0 && (
+      {!loading && !error && tasks.length === 0 && (
         <div className="rounded-lg border border-neutral-800 p-6 text-center text-neutral-300">
           <p className="mb-4">Nessun task disponibile.</p>
           <p className="text-sm text-neutral-400">
             Clicca su &quot;Genera nuovi Task&quot; per creare task basati sui
             tuoi KPI attuali.
+          </p>
+        </div>
+      )}
+
+      {!loading && error && tasks.length === 0 && (
+        <div className="rounded-lg border border-yellow-800 bg-yellow-900/20 p-6 text-center">
+          <p className="mb-2 font-medium text-yellow-300">
+            ⚠️ Attenzione: {error}
+          </p>
+          <p className="text-sm text-yellow-200/80">
+            Se la tabella dota_tasks non esiste, esegui la migration SQL in
+            supabase/migrations/20251125_create_dota_tasks.sql
           </p>
         </div>
       )}
@@ -229,10 +301,17 @@ function CoachingContent(): React.JSX.Element {
                   </p>
                   <div className="mb-2 text-xs text-neutral-400">
                     Basato su KPI:{' '}
-                    {Object.keys(task.kpi_payload || {}).join(', ')}
+                    {Object.keys(task.kpi_payload || {})
+                      .map((k) => getKpiLabel(k))
+                      .join(', ')}
                   </div>
-                  <div className="text-xs text-neutral-500">
-                    {formatKpiSummary(task)}
+                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
+                    <div className="mb-1 text-xs font-medium text-neutral-300">
+                      Dettagli KPI:
+                    </div>
+                    <div className="text-xs text-neutral-400">
+                      {formatKpiSummary(task)}
+                    </div>
                   </div>
                 </div>
               </div>

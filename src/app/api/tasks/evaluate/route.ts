@@ -11,6 +11,7 @@ import {
 import type { TaskEvaluationKPIs } from '@/domain/dota/tasks/taskKpiMappings'
 import { getKpiValuesForTask } from '@/domain/dota/tasks/taskKpiMappings'
 import type { DotaTaskType } from '@/domain/dota/tasks/taskTypes'
+import { evaluateTaskStatus } from '@/services/dota/taskEngine'
 
 export async function POST(req: Request) {
   try {
@@ -74,105 +75,13 @@ export async function POST(req: Request) {
       // Ottieni i valori KPI attuali per questo task
       const currentKpiValues = getKpiValuesForTask(taskType, currentKpis)
 
-      // Valuta se il task è completato o fallito in base al tipo
-      let isCompleted = false
-      let isFailed = false
-
-      switch (taskType) {
-        case 'REDUCE_EARLY_DEATHS': {
-          const current = currentKpiValues.earlyDeathsAvg ?? 0
-          const target = params.earlyDeathsAvg ?? 1.5
-          isCompleted = current <= target
-          // Fallito se è peggiorato significativamente
-          const original = originalKpiPayload.earlyDeathsAvg ?? 0
-          isFailed = current > original + 1.0
-          break
-        }
-
-        case 'INCREASE_KP': {
-          const current = currentKpiValues.fightParticipation ?? 0
-          const target = params.fightParticipation ?? 50
-          isCompleted = current >= target
-          const original = originalKpiPayload.fightParticipation ?? 0
-          isFailed = current < original - 5 && current < 30
-          break
-        }
-
-        case 'IMPROVE_FARMING': {
-          const currentGpm = currentKpiValues.avgGpm ?? 0
-          const currentXpm = currentKpiValues.avgXpm ?? 0
-          const targetGpm = params.avgGpm ?? 400
-          const targetXpm = params.avgXpm ?? 500
-          isCompleted = currentGpm >= targetGpm && currentXpm >= targetXpm
-          const originalGpm = originalKpiPayload.avgGpm ?? 0
-          const originalXpm = originalKpiPayload.avgXpm ?? 0
-          isFailed =
-            (currentGpm < originalGpm - 50 && currentGpm < 300) ||
-            (currentXpm < originalXpm - 50 && currentXpm < 400)
-          break
-        }
-
-        case 'PLAY_MAIN_HERO': {
-          const current = currentKpiValues.heroWinrate ?? 0
-          const target = params.heroWinrate ?? 55
-          isCompleted = current >= target
-          const original = originalKpiPayload.heroWinrate ?? 0
-          isFailed = current < original - 10 && current < 40
-          break
-        }
-
-        case 'IMPROVE_WINRATE': {
-          const current = currentKpiValues.winRate ?? 0
-          const target = params.winRate ?? 50
-          isCompleted = current >= target
-          const original = originalKpiPayload.winRate ?? 0
-          isFailed = current < original - 5 && current < 40
-          break
-        }
-
-        case 'INCREASE_AGGRESSIVITY': {
-          const current = currentKpiValues.killsPerMinute ?? 0
-          const target = params.killsPerMinute ?? 0.4
-          isCompleted = current >= target
-          break
-        }
-
-        case 'IMPROVE_KDA': {
-          const current = currentKpiValues.kdaAvg ?? 0
-          const target = params.kdaAvg ?? 2.0
-          isCompleted = current >= target
-          const original = originalKpiPayload.kdaAvg ?? 0
-          isFailed = current < original - 0.5 && current < 1.0
-          break
-        }
-
-        case 'REDUCE_DEATHS': {
-          const current = currentKpiValues.avgDeaths ?? 0
-          const target = params.avgDeaths ?? 5
-          isCompleted = current <= target
-          const original = originalKpiPayload.avgDeaths ?? 0
-          isFailed = current > original + 2 && current > 8
-          break
-        }
-
-        case 'INCREASE_OBJECTIVE_DAMAGE': {
-          const current = currentKpiValues.avgTowerDamage ?? 0
-          const target = params.avgTowerDamage ?? 2000
-          isCompleted = current >= target
-          break
-        }
-
-        case 'IMPROVE_HERO_POOL': {
-          const current = currentKpiValues.distinctHeroes ?? 0
-          const target = params.distinctHeroes ?? 10
-          isCompleted = current >= target
-          break
-        }
-
-        default:
-          // Task type non riconosciuto, non valutare
-          continue
-      }
+      // Usa il task engine per valutare lo status
+      const { isCompleted, isFailed } = evaluateTaskStatus(
+        taskType,
+        originalKpiPayload,
+        currentKpiValues,
+        params,
+      )
 
       // Aggiorna il task se completato o fallito
       if (isCompleted || isFailed) {
@@ -217,12 +126,17 @@ export async function POST(req: Request) {
       failed: failedCount,
       stillOpen: stillOpen?.length ?? 0,
       tasks: updatedTasks,
+      error: null,
     })
   } catch (error: any) {
     console.error('Error in tasks/evaluate:', error)
-    return NextResponse.json(
-      { error: error?.message ?? 'Error evaluating tasks' },
-      { status: 500 },
-    )
+    return NextResponse.json({
+      message: 'Errore nella valutazione dei task',
+      completed: 0,
+      failed: 0,
+      stillOpen: 0,
+      tasks: [],
+      error: error?.message ?? 'Error evaluating tasks',
+    })
   }
 }

@@ -39,6 +39,8 @@ export async function POST(req: Request) {
       return NextResponse.json({
         message: 'Nessun task da generare in base ai KPI attuali',
         tasks: [],
+        created: 0,
+        error: null,
       })
     }
 
@@ -95,12 +97,15 @@ export async function POST(req: Request) {
       } task aperti totali`,
       created: createdTasks.length,
       tasks: allOpenTasks || [],
+      error: null,
     })
   } catch (error: any) {
     console.error('Error in tasks/generate:', error)
-    return NextResponse.json(
-      { error: error?.message ?? 'Error generating tasks' },
-      { status: 500 },
-    )
+    return NextResponse.json({
+      message: 'Errore nella generazione dei task',
+      created: 0,
+      tasks: [],
+      error: error?.message ?? 'Error generating tasks',
+    })
   }
 }
