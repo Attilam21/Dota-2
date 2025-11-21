@@ -7,6 +7,8 @@ import { getPlayerIdFromSearchParams } from '@/lib/playerId'
 import { getHeroIconUrl, getHeroName } from '@/lib/dotaHeroes'
 import BarChart from '@/components/charts/BarChart'
 import ExplanationCard from '@/components/charts/ExplanationCard'
+import BuildMismatch from '@/components/dota/heroes/BuildMismatch'
+import HeroMetaReference from '@/components/dota/heroes/HeroMetaReference'
 import type { HeroPoolKPI } from '@/services/dota/kpiService'
 
 // Componente per Hero Pool Matrix
@@ -845,6 +847,53 @@ function HeroesContent(): React.JSX.Element {
               </table>
             </div>
           </div>
+
+          {/* 🔷 HERO POOL ADD-ON - NUOVI BLOCCHI ADDITIVI */}
+
+          {/* A) Build Mismatch Detection */}
+          {heroPoolKPI && heroPoolKPI.top5ByMatches.length > 0 && (
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
+              <h2 className="mb-4 text-lg font-semibold text-neutral-200">
+                Build Mismatch Detection
+              </h2>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {heroPoolKPI.top5ByMatches.slice(0, 3).map((h) => {
+                  const heroName = getHeroName(h.heroId)
+                  return (
+                    <BuildMismatch
+                      key={h.heroId}
+                      playerBuild={['Item 1', 'Item 2', 'Item 3']} // placeholder
+                      metaBuild={['Meta Item 1', 'Meta Item 2', 'Meta Item 3']} // placeholder
+                      divergence={15} // placeholder - da calcolare
+                    />
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* B) Hero Meta Reference */}
+          {heroPoolKPI && heroPoolKPI.top5ByWinrate.length > 0 && (
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
+              <h2 className="mb-4 text-lg font-semibold text-neutral-200">
+                Hero Meta Reference
+              </h2>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {heroPoolKPI.top5ByWinrate.slice(0, 3).map((h) => {
+                  const heroName = getHeroName(h.heroId)
+                  return (
+                    <HeroMetaReference
+                      key={h.heroId}
+                      hero={heroName}
+                      metaWinrate={52.5} // placeholder - da API meta se disponibile
+                      metaPickrate={8.2} // placeholder
+                      metaBuild={['Meta Item 1', 'Meta Item 2']} // placeholder
+                    />
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

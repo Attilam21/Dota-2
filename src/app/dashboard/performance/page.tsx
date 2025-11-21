@@ -8,6 +8,9 @@ import LineChart from '@/components/charts/LineChart'
 import MultiLineChart from '@/components/charts/MultiLineChart'
 import BarChart from '@/components/charts/BarChart'
 import ExplanationCard from '@/components/charts/ExplanationCard'
+import PlaystyleRadar from '@/components/dota/performance/PlaystyleRadar'
+import RecoveryScore from '@/components/dota/performance/RecoveryScore'
+import FightPositioning from '@/components/dota/performance/FightPositioning'
 import type {
   PlayerOverviewKPI,
   StyleOfPlayKPI,
@@ -492,6 +495,52 @@ function PerformanceContent(): React.JSX.Element {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* 🔷 PERFORMANCE 2.0 - NUOVI BLOCCHI ADDITIVI */}
+
+          {/* A) Radar Chart Stile di gioco */}
+          {styleKPI && (
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
+              <h2 className="mb-4 text-lg font-semibold text-neutral-200">
+                Radar Stile di Gioco
+              </h2>
+              <PlaystyleRadar
+                aggression={styleKPI.killsPerMinute * 100} // normalizza
+                kp={styleKPI.fightParticipation}
+                farm={(overviewKPI?.avgGpm || 0) / 10} // normalizza GPM
+                macro={(styleKPI.avgTowerDamage || 0) / 100} // normalizza
+              />
+            </div>
+          )}
+
+          {/* B) Recovery Index */}
+          {overviewKPI && (
+            <RecoveryScore
+              score={(() => {
+                // Calcolo recovery score (approssimato)
+                const recoveryGpm =
+                  Math.max(0, (overviewKPI.avgGpm || 0) - 300) / 2
+                const recoveryXpm =
+                  Math.max(0, (overviewKPI.avgXpm || 0) - 400) / 2
+                const comebackKills = 50 // placeholder
+                return Math.round(
+                  (recoveryGpm + recoveryXpm + comebackKills) / 3,
+                )
+              })()}
+              recoveryGpm={overviewKPI.avgGpm}
+              recoveryXpm={overviewKPI.avgXpm}
+            />
+          )}
+
+          {/* C) Fight Positioning */}
+          {styleKPI && (
+            <FightPositioning
+              averageDistanceAllies={500} // placeholder - da calcolare da match detail
+              averageDistanceEnemies={800} // placeholder
+              deathsInFight={styleKPI.deathsPerMinute * 40} // approssimato
+              fightDuration={40} // placeholder
+            />
           )}
         </>
       )}
