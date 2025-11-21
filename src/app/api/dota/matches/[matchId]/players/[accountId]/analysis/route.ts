@@ -130,17 +130,51 @@ async function calculateAnalysisFromOpenDota(
   const deathEvents: DotaPlayerDeathEvent[] = []
   const deathsByRole: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
 
+  // Get player's final level for better level estimation
+  // OpenDota provides player.level (final level at end of match)
+  // We use this as a reference point for level estimation
+  const finalLevel = player.level ?? null
+  const finalLevelTime = matchData.duration
+
   // We need to get killer info from match data
   // For now, we'll use a simplified approach
   deathsLog.forEach((death, idx) => {
     const phase = getGamePhase(death.time)
     deathsByPhase[phase]++
 
-    // Estimate level at death (simplified: assume linear progression)
-    const levelAtDeath = Math.min(
-      30,
-      Math.max(1, Math.floor((death.time / matchData.duration) * 30)),
-    )
+    // Calculate level at death with improved estimation
+    // Strategy:
+    // 1. If final level is available, use it as upper bound
+    // 2. Estimate level based on time progression (non-linear: early levels faster)
+    // 3. Use formula: level ≈ 1 + (time / duration) * (finalLevel - 1) with early game boost
+    let levelAtDeath: number
+    if (finalLevel !== null && finalLevel > 0) {
+      // Use final level as reference for better estimation
+      // Early game (0-10 min): faster leveling, mid/late: slower
+      const timeRatio = death.time / finalLevelTime
+      if (timeRatio < 0.2) {
+        // Early game: levels 1-6 faster (first 20% of time)
+        levelAtDeath = Math.min(
+          finalLevel,
+          Math.max(1, Math.floor(1 + timeRatio * 5 * 1.5)), // Boost early levels
+        )
+      } else {
+        // Mid/late game: more linear progression
+        levelAtDeath = Math.min(
+          finalLevel,
+          Math.max(
+            1,
+            Math.floor(1 + ((timeRatio - 0.2) * (finalLevel - 1)) / 0.8),
+          ),
+        )
+      }
+    } else {
+      // Fallback: linear estimation (original method)
+      levelAtDeath = Math.min(
+        30,
+        Math.max(1, Math.floor((death.time / matchData.duration) * 30)),
+      )
+    }
     const downtimeSeconds = calculateRespawnTime(levelAtDeath)
     const { goldLost, xpLost, csLost } = calculateDeathCost(
       downtimeSeconds,
@@ -327,6 +361,121 @@ async function upsertDeathEvents(
 }
 
 /**
+ * Upsert matches_digest with extended Dota 2 data
+ * Populates: kda, role_position, gold_per_min, xp_per_min, last_hits, denies
+ * This ensures matches_digest is kept in sync even when sync route is disabled
+ */
+async function upsertMatchesDigest(
+  matchId: number,
+  accountId: number,
+  matchData: {
+    match_id: number
+    duration: number
+    start_time: number
+    radiant_win: boolean
+  },
+  player: {
+    hero_id: number
+    kills: number
+    deaths: number
+    assists: number
+    player_slot: number
+    gold_per_min?: number
+    xp_per_min?: number
+    last_hits?: number
+    denies?: number
+    lane?: number
+    role?: number | string
+  },
+  rolePosition: RolePosition,
+): Promise<void> {
+  const supabaseAdmin = getAdminClient()
+
+  // Calculate KDA
+  const kda =
+    player.deaths > 0
+      ? (player.kills + player.assists) / player.deaths
+      : player.kills + player.assists
+
+  // Determine result (win/lose)
+  const isRadiant = player.player_slot < 128
+  const result = isRadiant === matchData.radiant_win ? 'win' : 'lose'
+
+  // Map lane from OpenDota number to text
+  let lane: string | null = null
+  if (player.lane !== undefined) {
+    const laneMap: Record<number, string> = {
+      0: 'safe',
+      1: 'mid',
+      2: 'offlane',
+      3: 'jungle',
+      4: 'roaming',
+    }
+    lane = laneMap[player.lane] ?? null
+  }
+
+  // Map role from OpenDota to text
+  let role: string | null = null
+  if (player.role !== undefined) {
+    if (typeof player.role === 'string') {
+      role = player.role
+    } else if (typeof player.role === 'number') {
+      const roleMap: Record<number, string> = {
+        0: 'safe',
+        1: 'mid',
+        2: 'offlane',
+        3: 'jungle',
+        4: 'roaming',
+      }
+      role = roleMap[player.role] ?? null
+    }
+  }
+
+  // Convert start_time (Unix timestamp) to ISO string
+  const startTime = new Date(matchData.start_time * 1000).toISOString()
+
+  // Upsert matches_digest
+  const { error: digestError } = await supabaseAdmin
+    .from('matches_digest')
+    .upsert(
+      {
+        player_account_id: accountId,
+        match_id: matchId,
+        hero_id: player.hero_id,
+        kills: player.kills,
+        deaths: player.deaths,
+        assists: player.assists,
+        duration_seconds: matchData.duration,
+        start_time: startTime,
+        result,
+        // Extended columns (now populated)
+        kda: Number(kda.toFixed(2)),
+        role_position: rolePosition,
+        gold_per_min: player.gold_per_min ?? null,
+        xp_per_min: player.xp_per_min ?? null,
+        last_hits: player.last_hits ?? null,
+        denies: player.denies ?? null,
+        // Optional text columns
+        lane,
+        role,
+      },
+      {
+        onConflict: 'player_account_id,match_id',
+      },
+    )
+
+  if (digestError) {
+    console.error('matches_digest upsert error:', digestError)
+    // Non-blocking: log error but don't fail the analysis
+    // This ensures analysis still works even if matches_digest update fails
+  } else {
+    console.log(
+      `matches_digest updated for match ${matchId}, player ${accountId}`,
+    )
+  }
+}
+
+/**
  * Upsert match analysis summary for a match+player
  * If exists, updates; if not, inserts
  */
@@ -496,14 +645,53 @@ export async function GET(
 
     // If not found, calculate from OpenDota and store
     if (!analysis) {
+      // Calculate analysis and get raw match data for matches_digest update
+      const matchData = await fetchFromOpenDota<{
+        match_id: number
+        duration: number
+        start_time: number
+        radiant_win: boolean
+        players: Array<{
+          account_id: number | null
+          player_slot: number
+          hero_id: number
+          kills: number
+          deaths: number
+          assists: number
+          last_hits?: number
+          denies?: number
+          gold_per_min?: number
+          xp_per_min?: number
+          level?: number
+          lane?: number
+          role?: number | string
+        }>
+      }>(`/matches/${matchId}`)
+
+      const player = matchData.players.find((p) => p.account_id === accountId)
+      if (!player) {
+        return NextResponse.json(
+          { error: `Player ${accountId} not found in match ${matchId}` },
+          { status: 404 },
+        )
+      }
+
       analysis = await calculateAnalysisFromOpenDota(matchId, accountId)
 
       // Store in Supabase using admin client (synchronous, blocking)
       // This ensures data is saved before returning response
       try {
-        // First store death events, then match analysis
+        // First store death events, then match analysis, then matches_digest
         await upsertDeathEvents(matchId, accountId, analysis.deathEvents ?? [])
         await upsertMatchAnalysis(matchId, accountId, analysis)
+        // Also update matches_digest with extended data
+        await upsertMatchesDigest(
+          matchId,
+          accountId,
+          matchData,
+          player,
+          analysis.rolePosition,
+        )
       } catch (storeError: any) {
         console.error(
           'Error storing analysis in Supabase (non-fatal, returning analysis anyway):',

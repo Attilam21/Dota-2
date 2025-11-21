@@ -26,9 +26,9 @@
 | `duration_seconds` | `integer` | Durata partita in secondi | OpenDota `duration` | OBBLIGATORIO | ✅ Valorizzato |
 | `start_time` | `timestamptz` | Timestamp inizio partita (UTC) | OpenDota `start_time` (convertito) | OBBLIGATORIO | ✅ Valorizzato |
 | `result` | `text` | Risultato: 'win' o 'lose' | Calcolato da `radiant_win` + `player_slot` | OBBLIGATORIO | ✅ Valorizzato |
-| `lane` | `text` | Corsia giocata (es. "safe", "mid", "off") | OpenDota `players[].lane` | OPZIONALE | ⚠️ **SEMPRE NULL** |
-| `role` | `text` | Ruolo testuale (es. "core", "support") | OpenDota `players[].role` | OPZIONALE | ⚠️ **SEMPRE NULL** |
-| `kda` | `numeric` | KDA calcolato: (kills + assists) / max(1, deaths) | Calcolato | OPZIONALE | ⚠️ **SEMPRE NULL** |
+| `lane` | `text` | Corsia giocata (es. "safe", "mid", "off") | OpenDota `players[].lane` | OPZIONALE | ✅ Valorizzato (durante analisi) |
+| `role` | `text` | Ruolo testuale (es. "core", "support") | OpenDota `players[].role` | OPZIONALE | ✅ Valorizzato (durante analisi) |
+| `kda` | `numeric` | KDA calcolato: (kills + assists) / max(1, deaths) | Calcolato durante analisi | OPZIONALE | ✅ Valorizzato (durante analisi) |
 | `created_at` | `timestamptz` | Timestamp creazione record | Default NOW() | OBBLIGATORIO | ✅ Valorizzato |
 | `updated_at` | `timestamptz` | Timestamp ultimo aggiornamento | Default NOW() | OBBLIGATORIO | ✅ Valorizzato |
 
@@ -48,26 +48,28 @@
 
 | Colonna | Tipo | Descrizione | Sorgente Dato | Stato | Valorizzazione |
 |---------|------|-------------|---------------|-------|----------------|
-| `role_position` | `integer` | Posizione ruolo Dota 2 (1-5): 1=Safe, 2=Mid, 3=Off, 4=Soft Support, 5=Hard Support | Calcolato da OpenDota `players[].role` | OPZIONALE | ⚠️ **SEMPRE NULL** |
-| `gold_per_min` | `integer` | Gold per minuto (GPM) | OpenDota `players[].gold_per_min` | OPZIONALE | ⚠️ **SEMPRE NULL** |
-| `xp_per_min` | `integer` | Experience per minuto (XPM) | OpenDota `players[].xp_per_min` | OPZIONALE | ⚠️ **SEMPRE NULL** |
-| `last_hits` | `integer` | Numero di last hits | OpenDota `players[].last_hits` | OPZIONALE | ⚠️ **SEMPRE NULL** |
-| `denies` | `integer` | Numero di denies | OpenDota `players[].denies` | OPZIONALE | ⚠️ **SEMPRE NULL** |
+| `role_position` | `integer` | Posizione ruolo Dota 2 (1-5): 1=Safe, 2=Mid, 3=Off, 4=Soft Support, 5=Hard Support | Calcolato da OpenDota `players[].role` durante analisi | OPZIONALE | ✅ Valorizzato (durante analisi) |
+| `gold_per_min` | `integer` | Gold per minuto (GPM) | OpenDota `players[].gold_per_min` durante analisi | OPZIONALE | ✅ Valorizzato (durante analisi) |
+| `xp_per_min` | `integer` | Experience per minuto (XPM) | OpenDota `players[].xp_per_min` durante analisi | OPZIONALE | ✅ Valorizzato (durante analisi) |
+| `last_hits` | `integer` | Numero di last hits | OpenDota `players[].last_hits` durante analisi | OPZIONALE | ✅ Valorizzato (durante analisi) |
+| `denies` | `integer` | Numero di denies | OpenDota `players[].denies` durante analisi | OPZIONALE | ✅ Valorizzato (durante analisi) |
 
 **Note colonne NULL:**
-- Tutte le colonne estese sono sempre NULL perché:
-  - `sync-player` route è disabilitata (non popola più `matches_digest`)
-  - Dashboard legge direttamente da OpenDota via `opendotaAdapter`
-  - Le colonne sono state aggiunte ma non c'è codice che le popola
+- ✅ **IMPLEMENTATO**: Tutte le colonne estese sono ora popolate durante l'analisi avanzata
+- Logica: La route `/api/dota/matches/[matchId]/players/[accountId]/analysis` ora chiama `upsertMatchesDigest()` per popolare `matches_digest` con dati estesi
+- Questo garantisce che `matches_digest` sia aggiornato anche se `sync-player` è disabilitato
 
-**Proposte valorizzazione:**
-- `role_position`: Mappare da OpenDota `players[].role` (0→1, 1→2, 2→3, 4→4, default→1)
-- `gold_per_min`: Mappare direttamente da OpenDota `players[].gold_per_min`
-- `xp_per_min`: Mappare direttamente da OpenDota `players[].xp_per_min`
-- `last_hits`: Mappare direttamente da OpenDota `players[].last_hits`
-- `denies`: Mappare direttamente da OpenDota `players[].denies`
+**Valorizzazione implementata:**
+- `role_position`: Mappato da OpenDota `players[].role` (0→1, 1→2, 2→3, 4→4, default→1) durante analisi
+- `gold_per_min`: Mappato direttamente da OpenDota `players[].gold_per_min` durante analisi
+- `xp_per_min`: Mappato direttamente da OpenDota `players[].xp_per_min` durante analisi
+- `last_hits`: Mappato direttamente da OpenDota `players[].last_hits` durante analisi
+- `denies`: Mappato direttamente da OpenDota `players[].denies` durante analisi
+- `kda`: Calcolato e salvato: `(kills + assists) / Math.max(1, deaths)` durante analisi
+- `lane`: Mappato da OpenDota `players[].lane` (0→"safe", 1→"mid", 2→"offlane", 3→"jungle", 4→"roaming") durante analisi
+- `role`: Mappato da OpenDota `players[].role` (numero o stringa) durante analisi
 
-**Nota:** Se `sync-player` viene riabilitato, queste colonne dovrebbero essere popolate durante la sincronizzazione.
+**Nota:** Le colonne vengono popolate ogni volta che viene chiamata la route di analisi avanzata. Se `sync-player` viene riabilitato, queste colonne dovrebbero essere popolate anche durante la sincronizzazione.
 
 ---
 
@@ -212,9 +214,12 @@
 | `downtime_seconds` | `integer` | Tempo di respawn stimato in secondi | Calcolato: `5 + level_at_death * 2` | OBBLIGATORIO | ✅ Valorizzato |
 
 **Note `level_at_death`:**
-- ⚠️ **STIMATO**: Non usa dati reali di OpenDota (se disponibili)
-- Logica attuale: progressione lineare da 1 a 30 basata su `time / duration`
-- **Miglioramento proposto:** Usare `players[].xp_t` (timeline XP) se disponibile per livello reale
+- ✅ **MIGLIORATO**: Usa `player.level` (livello finale) come riferimento per stima più accurata
+- Logica implementata:
+  - Se `player.level` è disponibile: stima non-lineare con boost early game (livelli 1-6 più veloci)
+  - Formula: early game (0-20% tempo) → `1 + (timeRatio * 5 * 1.5)`, mid/late → progressione lineare verso `finalLevel`
+  - Fallback: se `player.level` manca, usa stima lineare originale
+- **Sorgente dato:** OpenDota `players[].level` (livello finale) + `deaths_log[].time` (tempo morte) + `match.duration`
 
 **Note `downtime_seconds`:**
 - Formula semplificata: base 5s + 2s per livello
@@ -365,14 +370,8 @@
 ### 5.2 Colonne Sempre NULL ⚠️
 
 **matches_digest:**
-- `lane` (text) - OpenDota fornisce ma non mappato
-- `role` (text) - OpenDota fornisce ma non mappato
-- `kda` (numeric) - Calcolabile ma non salvato
-- `role_position` (integer) - Aggiunta ma non popolata
-- `gold_per_min` (integer) - Aggiunta ma non popolata
-- `xp_per_min` (integer) - Aggiunta ma non popolata
-- `last_hits` (integer) - Aggiunta ma non popolata
-- `denies` (integer) - Aggiunta ma non popolata
+- ✅ Tutte le colonne ora valorizzate durante analisi avanzata (`/api/dota/matches/[matchId]/players/[accountId]/analysis`)
+- `lane`, `role`, `kda`, `role_position`, `gold_per_min`, `xp_per_min`, `last_hits`, `denies` vengono popolate automaticamente
 
 **dota_player_death_events:**
 - `pos_x` (numeric) - Non disponibile da OpenDota standard
@@ -421,11 +420,11 @@
    - **Azione:** Documentare come "non utilizzata, implementazione futura" o rimuovere
    - **Nota:** Richiede endpoint avanzati OpenDota o replay parsing
 
-### 6.3 Colonne da Migliorare (Priorità Bassa)
+### 6.3 Colonne Migliorate ✅
 
 1. **dota_player_death_events.level_at_death**
-   - **Azione:** Usare timeline XP reale se disponibile da OpenDota
-   - **Nota:** Attualmente stimato linearmente
+   - ✅ **IMPLEMENTATO:** Usa `player.level` (livello finale) come riferimento per stima non-lineare più accurata
+   - **Nota:** Stima migliorata con boost early game (livelli 1-6 più veloci) e progressione verso livello finale
 
 2. **dota_player_death_events.downtime_seconds**
    - **Azione:** Usare formula Dota 2 reale (più complessa)
