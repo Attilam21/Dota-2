@@ -10,6 +10,11 @@ import {
   formatPercentageOrNA,
   isValueMissing,
 } from '@/utils/dotaFormatting'
+import { FZTH_COLOR_USAGE } from '@/utils/fzthColors'
+import SkeletonLoader, {
+  SkeletonGrid,
+  SkeletonChart,
+} from '@/components/ui/SkeletonLoader'
 
 type MatchDetailResponse = {
   match: {
@@ -204,8 +209,14 @@ export default function MatchDetailPage() {
         ← Torna alle partite recenti
       </button>
 
+      {/* Loading state con skeleton elegante */}
       {loading && (
-        <div className="text-neutral-400">Caricamento dati partita…</div>
+        <div className="space-y-6">
+          <SkeletonLoader variant="card" height="4rem" />
+          <SkeletonGrid cols={3} />
+          <SkeletonChart />
+          <SkeletonChart />
+        </div>
       )}
       {error && (
         <div className="text-red-400">
@@ -215,150 +226,63 @@ export default function MatchDetailPage() {
 
       {!loading && !error && data && (
         <div className="space-y-6">
-          {/* Header */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h1 className="text-2xl font-semibold">
-                Partita #{data.match.matchId}
-              </h1>
-              <p className="text-sm text-neutral-400">
-                Dettaglio match da OpenDota (profilo FZTH)
+          {/* Header con branding FZTH light */}
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+            <div className="flex-1">
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-semibold text-neutral-100">
+                  Partita #{data.match.matchId}
+                </h1>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-medium ${
+                    data.match.radiantWin
+                      ? 'bg-green-900/50 text-green-300'
+                      : 'bg-red-900/50 text-red-300'
+                  }`}
+                >
+                  {resultLabel}
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-neutral-400">
+                Analisi avanzata FZTH • Match ID: {data.match.matchId} • Player:{' '}
+                {playerId}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              {/* Link alla nuova analisi avanzata FZTH */}
+            <div className="flex flex-wrap items-center gap-2">
               <Link
                 href={`/dota/matches/${data.match.matchId}/players/${playerId}`}
-                className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700"
+                className="rounded-md border border-neutral-700 bg-neutral-800/50 px-3 py-1.5 text-xs font-medium text-neutral-200 transition-all hover:border-teal-500/50 hover:bg-teal-950/30 hover:text-teal-300"
               >
-                📊 Analisi Avanzata FZTH
+                📊 Analisi Completa
               </Link>
-              <span
-                className={`rounded px-2 py-1 text-xs ${
-                  data.match.radiantWin
-                    ? 'bg-green-900 text-green-200'
-                    : 'bg-red-900 text-red-200'
-                }`}
-              >
-                {resultLabel}
+              <span className="rounded-md bg-neutral-800/50 px-2 py-1 text-xs text-neutral-400">
+                {minutes(data.match.durationSeconds)}m
               </span>
-              <span className="rounded bg-neutral-900 px-2 py-1 text-xs text-neutral-300">
-                Durata: {minutes(data.match.durationSeconds)} min
-              </span>
-              <span className="rounded bg-neutral-900 px-2 py-1 text-xs text-neutral-300">
-                {new Date(data.match.startTime).toLocaleString('it-IT')}
-              </span>
-              <span className="rounded bg-neutral-900 px-2 py-1 text-xs text-neutral-300">
-                Eroe ID: {data.player.heroId}
+              <span className="rounded-md bg-neutral-800/50 px-2 py-1 text-xs text-neutral-400">
+                {new Date(data.match.startTime).toLocaleDateString('it-IT', {
+                  day: '2-digit',
+                  month: '2-digit',
+                })}
               </span>
             </div>
           </div>
 
-          {/* Mini-analisi automatica - mostra solo se advancedKPI è caricato */}
-          {kpiLoading && (
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-4">
-              <div className="text-neutral-400">
-                Caricamento analisi avanzata…
-              </div>
-            </div>
-          )}
-          {!kpiLoading && advancedKPI && data && (
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-4">
-              <h2 className="mb-3 text-sm font-medium text-neutral-200">
-                Mini-analisi automatica (Dati reali da Supabase)
-              </h2>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {/* Kill Distribution Early - dati reali da advancedKPI */}
-                <div className="rounded-lg border border-green-800/50 bg-green-900/20 p-3">
-                  <div className="text-xs text-green-300">Kill Early Game</div>
-                  <div className="text-sm font-semibold text-green-200">
-                    {advancedKPI.killDistribution.early} kill
-                  </div>
-                  <div className="text-xs text-green-400/80">
-                    {formatPercentageOrNA(
-                      advancedKPI.killPercentageDistribution.early,
-                      1,
-                    )}{' '}
-                    del totale
-                  </div>
-                </div>
-
-                {/* Kill Distribution Mid - dati reali da advancedKPI */}
-                <div className="rounded-lg border border-orange-800/50 bg-orange-900/20 p-3">
-                  <div className="text-xs text-orange-300">Kill Mid Game</div>
-                  <div className="text-sm font-semibold text-orange-200">
-                    {advancedKPI.killDistribution.mid} kill
-                  </div>
-                  <div className="text-xs text-orange-400/80">
-                    {formatPercentageOrNA(
-                      advancedKPI.killPercentageDistribution.mid,
-                      1,
-                    )}{' '}
-                    del totale
-                  </div>
-                </div>
-
-                {/* Kill Distribution Late - dati reali da advancedKPI */}
-                <div className="rounded-lg border border-red-800/50 bg-red-900/20 p-3">
-                  <div className="text-xs text-red-300">Kill Late Game</div>
-                  <div className="text-sm font-semibold text-red-200">
-                    {advancedKPI.killDistribution.late} kill
-                  </div>
-                  <div className="text-xs text-red-400/80">
-                    {formatPercentageOrNA(
-                      advancedKPI.killPercentageDistribution.late,
-                      1,
-                    )}{' '}
-                    del totale
-                  </div>
-                </div>
-
-                {/* Death Cost Summary - dati reali da advancedKPI */}
-                <div className="rounded-lg border border-red-800/50 bg-red-900/20 p-3">
-                  <div className="text-xs text-red-300">Costo Morti (Gold)</div>
-                  <div className="text-lg font-bold text-red-200">
-                    {formatNumberOrNA(
-                      advancedKPI.deathCostSummary.totalGoldLost,
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="mt-4">
-                <Link
-                  href="/dashboard/coaching"
-                  className="text-sm text-blue-400 hover:underline"
-                >
-                  Crea Task da questo match →
-                </Link>
-              </div>
-            </div>
-          )}
-
-          {/* KPI Card */}
+          {/* SEZIONE 1: KDA + Indicatori base - sempre visibile */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="rounded-lg border border-neutral-800 p-4">
-              <div className="text-xs text-neutral-400">K/D/A</div>
-              <div className="text-xl font-semibold">
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">
+                K/D/A
+              </div>
+              <div className="text-2xl font-bold text-neutral-100">
                 {data.player.kills} / {data.player.deaths} /{' '}
                 {data.player.assists}
               </div>
-              <div className="mt-2 text-xs text-neutral-400">KDA</div>
-              <div className="text-sm">{data.player.kda.toFixed(2)}</div>
-            </div>
-            <div className="rounded-lg border border-neutral-800 p-4">
-              <div className="text-xs text-neutral-400">CS</div>
-              <div className="text-xl font-semibold">
-                {formatNumberOrNA(data.player.lastHits)} /{' '}
-                {formatNumberOrNA(data.player.denies)}
+              <div className="mt-2 text-xs text-neutral-400">KDA Ratio</div>
+              <div className="text-sm font-semibold text-neutral-200">
+                {data.player.kda.toFixed(2)}
               </div>
-              <div className="mt-2 text-xs text-neutral-400">GPM / XPM</div>
-              <div className="text-sm">
-                {formatNumberOrNA(data.player.gpm)} /{' '}
-                {formatNumberOrNA(data.player.xpm)}
-              </div>
-              {/* Mostra role position da advancedKPI se disponibile */}
               {advancedKPI && (
-                <div className="mt-2 text-xs text-neutral-400">
+                <div className="mt-3 border-t border-neutral-800 pt-3 text-xs text-neutral-500">
                   Role:{' '}
                   {advancedKPI.rolePosition === 1
                     ? 'Pos 1 (Carry)'
@@ -374,175 +298,128 @@ export default function MatchDetailPage() {
                 </div>
               )}
             </div>
-            <div className="rounded-lg border border-neutral-800 p-4">
-              <div className="text-xs text-neutral-400">Danni</div>{' '}
-              <div className="text-sm">
-                Eroe: {formatNumberOrNA(data.player.heroDamage)}
+
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">
+                Farm
               </div>
-              <div className="text-sm">
-                Torri: {formatNumberOrNA(data.player.towerDamage)}
+              <div className="mb-3 text-xl font-bold text-neutral-100">
+                {formatNumberOrNA(data.player.lastHits)} /{' '}
+                {formatNumberOrNA(data.player.denies)}
               </div>
-              <div className="text-sm">
-                Cura: {formatNumberOrNA(data.player.heroHealing)}
+              <div className="mt-2 text-xs text-neutral-400">GPM / XPM</div>
+              <div className="text-sm font-semibold text-neutral-200">
+                {formatNumberOrNA(data.player.gpm)} /{' '}
+                {formatNumberOrNA(data.player.xpm)}
               </div>
-              {/* Mostra death cost summary da advancedKPI se disponibile */}
+            </div>
+
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400">
+                Danni
+              </div>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">Eroe:</span>
+                  <span className="font-semibold text-neutral-200">
+                    {formatNumberOrNA(data.player.heroDamage)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">Torri:</span>
+                  <span className="font-semibold text-neutral-200">
+                    {formatNumberOrNA(data.player.towerDamage)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-neutral-400">Cura:</span>
+                  <span className="font-semibold text-neutral-200">
+                    {formatNumberOrNA(data.player.heroHealing)}
+                  </span>
+                </div>
+              </div>
               {advancedKPI && (
-                <>
-                  <div className="mt-2 border-t border-neutral-700 pt-2 text-xs text-neutral-400">
-                    Costo Morti (XP/CS)
-                  </div>
-                  <div className="text-xs text-yellow-300">
+                <div className="mt-3 border-t border-neutral-800 pt-3 text-xs">
+                  <div className="mb-1 text-neutral-400">Costo Morti:</div>
+                  <div className="text-yellow-300">
                     XP:{' '}
                     {formatNumberOrNA(advancedKPI.deathCostSummary.totalXpLost)}
                   </div>
-                  <div className="text-xs text-orange-300">
+                  <div className="text-orange-300">
                     CS:{' '}
                     {formatNumberOrNA(advancedKPI.deathCostSummary.totalCsLost)}
                   </div>
-                </>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Charts (SVG lightweight) */}
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-            <div className="rounded-lg border border-neutral-800 p-4">
-              <div className="mb-2 text-sm text-neutral-300">
-                Gold Difference nel tempo
-              </div>
+          {/* SEZIONE 2: Gold/XP/CS Timeline - grafico */}
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+            <h2 className="mb-4 text-lg font-semibold text-neutral-200">
+              Timeline Gold Difference
+            </h2>
+            <div className="mb-4 h-[240px]">
               <SparkLine points={data.timeline.goldDiffSeries} />
-              <ExplanationCard
-                title="Cosa mostra il Gold Difference"
-                description="Il grafico mostra la differenza di gold tra il tuo team e il nemico nel tempo. Valori positivi indicano vantaggio economico."
-                timeRange="Durata della partita"
-              />
             </div>
-            <div className="rounded-lg border border-neutral-800 p-4">
-              <div className="mb-2 text-sm text-neutral-300">
-                Kills per intervallo (10 min)
-              </div>
-              <Bars data={data.timeline.killsByInterval} />
-              <ExplanationCard
-                title="Kills per intervallo"
-                description="Mostra quanti kill ha fatto il tuo team (verde) vs il nemico (rosso) in ogni intervallo di 10 minuti. Aiuta a capire quando il team ha dominato."
-                timeRange="Durata della partita"
-              />
-            </div>
+            <ExplanationCard
+              title="Gold Difference Timeline"
+              description="Mostra la differenza di gold tra il tuo team e il nemico nel tempo. Valori positivi (verde) indicano vantaggio economico, valori negativi (rosso) indicano svantaggio."
+              timeRange="Durata della partita"
+            />
           </div>
 
-          {/* KPI avanzati da dota_player_match_analysis */}
+          {/* SEZIONE 3: Kills by Interval - grafico */}
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+            <h2 className="mb-4 text-lg font-semibold text-neutral-200">
+              Kills per Intervallo (10 min)
+            </h2>
+            <div className="mb-4 h-[240px]">
+              <Bars data={data.timeline.killsByInterval} />
+            </div>
+            <ExplanationCard
+              title="Kills per Intervallo"
+              description="Mostra quanti kill ha fatto il tuo team (verde acqua) vs il nemico (rosso) in ogni intervallo di 10 minuti. Aiuta a capire quando il team ha dominato."
+              timeRange="Durata della partita"
+            />
+          </div>
+
+          {/* SEZIONE 4: Advanced KPI - con loading skeleton */}
           {kpiLoading && (
-            <div className="rounded-lg border border-neutral-800 p-4">
-              <div className="text-neutral-400">
-                Caricamento analisi avanzata…
-              </div>
+            <div className="space-y-6">
+              <SkeletonChart />
+              <SkeletonGrid cols={3} />
+              <SkeletonChart />
+              <SkeletonGrid cols={5} />
             </div>
           )}
           {!kpiLoading && advancedKPI && (
-            <div className="rounded-lg border border-neutral-800 p-4">
-              <h2 className="mb-4 text-lg font-semibold text-neutral-200">
-                Analisi Avanzata Match FZTH
-              </h2>
-
-              {/* Death Cost Summary */}
-              <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div className="rounded-lg border border-red-800/50 bg-red-900/20 p-3">
-                  <div className="text-xs text-red-300">Gold Perso</div>
-                  <div className="text-xl font-bold text-red-200">
-                    {formatNumberOrNA(
-                      advancedKPI.deathCostSummary.totalGoldLost,
-                    )}
-                  </div>
-                </div>
-                <div className="rounded-lg border border-yellow-800/50 bg-yellow-900/20 p-3">
-                  <div className="text-xs text-yellow-300">XP Perso</div>
-                  <div className="text-xl font-bold text-yellow-200">
-                    {formatNumberOrNA(advancedKPI.deathCostSummary.totalXpLost)}
-                  </div>
-                </div>
-                <div className="rounded-lg border border-orange-800/50 bg-orange-900/20 p-3">
-                  <div className="text-xs text-orange-300">CS Perso</div>
-                  <div className="text-xl font-bold text-orange-200">
-                    {formatNumberOrNA(advancedKPI.deathCostSummary.totalCsLost)}
-                  </div>
+            <div className="space-y-6">
+              {/* Header Advanced KPI */}
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-neutral-200">
+                    Analisi Avanzata FZTH
+                  </h2>
+                  <Link
+                    href={`/dota/matches/${matchId}/players/${playerId}`}
+                    className="text-xs text-teal-400 hover:text-teal-300 hover:underline"
+                  >
+                    Vedi analisi completa →
+                  </Link>
                 </div>
               </div>
 
-              {/* Kill Distribution per fase - grafico */}
-              <div className="mb-6">
-                <h3 className="mb-3 text-sm font-medium text-neutral-300">
-                  Kill Distribution per Fase (Grafico)
+              {/* SEZIONE 5: Death Distribution per fase */}
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+                <h3 className="mb-4 text-base font-semibold text-neutral-200">
+                  Death Distribution per Fase
                 </h3>
-                {/* Grafico Kill Distribution */}
-                <div className="mb-4 h-[200px]">
-                  <Bars
-                    data={[
-                      {
-                        minuteFrom: 0,
-                        minuteTo: 10,
-                        teamKills: advancedKPI.killDistribution.early,
-                        enemyKills: 0,
-                      },
-                      {
-                        minuteFrom: 10,
-                        minuteTo: 30,
-                        teamKills: advancedKPI.killDistribution.mid,
-                        enemyKills: 0,
-                      },
-                      {
-                        minuteFrom: 30,
-                        minuteTo: 60,
-                        teamKills: advancedKPI.killDistribution.late,
-                        enemyKills: 0,
-                      },
-                    ]}
-                  />
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded border border-green-800/50 bg-green-900/20 p-2 text-center">
-                    <div className="text-xs text-green-300">Early</div>
-                    <div className="text-lg font-semibold text-green-200">
-                      {advancedKPI.killDistribution.early}
-                    </div>
-                    <div className="text-xs text-green-400/80">
-                      {formatPercentageOrNA(
-                        advancedKPI.killPercentageDistribution.early,
-                        1,
-                      )}
-                    </div>
-                  </div>
-                  <div className="rounded border border-orange-800/50 bg-orange-900/20 p-2 text-center">
-                    <div className="text-xs text-orange-300">Mid</div>
-                    <div className="text-lg font-semibold text-orange-200">
-                      {advancedKPI.killDistribution.mid}
-                    </div>
-                    <div className="text-xs text-orange-400/80">
-                      {formatPercentageOrNA(
-                        advancedKPI.killPercentageDistribution.mid,
-                        1,
-                      )}
-                    </div>
-                  </div>
-                  <div className="rounded border border-red-800/50 bg-red-900/20 p-2 text-center">
-                    <div className="text-xs text-red-300">Late</div>
-                    <div className="text-lg font-semibold text-red-200">
-                      {advancedKPI.killDistribution.late}
-                    </div>
-                    <div className="text-xs text-red-400/80">
-                      {formatPercentageOrNA(
-                        advancedKPI.killPercentageDistribution.late,
-                        1,
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                <p className="mb-4 text-xs text-neutral-400">
+                  Distribuzione delle morti nelle tre fasi (Early: 0-10min, Mid:
+                  10-30min, Late: 30+min)
+                </p>
 
-              {/* Death Distribution per fase - grafico */}
-              <div className="mb-6">
-                <h3 className="mb-3 text-sm font-medium text-neutral-300">
-                  Death Distribution per Fase (Grafico)
-                </h3>
                 {/* Grafico Death Distribution */}
                 <div className="mb-4 h-[200px]">
                   <Bars
@@ -568,37 +445,45 @@ export default function MatchDetailPage() {
                     ]}
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded border border-red-800/50 bg-red-900/20 p-2 text-center">
-                    <div className="text-xs text-red-300">Early</div>
-                    <div className="text-lg font-semibold text-red-200">
+
+                {/* Cards Death Distribution */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-lg border border-red-800/50 bg-red-900/20 p-3 text-center">
+                    <div className="mb-1 text-xs font-medium uppercase tracking-wide text-red-300">
+                      Early
+                    </div>
+                    <div className="text-xl font-bold text-red-200">
                       {advancedKPI.deathDistribution.early}
                     </div>
-                    <div className="text-xs text-red-400/80">
+                    <div className="mt-1 text-xs text-red-400/80">
                       {formatPercentageOrNA(
                         advancedKPI.deathPercentageDistribution.early,
                         1,
                       )}
                     </div>
                   </div>
-                  <div className="rounded border border-orange-800/50 bg-orange-900/20 p-2 text-center">
-                    <div className="text-xs text-orange-300">Mid</div>
-                    <div className="text-lg font-semibold text-orange-200">
+                  <div className="rounded-lg border border-orange-800/50 bg-orange-900/20 p-3 text-center">
+                    <div className="mb-1 text-xs font-medium uppercase tracking-wide text-orange-300">
+                      Mid
+                    </div>
+                    <div className="text-xl font-bold text-orange-200">
                       {advancedKPI.deathDistribution.mid}
                     </div>
-                    <div className="text-xs text-orange-400/80">
+                    <div className="mt-1 text-xs text-orange-400/80">
                       {formatPercentageOrNA(
                         advancedKPI.deathPercentageDistribution.mid,
                         1,
                       )}
                     </div>
                   </div>
-                  <div className="rounded border border-green-800/50 bg-green-900/20 p-2 text-center">
-                    <div className="text-xs text-green-300">Late</div>
-                    <div className="text-lg font-semibold text-green-200">
+                  <div className="rounded-lg border border-green-800/50 bg-green-900/20 p-3 text-center">
+                    <div className="mb-1 text-xs font-medium uppercase tracking-wide text-green-300">
+                      Late
+                    </div>
+                    <div className="text-xl font-bold text-green-200">
                       {advancedKPI.deathDistribution.late}
                     </div>
-                    <div className="text-xs text-green-400/80">
+                    <div className="mt-1 text-xs text-green-400/80">
                       {formatPercentageOrNA(
                         advancedKPI.deathPercentageDistribution.late,
                         1,
@@ -608,11 +493,98 @@ export default function MatchDetailPage() {
                 </div>
               </div>
 
-              {/* Death by Role - grafico e tabella */}
-              <div className="mb-6">
-                <h3 className="mb-3 text-sm font-medium text-neutral-300">
-                  Death by Role (Pos1-5) - Dati reali da Supabase
+              {/* SEZIONE 6: Kill Distribution per fase */}
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+                <h3 className="mb-4 text-base font-semibold text-neutral-200">
+                  Kill Distribution per Fase
                 </h3>
+                <p className="mb-4 text-xs text-neutral-400">
+                  Distribuzione delle kill nelle tre fasi (Early: 0-10min, Mid:
+                  10-30min, Late: 30+min)
+                </p>
+
+                {/* Grafico Kill Distribution */}
+                <div className="mb-4 h-[200px]">
+                  <Bars
+                    data={[
+                      {
+                        minuteFrom: 0,
+                        minuteTo: 10,
+                        teamKills: advancedKPI.killDistribution.early,
+                        enemyKills: 0,
+                      },
+                      {
+                        minuteFrom: 10,
+                        minuteTo: 30,
+                        teamKills: advancedKPI.killDistribution.mid,
+                        enemyKills: 0,
+                      },
+                      {
+                        minuteFrom: 30,
+                        minuteTo: 60,
+                        teamKills: advancedKPI.killDistribution.late,
+                        enemyKills: 0,
+                      },
+                    ]}
+                  />
+                </div>
+
+                {/* Cards Kill Distribution */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="rounded-lg border border-green-800/50 bg-green-900/20 p-3 text-center">
+                    <div className="mb-1 text-xs font-medium uppercase tracking-wide text-green-300">
+                      Early
+                    </div>
+                    <div className="text-xl font-bold text-green-200">
+                      {advancedKPI.killDistribution.early}
+                    </div>
+                    <div className="mt-1 text-xs text-green-400/80">
+                      {formatPercentageOrNA(
+                        advancedKPI.killPercentageDistribution.early,
+                        1,
+                      )}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-orange-800/50 bg-orange-900/20 p-3 text-center">
+                    <div className="mb-1 text-xs font-medium uppercase tracking-wide text-orange-300">
+                      Mid
+                    </div>
+                    <div className="text-xl font-bold text-orange-200">
+                      {advancedKPI.killDistribution.mid}
+                    </div>
+                    <div className="mt-1 text-xs text-orange-400/80">
+                      {formatPercentageOrNA(
+                        advancedKPI.killPercentageDistribution.mid,
+                        1,
+                      )}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-red-800/50 bg-red-900/20 p-3 text-center">
+                    <div className="mb-1 text-xs font-medium uppercase tracking-wide text-red-300">
+                      Late
+                    </div>
+                    <div className="text-xl font-bold text-red-200">
+                      {advancedKPI.killDistribution.late}
+                    </div>
+                    <div className="mt-1 text-xs text-red-400/80">
+                      {formatPercentageOrNA(
+                        advancedKPI.killPercentageDistribution.late,
+                        1,
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SEZIONE 7: Death by Role */}
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+                <h3 className="mb-4 text-base font-semibold text-neutral-200">
+                  Death by Role (Pos1-5)
+                </h3>
+                <p className="mb-4 text-xs text-neutral-400">
+                  Percentuale di morti causate da ciascun ruolo avversario
+                </p>
+
                 {/* Grafico Death by Role */}
                 <div className="mb-4 h-[200px]">
                   <Bars
@@ -629,6 +601,8 @@ export default function MatchDetailPage() {
                     })}
                   />
                 </div>
+
+                {/* Cards Death by Role */}
                 <div className="grid grid-cols-5 gap-2">
                   {[1, 2, 3, 4, 5].map((pos) => {
                     const value = advancedKPI.deathByRole[
@@ -641,16 +615,36 @@ export default function MatchDetailPage() {
                       4: 'Soft Sup',
                       5: 'Hard Sup',
                     }
+                    const maxValue = Math.max(
+                      ...([1, 2, 3, 4, 5] as const).map(
+                        (p) =>
+                          advancedKPI.deathByRole[
+                            `pos${p}` as keyof typeof advancedKPI.deathByRole
+                          ] as number,
+                      ),
+                    )
+                    const isMax = value === maxValue && value > 0
+
                     return (
                       <div
                         key={pos}
-                        className="rounded border border-neutral-800 bg-neutral-900/70 p-2 text-center"
+                        className={`rounded-lg border p-3 text-center transition-all ${
+                          isMax
+                            ? 'border-orange-600/50 bg-orange-900/20'
+                            : 'border-neutral-800 bg-neutral-900/70'
+                        }`}
                       >
-                        <div className="text-xs text-neutral-400">Pos{pos}</div>
-                        <div className="text-xs text-neutral-500">
+                        <div className="mb-1 text-xs font-medium uppercase tracking-wide text-neutral-400">
+                          Pos{pos}
+                        </div>
+                        <div className="mb-1 text-[10px] text-neutral-500">
                           {roleLabels[pos]}
                         </div>
-                        <div className="text-lg font-semibold text-neutral-200">
+                        <div
+                          className={`text-lg font-bold ${
+                            isMax ? 'text-orange-300' : 'text-neutral-200'
+                          }`}
+                        >
                           {formatPercentageOrNA(value, 1)}
                         </div>
                       </div>
@@ -659,68 +653,118 @@ export default function MatchDetailPage() {
                 </div>
               </div>
 
-              {/* Death Events Info */}
-              {advancedKPI.deathEvents &&
-                advancedKPI.deathEvents.length > 0 && (
-                  <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900/30 p-3">
-                    <div className="text-xs text-neutral-400">
-                      Eventi di Morte Disponibili:{' '}
-                      {advancedKPI.deathEvents.length}
+              {/* SEZIONE 8: Death Cost Summary */}
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+                <h3 className="mb-4 text-base font-semibold text-neutral-200">
+                  Costo Opportunità delle Morti
+                </h3>
+                <p className="mb-4 text-xs text-neutral-400">
+                  Risorse perse durante i tempi di respawn causati dalle morti
+                </p>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="rounded-lg border border-red-800/50 bg-red-900/20 p-4">
+                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-red-300">
+                      Gold Perso
                     </div>
-                    <div className="mt-1 text-xs text-neutral-500">
-                      Dati disponibili per analisi dettagliata della heatmap
+                    <div className="text-2xl font-bold text-red-200">
+                      {formatNumberOrNA(
+                        advancedKPI.deathCostSummary.totalGoldLost,
+                      )}
+                    </div>
+                    <div className="mt-2 text-xs text-red-400/80">
+                      Durante tutti i respawn
                     </div>
                   </div>
-                )}
 
-              {/* Link alla pagina analisi completa */}
-              <div className="mt-4">
-                <Link
-                  href={`/dota/matches/${matchId}/players/${playerId}`}
-                  className="text-sm text-blue-400 hover:underline"
-                >
-                  📊 Vedi Analisi Completa Avanzata →
-                </Link>
+                  <div className="rounded-lg border border-yellow-800/50 bg-yellow-900/20 p-4">
+                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-yellow-300">
+                      XP Perso
+                    </div>
+                    <div className="text-2xl font-bold text-yellow-200">
+                      {formatNumberOrNA(
+                        advancedKPI.deathCostSummary.totalXpLost,
+                      )}
+                    </div>
+                    <div className="mt-2 text-xs text-yellow-400/80">
+                      Esperienza non guadagnata
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-orange-800/50 bg-orange-900/20 p-4">
+                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-orange-300">
+                      CS Perso
+                    </div>
+                    <div className="text-2xl font-bold text-orange-200">
+                      {formatNumberOrNA(
+                        advancedKPI.deathCostSummary.totalCsLost,
+                      )}
+                    </div>
+                    <div className="mt-2 text-xs text-orange-400/80">
+                      Last hits mancati
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Analisi risultato */}
-              <div className="mt-6 rounded-lg border border-neutral-800 bg-neutral-900/30 p-4">
-                <h3 className="mb-2 text-sm font-medium text-neutral-200">
-                  Analisi risultato partita
+              {/* SEZIONE 9: Insight Box (Placeholder Fase 3C) */}
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+                <h3 className="mb-4 text-base font-semibold text-neutral-200">
+                  Insight Match
                 </h3>
-                <div className="text-xs text-neutral-300">
-                  {data.match.radiantWin
-                    ? 'Questa partita è stata vinta grazie a:'
-                    : 'Questa partita è stata persa a causa di:'}
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
+                  <div className="mb-2 text-xs font-medium text-neutral-300">
+                    {data.match.radiantWin
+                      ? '✅ Partita vinta grazie a:'
+                      : '❌ Partita persa a causa di:'}
+                  </div>
+                  <ul className="space-y-1.5 text-xs text-neutral-400">
+                    {data.player.kda != null && data.player.kda >= 2.0 && (
+                      <li className="flex items-center gap-2">
+                        <span className="text-green-400">•</span>
+                        <span>Buon KDA: {data.player.kda.toFixed(2)}</span>
+                      </li>
+                    )}
+                    {data.player.kda != null && data.player.kda < 1.0 && (
+                      <li className="flex items-center gap-2">
+                        <span className="text-red-400">•</span>
+                        <span>KDA basso: {data.player.kda.toFixed(2)}</span>
+                      </li>
+                    )}
+                    {data.player.gpm && data.player.gpm >= 400 && (
+                      <li className="flex items-center gap-2">
+                        <span className="text-green-400">•</span>
+                        <span>GPM alto: {data.player.gpm}</span>
+                      </li>
+                    )}
+                    {data.player.gpm && data.player.gpm < 300 && (
+                      <li className="flex items-center gap-2">
+                        <span className="text-orange-400">•</span>
+                        <span>GPM basso: {data.player.gpm}</span>
+                      </li>
+                    )}
+                    {data.player.heroDamage &&
+                      data.player.heroDamage >= 15000 && (
+                        <li className="flex items-center gap-2">
+                          <span className="text-green-400">•</span>
+                          <span>
+                            Danni agli eroi alti:{' '}
+                            {data.player.heroDamage.toLocaleString()}
+                          </span>
+                        </li>
+                      )}
+                    {data.player.towerDamage &&
+                      data.player.towerDamage >= 2000 && (
+                        <li className="flex items-center gap-2">
+                          <span className="text-green-400">•</span>
+                          <span>
+                            Focus obiettivi:{' '}
+                            {data.player.towerDamage.toLocaleString()}
+                          </span>
+                        </li>
+                      )}
+                  </ul>
                 </div>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-neutral-400">
-                  {data.player.kda != null && data.player.kda >= 2.0 && (
-                    <li>Buon KDA ({data.player.kda.toFixed(2)})</li>
-                  )}
-                  {data.player.kda != null && data.player.kda < 1.0 && (
-                    <li>KDA basso ({data.player.kda.toFixed(2)})</li>
-                  )}
-                  {data.player.gpm && data.player.gpm >= 400 && (
-                    <li>GPM alto ({data.player.gpm})</li>
-                  )}
-                  {data.player.gpm && data.player.gpm < 300 && (
-                    <li>GPM basso ({data.player.gpm})</li>
-                  )}
-                  {data.player.heroDamage &&
-                    data.player.heroDamage >= 15000 && (
-                      <li>
-                        Danni agli eroi alti (
-                        {data.player.heroDamage.toLocaleString()})
-                      </li>
-                    )}
-                  {data.player.towerDamage &&
-                    data.player.towerDamage >= 2000 && (
-                      <li>
-                        Buon focus obiettivi (
-                        {data.player.towerDamage.toLocaleString()})
-                      </li>
-                    )}
-                </ul>
                 <ExplanationCard
                   title="Come usare questa analisi"
                   description="I KPI chiave mostrano cosa ha funzionato o non ha funzionato in questa partita. Usa queste informazioni per migliorare nelle prossime partite."
@@ -768,18 +812,68 @@ function SparkLine({
     <svg
       width="100%"
       viewBox={`0 0 ${width} ${height}`}
-      className="text-blue-400"
+      className="max-w-full overflow-hidden"
+      preserveAspectRatio="xMidYMid meet"
     >
+      {/* Background grid lines */}
+      <defs>
+        <pattern id="grid" width="40" height="20" patternUnits="userSpaceOnUse">
+          <path
+            d="M 40 0 L 0 0 0 20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="0.5"
+            strokeOpacity="0.1"
+          />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#grid)" />
+
+      {/* Zero line */}
       <line
-        x1="0"
+        x1="20"
         y1={scaleY(0)}
-        x2={width}
+        x2={width - 20}
         y2={scaleY(0)}
-        stroke="currentColor"
-        strokeOpacity="0.3"
-        strokeWidth="1"
+        stroke="#0d9488"
+        strokeOpacity="0.4"
+        strokeWidth="1.5"
+        strokeDasharray="4 4"
       />
-      <path d={path} fill="none" stroke="currentColor" strokeWidth="2" />
+
+      {/* Data line */}
+      <path
+        d={path}
+        fill="none"
+        stroke="#14b8a6"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {/* Points */}
+      {points.map((p, i) => (
+        <circle
+          key={i}
+          cx={scaleX(p.minute)}
+          cy={scaleY(p.goldDiff)}
+          r="3"
+          fill="#14b8a6"
+          stroke="#0d9488"
+          strokeWidth="1.5"
+        />
+      ))}
+
+      {/* Labels */}
+      <text
+        x={width - 100}
+        y={20}
+        fontSize="10"
+        fill="#a1a1aa"
+        className="font-medium"
+      >
+        Gold Diff
+      </text>
     </svg>
   )
 }
@@ -810,33 +904,124 @@ function Bars({
   const scaleY = (v: number) => (v / maxVal) * (height - 30)
 
   return (
-    <svg width="100%" viewBox={`0 0 ${width} ${height}`}>
+    <svg
+      width="100%"
+      viewBox={`0 0 ${width} ${height}`}
+      className="max-w-full overflow-hidden"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      {/* Legend */}
+      <g>
+        <rect x={20} y={10} width="12" height="12" fill="#14b8a6" rx="2" />
+        <text
+          x={36}
+          y={19}
+          fontSize="10"
+          fill="#d4d4d8"
+          className="font-medium"
+        >
+          Team
+        </text>
+        <rect x={90} y={10} width="12" height="12" fill="#ef4444" rx="2" />
+        <text
+          x={106}
+          y={19}
+          fontSize="10"
+          fill="#d4d4d8"
+          className="font-medium"
+        >
+          Enemy
+        </text>
+      </g>
+
+      {/* Bars */}
       {data.map((d, idx) => {
         const x = 20 + idx * (barGroupWidth + gap)
         const teamH = scaleY(d.teamKills)
         const enemyH = scaleY(d.enemyKills)
+        const maxH = Math.max(teamH, enemyH, 5) // Minimum height for visibility
+
         return (
           <g key={idx}>
+            {/* Team kills bar */}
             <rect
               x={x}
-              y={height - teamH - 10}
-              width={12}
-              height={teamH}
-              fill="#22c55e"
-            />
+              y={height - Math.max(teamH, 5) - 25}
+              width="14"
+              height={Math.max(teamH, 5)}
+              fill="#14b8a6"
+              rx="2"
+              opacity={d.teamKills > 0 ? 1 : 0.3}
+            >
+              <title>Team: {d.teamKills} kills</title>
+            </rect>
+
+            {/* Enemy kills bar */}
             <rect
-              x={x + 14}
-              y={height - enemyH - 10}
-              width={12}
-              height={enemyH}
+              x={x + 16}
+              y={height - Math.max(enemyH, 5) - 25}
+              width="14"
+              height={Math.max(enemyH, 5)}
               fill="#ef4444"
-            />
-            <text x={x} y={height} fontSize="9" fill="#9ca3af">
-              {d.minuteFrom}-{d.minuteTo}
+              rx="2"
+              opacity={d.enemyKills > 0 ? 1 : 0.3}
+            >
+              <title>Enemy: {d.enemyKills} kills</title>
+            </rect>
+
+            {/* Interval label */}
+            <text
+              x={x + 7}
+              y={height - 5}
+              fontSize="9"
+              fill="#71717a"
+              textAnchor="middle"
+              className="font-medium"
+            >
+              {d.minuteFrom}-{d.minuteTo}m
             </text>
+
+            {/* Value labels */}
+            {d.teamKills > 0 && (
+              <text
+                x={x + 7}
+                y={height - Math.max(teamH, 5) - 30}
+                fontSize="8"
+                fill="#14b8a6"
+                textAnchor="middle"
+                className="font-semibold"
+              >
+                {d.teamKills}
+              </text>
+            )}
+            {d.enemyKills > 0 && (
+              <text
+                x={x + 23}
+                y={height - Math.max(enemyH, 5) - 30}
+                fontSize="8"
+                fill="#ef4444"
+                textAnchor="middle"
+                className="font-semibold"
+              >
+                {d.enemyKills}
+              </text>
+            )}
           </g>
         )
       })}
+
+      {/* Y-axis label */}
+      <text
+        x={15}
+        y={height / 2}
+        fontSize="10"
+        fill="#71717a"
+        textAnchor="middle"
+        transform={`rotate(-90, 15, ${height / 2})`}
+        className="font-medium"
+      >
+        Kills
+      </text>
     </svg>
   )
 }
