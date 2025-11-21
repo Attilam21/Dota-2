@@ -580,9 +580,9 @@ function DashboardOverview(): React.JSX.Element {
   }
 
   return (
-    <div className="space-y-6 p-6 text-white">
+    <div className="space-y-4 text-white">
       {/* Header */}
-      <div>
+      <div className="mb-4">
         <h1 className="text-2xl font-semibold">Panoramica</h1>
         <p className="text-sm text-neutral-400">Player #{playerId}</p>
       </div>
@@ -608,152 +608,153 @@ function DashboardOverview(): React.JSX.Element {
       )}
 
       {!loading && !error && rows && rows.length > 0 && (
-        <>
-          {/* 🔷 BLOCCO A — IDENTITÀ GIOCATORE */}
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
-            <h2 className="mb-4 text-lg font-semibold text-neutral-200">
-              Identità Giocatore
-            </h2>
-            <div className="mb-4">
-              <div className="text-sm text-neutral-400">Nome giocatore</div>
-              <div className="text-lg font-semibold">Giocatore #{playerId}</div>
-              <div className="mt-1">
-                <span className="text-xs text-neutral-500">Player ID: </span>
-                <span className="cursor-pointer text-xs text-blue-400 hover:underline">
-                  {playerId}
-                </span>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              {/* Winrate complessivo */}
-              <KpiCardWithTooltip
-                label="Winrate complessivo"
-                value={globalStats?.winRate ?? null}
-                suffix="%"
-                tooltip="Percentuale di vittorie su tutte le partite disponibili"
-              />
-
-              {/* KDA medio */}
-              <KpiCardWithTooltip
-                label="KDA medio"
-                value={globalStats?.kdaAvg ?? null}
-                tooltip="Kill/Death/Assist Ratio medio: misura l'efficienza nelle partite"
-              />
-
-              {/* GPM medio */}
-              <KpiCardWithTooltip
-                label="Gold per Minuto (GPM)"
-                value={globalStats?.avgGpm ?? null}
-                tooltip="Gold guadagnato al minuto: indica l'efficienza nel farming"
-              />
-
-              {/* XPM medio */}
-              <KpiCardWithTooltip
-                label="Experience per Minuto (XPM)"
-                value={globalStats?.avgXpm ?? null}
-                tooltip="Experience guadagnata al minuto: indica la velocità di leveling"
-              />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {/* Colonna sinistra - Trend principale (2/3 su desktop) */}
+          <div className="space-y-4 lg:col-span-2">
+            {/* 🔷 BLOCCO B — TREND PRESTAZIONI */}
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+              <h2 className="mb-3 text-lg font-semibold text-neutral-200">
+                Trend Ultime 20 Partite
+              </h2>
+              {trendData.length > 0 ? (
+                <div className="h-[280px]">
+                  <MultiLineChart
+                    data={trendData}
+                    lines={[
+                      { key: 'winrate', color: '#22c55e', label: 'Winrate %' },
+                      { key: 'kda', color: '#60a5fa', label: 'KDA' },
+                      { key: 'gpm', color: '#f59e0b', label: 'GPM' },
+                    ]}
+                    width={800}
+                    height={280}
+                  />
+                </div>
+              ) : (
+                <div className="text-sm text-neutral-500">
+                  {kpiLoading
+                    ? 'Caricamento dati trend...'
+                    : 'Dati trend non disponibili'}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* 🔷 BLOCCO B — TREND PRESTAZIONI */}
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
-            <h2 className="mb-4 text-lg font-semibold text-neutral-200">
-              Trend Ultime 20 Partite
-            </h2>
-            {trendData.length > 0 ? (
-              <MultiLineChart
-                data={trendData}
-                lines={[
-                  { key: 'winrate', color: '#22c55e', label: 'Winrate %' },
-                  { key: 'kda', color: '#60a5fa', label: 'KDA' },
-                  { key: 'gpm', color: '#f59e0b', label: 'GPM' },
-                ]}
-                width={800}
-                height={300}
-              />
-            ) : (
-              <div className="text-sm text-neutral-500">
-                {kpiLoading
-                  ? 'Caricamento dati trend...'
-                  : 'Dati trend non disponibili'}
+          {/* Colonna destra - KPI e Telemetria (1/3 su desktop) */}
+          <div className="space-y-4">
+            {/* 🔷 BLOCCO A — IDENTITÀ GIOCATORE */}
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+              <h2 className="mb-3 text-lg font-semibold text-neutral-200">
+                Identità Giocatore
+              </h2>
+              <div className="mb-3">
+                <div className="text-sm text-neutral-400">Nome giocatore</div>
+                <div className="text-lg font-semibold">
+                  Giocatore #{playerId}
+                </div>
+                <div className="mt-1">
+                  <span className="text-xs text-neutral-500">Player ID: </span>
+                  <span className="cursor-pointer text-xs text-blue-400 hover:underline">
+                    {playerId}
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {/* Winrate complessivo */}
+                <KpiCardWithTooltip
+                  label="Winrate complessivo"
+                  value={globalStats?.winRate ?? null}
+                  suffix="%"
+                  tooltip="Percentuale di vittorie su tutte le partite disponibili"
+                />
+
+                {/* KDA medio */}
+                <KpiCardWithTooltip
+                  label="KDA medio"
+                  value={globalStats?.kdaAvg ?? null}
+                  tooltip="Kill/Death/Assist Ratio medio: misura l'efficienza nelle partite"
+                />
+
+                {/* GPM medio */}
+                <KpiCardWithTooltip
+                  label="Gold per Minuto (GPM)"
+                  value={globalStats?.avgGpm ?? null}
+                  tooltip="Gold guadagnato al minuto: indica l'efficienza nel farming"
+                />
+
+                {/* XPM medio */}
+                <KpiCardWithTooltip
+                  label="Experience per Minuto (XPM)"
+                  value={globalStats?.avgXpm ?? null}
+                  tooltip="Experience guadagnata al minuto: indica la velocità di leveling"
+                />
+              </div>
+            </div>
+
+            {/* 🔷 BLOCCO C — TELEMETRIA RAPIDA DEL GIOCATORE */}
+            {microKPI && (
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+                <h2 className="mb-3 text-sm font-semibold text-neutral-200">
+                  Telemetria Rapida
+                </h2>
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Consistenza */}
+                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
+                    <div className="mb-1 text-xs text-neutral-400">
+                      Consistenza
+                    </div>
+                    <div className="mb-1 text-base font-semibold text-neutral-200">
+                      {microKPI.consistencyStdDev !== null
+                        ? microKPI.consistencyStdDev.toFixed(2)
+                        : formatValueOrNA(null)}
+                    </div>
+                    <div className="text-[10px] text-neutral-500">
+                      Dev. standard KDA
+                    </div>
+                  </div>
+
+                  {/* Stile di gioco dominante */}
+                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
+                    <div className="mb-1 text-xs text-neutral-400">
+                      Stile di gioco
+                    </div>
+                    <div className="mb-1 text-base font-semibold text-neutral-200">
+                      {microKPI.playstyleLabel}
+                    </div>
+                    <div className="text-[10px] text-neutral-500">
+                      Basato su kills e assist
+                    </div>
+                  </div>
+
+                  {/* Lane più frequente */}
+                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
+                    <div className="mb-1 text-xs text-neutral-400">
+                      Lane più frequente
+                    </div>
+                    <div className="mb-1 text-base font-semibold text-neutral-200">
+                      {microKPI.laneMostFrequent}
+                    </div>
+                    <div className="text-[10px] text-neutral-500">
+                      Ultime 20 partite
+                    </div>
+                  </div>
+
+                  {/* Peak Performance */}
+                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
+                    <div className="mb-1 text-xs text-neutral-400">
+                      Peak Performance
+                    </div>
+                    <div className="mb-1 text-base font-semibold text-neutral-200">
+                      {microKPI.peakPerformance}
+                    </div>
+                    <div className="text-[10px] text-neutral-500">
+                      Migliore performance
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
-
-          {/* 🔷 BLOCCO C — TELEMETRIA RAPIDA DEL GIOCATORE */}
-          {microKPI && (
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
-              <h2 className="mb-4 text-lg font-semibold text-neutral-200">
-                Telemetria Rapida del Giocatore
-              </h2>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {/* Consistenza */}
-                <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-                  <div className="mb-1 text-xs text-neutral-400">
-                    Consistenza
-                  </div>
-                  <div className="mb-1 text-lg font-semibold text-neutral-200">
-                    {microKPI.consistencyStdDev !== null
-                      ? microKPI.consistencyStdDev.toFixed(2)
-                      : formatValueOrNA(null)}
-                  </div>
-                  <div className="text-xs text-neutral-500">
-                    Dev. standard KDA
-                  </div>
-                  <div
-                    className="mt-1 text-[10px] text-neutral-400"
-                    title="Misura la variabilità delle tue prestazioni: più è bassa, più sei consistente."
-                  >
-                    Variabilità prestazioni
-                  </div>
-                </div>
-
-                {/* Stile di gioco dominante */}
-                <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-                  <div className="mb-1 text-xs text-neutral-400">
-                    Stile di gioco dominante
-                  </div>
-                  <div className="mb-1 text-lg font-semibold text-neutral-200">
-                    {microKPI.playstyleLabel}
-                  </div>
-                  <div className="text-xs text-neutral-500">
-                    Basato su kills e assist
-                  </div>
-                </div>
-
-                {/* Lane più frequente */}
-                <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-                  <div className="mb-1 text-xs text-neutral-400">
-                    Lane più frequente
-                  </div>
-                  <div className="mb-1 text-lg font-semibold text-neutral-200">
-                    {microKPI.laneMostFrequent}
-                  </div>
-                  <div
-                    className="text-xs text-neutral-500"
-                    title="Corsia più giocata nelle ultime 20 partite."
-                  >
-                    Ultime 20 partite
-                  </div>
-                </div>
-
-                {/* Peak Performance */}
-                <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-                  <div className="mb-1 text-xs text-neutral-400">
-                    Peak Performance
-                  </div>
-                  <div className="mb-1 text-lg font-semibold text-neutral-200">
-                    {microKPI.peakPerformance}
-                  </div>
-                  <div className="text-xs text-neutral-500">
-                    Migliore performance recente
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
+        </div>
       )}
     </div>
   )
@@ -781,11 +782,11 @@ function KpiCardWithTooltip({
       : formatValueOrNA(null)
 
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+    <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
       <div className="mb-1 text-xs text-neutral-400" title={tooltip}>
         {label}
       </div>
-      <div className="text-xl font-semibold text-neutral-200">
+      <div className="text-lg font-semibold text-neutral-200">
         {displayValue}
       </div>
     </div>

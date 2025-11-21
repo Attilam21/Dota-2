@@ -78,10 +78,10 @@ function MatchesPageContent(): React.JSX.Element {
   }, [playerId])
 
   return (
-    <div className="space-y-4">
-      <div>
+    <div className="space-y-4 text-white">
+      <div className="mb-4">
         <h1 className="text-2xl font-semibold">Partite recenti</h1>
-        <p className="text-sm text-neutral-300">
+        <p className="text-sm text-neutral-400">
           Dati letti direttamente da OpenDota tramite API.
         </p>
         <p className="text-xs text-neutral-500">Player #{playerId}</p>
@@ -99,7 +99,7 @@ function MatchesPageContent(): React.JSX.Element {
       {!loading && !error && data && (
         <>
           {/* Filtri */}
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-4">
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
             <div className="mb-3 text-sm font-medium text-neutral-300">
               Filtri
             </div>
@@ -146,9 +146,9 @@ function MatchesPageContent(): React.JSX.Element {
           </div>
 
           {/* Tabella con filtri applicati */}
-          <div className="overflow-x-auto rounded-lg border border-neutral-800">
+          <div className="overflow-x-auto rounded-lg border border-neutral-800 bg-neutral-900/80 backdrop-blur-sm">
             <table className="min-w-full text-sm">
-              <thead className="bg-neutral-900/60 text-neutral-300">
+              <thead className="bg-neutral-900/90 text-neutral-300">
                 <tr>
                   <th className="px-3 py-2 text-left font-medium">Match ID</th>
                   <th className="px-3 py-2 text-left font-medium">Eroe</th>
@@ -182,7 +182,7 @@ function MatchesPageContent(): React.JSX.Element {
                     return (
                       <tr
                         key={m.match_id}
-                        className="border-t border-neutral-800"
+                        className="border-t border-neutral-800 bg-neutral-900/50"
                       >
                         <td className="px-3 py-2">
                           <Link

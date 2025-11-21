@@ -381,15 +381,14 @@ function HeroesContent(): React.JSX.Element {
   }
 
   return (
-    <div className="space-y-6 p-6 text-white">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Eroi</h1>
-          <p className="text-sm text-neutral-400">
-            Panoramica delle performance per eroe su tutte le partite
-            disponibili (dataset di test).
-          </p>
-        </div>
+    <div className="space-y-4 text-white">
+      <div className="mb-4">
+        <h1 className="text-2xl font-semibold">Hero Pool</h1>
+        <p className="text-sm text-neutral-400">
+          Panoramica delle performance per eroe su tutte le partite disponibili
+          (dataset di test).
+        </p>
+        <p className="text-xs text-neutral-500">Player #{playerId}</p>
       </div>
 
       {loading && (
@@ -402,7 +401,7 @@ function HeroesContent(): React.JSX.Element {
       )}
 
       {!loading && !error && rows && rows.length === 0 && (
-        <div className="rounded-lg border border-neutral-800 p-6 text-neutral-300">
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 text-neutral-300 backdrop-blur-sm">
           Nessuna partita trovata per questo giocatore nel dataset disponibile.
         </div>
       )}
@@ -442,15 +441,15 @@ function HeroesContent(): React.JSX.Element {
           {heroPoolKPI &&
             (heroPoolKPI.top5ByWinrate.length > 0 ||
               heroPoolKPI.top5ByMatches.length > 0) && (
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 {/* Top 5 per winrate */}
-                <div className="rounded-lg border border-neutral-800 p-4">
-                  <h2 className="mb-3 text-sm text-neutral-300">
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+                  <h2 className="mb-3 text-sm font-semibold text-neutral-200">
                     Top 5 eroi per winrate (min. 3 partite)
                   </h2>
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
-                      <thead className="bg-neutral-900/60 text-neutral-300">
+                      <thead className="bg-neutral-900/90 text-neutral-300">
                         <tr>
                           <th className="px-3 py-2 text-left font-medium">
                             Eroe
@@ -470,7 +469,7 @@ function HeroesContent(): React.JSX.Element {
                           return (
                             <tr
                               key={h.heroId}
-                              className="border-t border-neutral-800"
+                              className="border-t border-neutral-800 bg-neutral-900/50"
                             >
                               <td className="px-3 py-2">
                                 <div className="flex items-center gap-2">
@@ -517,13 +516,13 @@ function HeroesContent(): React.JSX.Element {
                 </div>
 
                 {/* Top 5 più giocati */}
-                <div className="rounded-lg border border-neutral-800 p-4">
-                  <h2 className="mb-3 text-sm text-neutral-300">
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+                  <h2 className="mb-3 text-sm font-semibold text-neutral-200">
                     Top 5 eroi più giocati
                   </h2>
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
-                      <thead className="bg-neutral-900/60 text-neutral-300">
+                      <thead className="bg-neutral-900/90 text-neutral-300">
                         <tr>
                           <th className="px-3 py-2 text-left font-medium">
                             Eroe
@@ -543,7 +542,7 @@ function HeroesContent(): React.JSX.Element {
                           return (
                             <tr
                               key={h.heroId}
-                              className="border-t border-neutral-800"
+                              className="border-t border-neutral-800 bg-neutral-900/50"
                             >
                               <td className="px-3 py-2">
                                 <div className="flex items-center gap-2">
@@ -852,7 +851,7 @@ function HeroesContent(): React.JSX.Element {
 
           {/* A) Build Mismatch Detection */}
           {heroPoolKPI && heroPoolKPI.top5ByMatches.length > 0 && (
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
               <h2 className="mb-4 text-lg font-semibold text-neutral-200">
                 Build Mismatch Detection
               </h2>
@@ -874,7 +873,7 @@ function HeroesContent(): React.JSX.Element {
 
           {/* B) Hero Meta Reference */}
           {heroPoolKPI && heroPoolKPI.top5ByWinrate.length > 0 && (
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
               <h2 className="mb-4 text-lg font-semibold text-neutral-200">
                 Hero Meta Reference
               </h2>

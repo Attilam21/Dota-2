@@ -256,8 +256,8 @@ function CoachingContent(): React.JSX.Element {
   }
 
   return (
-    <div className="space-y-6 p-6 text-white">
-      <div>
+    <div className="space-y-4 text-white">
+      <div className="mb-4">
         <h1 className="text-2xl font-semibold">Coaching & Task</h1>
         <p className="text-sm text-neutral-400">
           Piani di allenamento, checklist operative e task consigliati per il
@@ -309,7 +309,7 @@ function CoachingContent(): React.JSX.Element {
       {loading && <div className="text-neutral-400">Caricamento task…</div>}
 
       {!loading && !error && tasks.length === 0 && (
-        <div className="rounded-lg border border-neutral-800 p-6 text-center text-neutral-300">
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 text-center text-neutral-300 backdrop-blur-sm">
           <p className="mb-4">Nessun task disponibile.</p>
           <p className="text-sm text-neutral-400">
             Clicca su &quot;Genera nuovi Task&quot; per creare task basati sui
@@ -319,7 +319,7 @@ function CoachingContent(): React.JSX.Element {
       )}
 
       {!loading && error && tasks.length === 0 && (
-        <div className="rounded-lg border border-yellow-800 bg-yellow-900/20 p-6 text-center">
+        <div className="rounded-lg border border-yellow-800 bg-yellow-900/40 p-4 text-center backdrop-blur-sm">
           <p className="mb-2 font-medium text-yellow-300">
             ⚠️ Attenzione: {error}
           </p>
@@ -331,7 +331,7 @@ function CoachingContent(): React.JSX.Element {
       )}
 
       {!loading && tasks.length > 0 && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {Object.entries(groupedTasks).map(
             ([category, categoryTasks]: [string, DotaTask[]]) => {
               if (categoryTasks.length === 0) return null
@@ -344,7 +344,7 @@ function CoachingContent(): React.JSX.Element {
                     {categoryTasks.map((task: DotaTask) => (
                       <div
                         key={task.id}
-                        className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-4"
+                        className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm"
                       >
                         <div className="mb-3 flex items-start justify-between">
                           <div className="flex-1">
@@ -363,7 +363,7 @@ function CoachingContent(): React.JSX.Element {
                                 .map((k) => getKpiLabel(k))
                                 .join(', ')}
                             </div>
-                            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
+                            <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3 backdrop-blur-sm">
                               <div className="mb-1 text-xs font-medium text-neutral-300">
                                 Dettagli KPI:
                               </div>
