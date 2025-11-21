@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ExplanationCard from '@/components/charts/ExplanationCard'
+import BarChart from '@/components/charts/BarChart'
 import type { DotaPlayerMatchAnalysis } from '@/types/dotaAnalysis'
 import {
   formatNumberOrNA,
@@ -420,29 +421,28 @@ export default function MatchDetailPage() {
                   10-30min, Late: 30+min)
                 </p>
 
-                {/* Grafico Kill Distribution */}
+                {/* Grafico Kill Distribution - usa BarChart per coerenza */}
                 <div className="mb-4 h-[200px]">
-                  <Bars
+                  <BarChart
                     data={[
                       {
-                        minuteFrom: 0,
-                        minuteTo: 10,
-                        teamKills: advancedKPI.killDistribution.early,
-                        enemyKills: 0,
+                        label: 'Early (0-10min)',
+                        value: advancedKPI.killDistribution.early,
+                        color: '#22c55e', // Green
                       },
                       {
-                        minuteFrom: 10,
-                        minuteTo: 30,
-                        teamKills: advancedKPI.killDistribution.mid,
-                        enemyKills: 0,
+                        label: 'Mid (10-30min)',
+                        value: advancedKPI.killDistribution.mid,
+                        color: '#f59e0b', // Orange
                       },
                       {
-                        minuteFrom: 30,
-                        minuteTo: 60,
-                        teamKills: advancedKPI.killDistribution.late,
-                        enemyKills: 0,
+                        label: 'Late (30+min)',
+                        value: advancedKPI.killDistribution.late,
+                        color: '#ef4444', // Red
                       },
                     ]}
+                    width={560}
+                    height={200}
                   />
                 </div>
 
@@ -501,51 +501,97 @@ export default function MatchDetailPage() {
                 <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
                   <div className="mb-2 text-xs font-medium text-neutral-300">
                     {data.match.radiantWin
-                      ? '✅ Partita vinta grazie a:'
-                      : '❌ Partita persa a causa di:'}
+                      ? '✅ Partita vinta - Punti di forza:'
+                      : '❌ Partita persa - Aree di miglioramento:'}
                   </div>
                   <ul className="space-y-1.5 text-xs text-neutral-400">
-                    {data.player.kda != null && data.player.kda >= 2.0 && (
-                      <li className="flex items-center gap-2">
-                        <span className="text-green-400">•</span>
-                        <span>Buon KDA: {data.player.kda.toFixed(2)}</span>
-                      </li>
+                    {/* Logica corretta: mostra punti di forza se vinta, debolezze se persa */}
+                    {data.match.radiantWin ? (
+                      <>
+                        {data.player.kda != null && data.player.kda >= 2.0 && (
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-400">•</span>
+                            <span>
+                              Ottimo KDA: {data.player.kda.toFixed(2)}
+                            </span>
+                          </li>
+                        )}
+                        {data.player.gpm && data.player.gpm >= 400 && (
+                          <li className="flex items-center gap-2">
+                            <span className="text-green-400">•</span>
+                            <span>
+                              Farming efficiente: {data.player.gpm} GPM
+                            </span>
+                          </li>
+                        )}
+                        {data.player.heroDamage &&
+                          data.player.heroDamage >= 15000 && (
+                            <li className="flex items-center gap-2">
+                              <span className="text-green-400">•</span>
+                              <span>
+                                Alto danno agli eroi:{' '}
+                                {data.player.heroDamage.toLocaleString()}
+                              </span>
+                            </li>
+                          )}
+                        {data.player.towerDamage &&
+                          data.player.towerDamage >= 2000 && (
+                            <li className="flex items-center gap-2">
+                              <span className="text-green-400">•</span>
+                              <span>
+                                Focus su obiettivi:{' '}
+                                {data.player.towerDamage.toLocaleString()} danno
+                              </span>
+                            </li>
+                          )}
+                      </>
+                    ) : (
+                      <>
+                        {data.player.kda != null && data.player.kda < 1.0 && (
+                          <li className="flex items-center gap-2">
+                            <span className="text-red-400">•</span>
+                            <span>KDA basso: {data.player.kda.toFixed(2)}</span>
+                          </li>
+                        )}
+                        {data.player.gpm && data.player.gpm < 300 && (
+                          <li className="flex items-center gap-2">
+                            <span className="text-orange-400">•</span>
+                            <span>
+                              Farming insufficiente: {data.player.gpm} GPM
+                            </span>
+                          </li>
+                        )}
+                        {data.player.deaths >= 8 && (
+                          <li className="flex items-center gap-2">
+                            <span className="text-red-400">•</span>
+                            <span>
+                              Troppe morti: {data.player.deaths} (migliorare
+                              posizionamento)
+                            </span>
+                          </li>
+                        )}
+                        {data.player.heroDamage &&
+                          data.player.heroDamage < 10000 && (
+                            <li className="flex items-center gap-2">
+                              <span className="text-orange-400">•</span>
+                              <span>
+                                Danno agli eroi basso:{' '}
+                                {data.player.heroDamage.toLocaleString()}
+                              </span>
+                            </li>
+                          )}
+                      </>
                     )}
-                    {data.player.kda != null && data.player.kda < 1.0 && (
-                      <li className="flex items-center gap-2">
-                        <span className="text-red-400">•</span>
-                        <span>KDA basso: {data.player.kda.toFixed(2)}</span>
-                      </li>
-                    )}
-                    {data.player.gpm && data.player.gpm >= 400 && (
-                      <li className="flex items-center gap-2">
-                        <span className="text-green-400">•</span>
-                        <span>GPM alto: {data.player.gpm}</span>
-                      </li>
-                    )}
-                    {data.player.gpm && data.player.gpm < 300 && (
-                      <li className="flex items-center gap-2">
-                        <span className="text-orange-400">•</span>
-                        <span>GPM basso: {data.player.gpm}</span>
-                      </li>
-                    )}
-                    {data.player.heroDamage &&
-                      data.player.heroDamage >= 15000 && (
+                    {!data.match.radiantWin &&
+                      data.player.kda != null &&
+                      data.player.kda >= 1.5 &&
+                      data.player.gpm &&
+                      data.player.gpm >= 350 && (
                         <li className="flex items-center gap-2">
-                          <span className="text-green-400">•</span>
+                          <span className="text-neutral-400">•</span>
                           <span>
-                            Danni agli eroi alti:{' '}
-                            {data.player.heroDamage.toLocaleString()}
-                          </span>
-                        </li>
-                      )}
-                    {data.player.towerDamage &&
-                      data.player.towerDamage >= 2000 && (
-                        <li className="flex items-center gap-2">
-                          <span className="text-green-400">•</span>
-                          <span>
-                            Focus obiettivi:{' '}
-                            {data.player.towerDamage.toLocaleString()}
+                            Prestazioni personali buone ma partita persa (focus
+                            su macro/teamfight)
                           </span>
                         </li>
                       )}

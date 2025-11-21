@@ -675,8 +675,11 @@ function DashboardOverview(): React.JSX.Element {
                             />
                           ) : null
                         })()}
-                        <div className="flex-1">
-                          <div className="text-xs font-medium text-neutral-200">
+                        <div className="min-w-0 flex-1">
+                          <div
+                            className="truncate text-xs font-medium text-neutral-200"
+                            title={getHeroName(hero.heroId)}
+                          >
                             {getHeroName(hero.heroId)}
                           </div>
                           <div className="text-[10px] text-neutral-400">

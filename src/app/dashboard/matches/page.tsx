@@ -222,7 +222,12 @@ function MatchesPageContent(): React.JSX.Element {
                                 </div>
                               )
                             })()}
-                            <span>{getHeroName(m.hero_id)}</span>
+                            <span
+                              className="truncate"
+                              title={getHeroName(m.hero_id)}
+                            >
+                              {getHeroName(m.hero_id)}
+                            </span>
                           </div>
                         </td>
                         <td className="px-3 py-2">
