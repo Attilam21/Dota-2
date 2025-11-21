@@ -145,9 +145,7 @@ export default function MatchDetailPage() {
           matchId: kpi.matchId,
           accountId: kpi.accountId,
           rolePosition: kpi.rolePosition,
-          totalGoldLost: kpi.deathCostSummary.totalGoldLost,
-          totalXpLost: kpi.deathCostSummary.totalXpLost,
-          totalCsLost: kpi.deathCostSummary.totalCsLost,
+          // Death Cost Summary rimosso (dipende da deaths_log non garantito)
           killsEarly: kpi.killDistribution.early,
           killsMid: kpi.killDistribution.mid,
           killsLate: kpi.killDistribution.late,
@@ -155,8 +153,6 @@ export default function MatchDetailPage() {
           deathPctMid: kpi.deathPercentageDistribution.mid,
           deathPctLate: kpi.deathPercentageDistribution.late,
           deathByRole: kpi.deathByRole,
-          hasDeathEvents: !!kpi.deathEvents?.length,
-          deathEventsCount: kpi.deathEvents?.length ?? 0,
         })
 
         if (active) {
@@ -346,19 +342,6 @@ export default function MatchDetailPage() {
                   </span>
                 </div>
               </div>
-              {advancedKPI && (
-                <div className="mt-3 border-t border-neutral-800 pt-3 text-xs">
-                  <div className="mb-1 text-neutral-400">Costo Morti:</div>
-                  <div className="text-yellow-300">
-                    XP:{' '}
-                    {formatNumberOrNA(advancedKPI.deathCostSummary.totalXpLost)}
-                  </div>
-                  <div className="text-orange-300">
-                    CS:{' '}
-                    {formatNumberOrNA(advancedKPI.deathCostSummary.totalCsLost)}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -400,15 +383,8 @@ export default function MatchDetailPage() {
                 <SkeletonLoader variant="text" className="w-1/4" />
               </div>
 
-              {/* Death Cost skeleton */}
-              <SkeletonGrid cols={3} />
-
-              {/* Distribution charts skeleton */}
+              {/* Kill Distribution skeleton (Tier 1) */}
               <SkeletonChart />
-              <SkeletonChart />
-
-              {/* Death by Role skeleton */}
-              <SkeletonGrid cols={5} />
             </div>
           )}
           {!kpiLoading && advancedKPI && (
@@ -428,90 +404,7 @@ export default function MatchDetailPage() {
                 </div>
               </div>
 
-              {/* SEZIONE 5: Death Distribution per fase */}
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-                <h3 className="mb-4 text-base font-semibold text-neutral-200">
-                  Death Distribution per Fase
-                </h3>
-                <p className="mb-4 text-xs text-neutral-400">
-                  Distribuzione delle morti nelle tre fasi (Early: 0-10min, Mid:
-                  10-30min, Late: 30+min)
-                </p>
-
-                {/* Grafico Death Distribution */}
-                <div className="mb-4 h-[200px]">
-                  <Bars
-                    data={[
-                      {
-                        minuteFrom: 0,
-                        minuteTo: 10,
-                        teamKills: 0,
-                        enemyKills: advancedKPI.deathDistribution.early,
-                      },
-                      {
-                        minuteFrom: 10,
-                        minuteTo: 30,
-                        teamKills: 0,
-                        enemyKills: advancedKPI.deathDistribution.mid,
-                      },
-                      {
-                        minuteFrom: 30,
-                        minuteTo: 60,
-                        teamKills: 0,
-                        enemyKills: advancedKPI.deathDistribution.late,
-                      },
-                    ]}
-                  />
-                </div>
-
-                {/* Cards Death Distribution */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-lg border border-red-800/50 bg-red-900/20 p-3 text-center">
-                    <div className="mb-1 text-xs font-medium uppercase tracking-wide text-red-300">
-                      Early
-                    </div>
-                    <div className="text-xl font-bold text-red-200">
-                      {advancedKPI.deathDistribution.early}
-                    </div>
-                    <div className="mt-1 text-xs text-red-400/80">
-                      {formatPercentageOrNA(
-                        advancedKPI.deathPercentageDistribution.early,
-                        1,
-                      )}
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-orange-800/50 bg-orange-900/20 p-3 text-center">
-                    <div className="mb-1 text-xs font-medium uppercase tracking-wide text-orange-300">
-                      Mid
-                    </div>
-                    <div className="text-xl font-bold text-orange-200">
-                      {advancedKPI.deathDistribution.mid}
-                    </div>
-                    <div className="mt-1 text-xs text-orange-400/80">
-                      {formatPercentageOrNA(
-                        advancedKPI.deathPercentageDistribution.mid,
-                        1,
-                      )}
-                    </div>
-                  </div>
-                  <div className="rounded-lg border border-green-800/50 bg-green-900/20 p-3 text-center">
-                    <div className="mb-1 text-xs font-medium uppercase tracking-wide text-green-300">
-                      Late
-                    </div>
-                    <div className="text-xl font-bold text-green-200">
-                      {advancedKPI.deathDistribution.late}
-                    </div>
-                    <div className="mt-1 text-xs text-green-400/80">
-                      {formatPercentageOrNA(
-                        advancedKPI.deathPercentageDistribution.late,
-                        1,
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* SEZIONE 6: Kill Distribution per fase */}
+              {/* SEZIONE 5: Kill Distribution per fase (TIER 1 - garantito da kills_log) */}
               <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
                 <h3 className="mb-4 text-base font-semibold text-neutral-200">
                   Kill Distribution per Fase
@@ -594,138 +487,7 @@ export default function MatchDetailPage() {
                 </div>
               </div>
 
-              {/* SEZIONE 7: Death by Role */}
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-                <h3 className="mb-4 text-base font-semibold text-neutral-200">
-                  Death by Role (Pos1-5)
-                </h3>
-                <p className="mb-4 text-xs text-neutral-400">
-                  Percentuale di morti causate da ciascun ruolo avversario
-                </p>
-
-                {/* Grafico Death by Role */}
-                <div className="mb-4 h-[200px]">
-                  <Bars
-                    data={[1, 2, 3, 4, 5].map((pos) => {
-                      const value = advancedKPI.deathByRole[
-                        `pos${pos}` as keyof typeof advancedKPI.deathByRole
-                      ] as number
-                      return {
-                        minuteFrom: pos,
-                        minuteTo: pos + 1,
-                        teamKills: 0,
-                        enemyKills: value,
-                      }
-                    })}
-                  />
-                </div>
-
-                {/* Cards Death by Role */}
-                <div className="grid grid-cols-5 gap-2">
-                  {[1, 2, 3, 4, 5].map((pos) => {
-                    const value = advancedKPI.deathByRole[
-                      `pos${pos}` as keyof typeof advancedKPI.deathByRole
-                    ] as number
-                    const roleLabels: Record<number, string> = {
-                      1: 'Carry',
-                      2: 'Mid',
-                      3: 'Offlane',
-                      4: 'Soft Sup',
-                      5: 'Hard Sup',
-                    }
-                    const maxValue = Math.max(
-                      ...([1, 2, 3, 4, 5] as const).map(
-                        (p) =>
-                          advancedKPI.deathByRole[
-                            `pos${p}` as keyof typeof advancedKPI.deathByRole
-                          ] as number,
-                      ),
-                    )
-                    const isMax = value === maxValue && value > 0
-
-                    return (
-                      <div
-                        key={pos}
-                        className={`rounded-lg border p-3 text-center transition-all ${
-                          isMax
-                            ? 'border-orange-600/50 bg-orange-900/20'
-                            : 'border-neutral-800 bg-neutral-900/70'
-                        }`}
-                      >
-                        <div className="mb-1 text-xs font-medium uppercase tracking-wide text-neutral-400">
-                          Pos{pos}
-                        </div>
-                        <div className="mb-1 text-[10px] text-neutral-500">
-                          {roleLabels[pos]}
-                        </div>
-                        <div
-                          className={`text-lg font-bold ${
-                            isMax ? 'text-orange-300' : 'text-neutral-200'
-                          }`}
-                        >
-                          {formatPercentageOrNA(value, 1)}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* SEZIONE 8: Death Cost Summary */}
-              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-                <h3 className="mb-4 text-base font-semibold text-neutral-200">
-                  Costo Opportunità delle Morti
-                </h3>
-                <p className="mb-4 text-xs text-neutral-400">
-                  Risorse perse durante i tempi di respawn causati dalle morti
-                </p>
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                  <div className="rounded-lg border border-red-800/50 bg-red-900/20 p-4">
-                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-red-300">
-                      Gold Perso
-                    </div>
-                    <div className="text-2xl font-bold text-red-200">
-                      {formatNumberOrNA(
-                        advancedKPI.deathCostSummary.totalGoldLost,
-                      )}
-                    </div>
-                    <div className="mt-2 text-xs text-red-400/80">
-                      Durante tutti i respawn
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-yellow-800/50 bg-yellow-900/20 p-4">
-                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-yellow-300">
-                      XP Perso
-                    </div>
-                    <div className="text-2xl font-bold text-yellow-200">
-                      {formatNumberOrNA(
-                        advancedKPI.deathCostSummary.totalXpLost,
-                      )}
-                    </div>
-                    <div className="mt-2 text-xs text-yellow-400/80">
-                      Esperienza non guadagnata
-                    </div>
-                  </div>
-
-                  <div className="rounded-lg border border-orange-800/50 bg-orange-900/20 p-4">
-                    <div className="mb-2 text-xs font-medium uppercase tracking-wide text-orange-300">
-                      CS Perso
-                    </div>
-                    <div className="text-2xl font-bold text-orange-200">
-                      {formatNumberOrNA(
-                        advancedKPI.deathCostSummary.totalCsLost,
-                      )}
-                    </div>
-                    <div className="mt-2 text-xs text-orange-400/80">
-                      Last hits mancati
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* SEZIONE 9: Insight Box (Placeholder Fase 3C) */}
+              {/* SEZIONE 6: Insight Match (TIER 1 - basato su KDA/GPM/Damage garantiti) */}
               <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
                 <h3 className="mb-4 text-base font-semibold text-neutral-200">
                   Insight Match
