@@ -662,16 +662,19 @@ function DashboardOverview(): React.JSX.Element {
                         href={`/dashboard/heroes?playerId=${playerId}`}
                         className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900/70 p-2 transition-colors hover:bg-neutral-900/90"
                       >
-                        {getHeroIconUrl(hero.heroId) && (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={getHeroIconUrl(hero.heroId)}
-                            alt={getHeroName(hero.heroId)}
-                            width={24}
-                            height={24}
-                            className="h-6 w-6 rounded"
-                          />
-                        )}
+                        {(() => {
+                          const iconUrl = getHeroIconUrl(hero.heroId)
+                          return iconUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={iconUrl}
+                              alt={getHeroName(hero.heroId)}
+                              width={24}
+                              height={24}
+                              className="h-6 w-6 rounded"
+                            />
+                          ) : null
+                        })()}
                         <div className="flex-1">
                           <div className="text-xs font-medium text-neutral-200">
                             {getHeroName(hero.heroId)}

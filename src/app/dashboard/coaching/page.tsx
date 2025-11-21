@@ -1,6 +1,12 @@
 'use client'
 
-import React, { Suspense, useEffect, useState, useMemo } from 'react'
+import React, {
+  Suspense,
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+} from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { getPlayerIdFromSearchParams } from '@/lib/playerId'
@@ -41,7 +47,7 @@ function CoachingContent(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
-  const loadTasks = async () => {
+  const loadTasks = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -80,11 +86,11 @@ function CoachingContent(): React.JSX.Element {
     } finally {
       setLoading(false)
     }
-  }
+  }, [playerId])
 
   useEffect(() => {
     loadTasks()
-  }, [playerId])
+  }, [loadTasks])
 
   const handleGenerate = async () => {
     try {
