@@ -384,12 +384,22 @@ export default function MatchDetailPage() {
             />
           </div>
 
-          {/* SEZIONE 4: Advanced KPI - con loading skeleton */}
+          {/* SEZIONE 4: Advanced KPI - con loading skeleton elegante */}
           {kpiLoading && (
-            <div className="space-y-6">
-              <SkeletonChart />
+            <div className="space-y-6 duration-300 animate-in fade-in">
+              {/* Header skeleton */}
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+                <SkeletonLoader variant="text" className="w-1/4" />
+              </div>
+
+              {/* Death Cost skeleton */}
               <SkeletonGrid cols={3} />
+
+              {/* Distribution charts skeleton */}
               <SkeletonChart />
+              <SkeletonChart />
+
+              {/* Death by Role skeleton */}
               <SkeletonGrid cols={5} />
             </div>
           )}
