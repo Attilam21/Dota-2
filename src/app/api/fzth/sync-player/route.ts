@@ -50,18 +50,50 @@ export async function GET(req: Request) {
     })
 
     // Resolve internal player UUID (fzth_players.id)
-    const { data: players, error: pErr } = await sb
+    let { data: players, error: pErr } = await sb
       .from('fzth_players')
       .select('id')
       .eq('dota_account_id', dotaAccountId)
       .limit(1)
     if (pErr) throw pErr
-    const playerUuid = players?.[0]?.id as string | undefined
+    let playerUuid = players?.[0]?.id as string | undefined
     if (!playerUuid) {
-      return NextResponse.json(
-        { error: 'Player not found in fzth_players' },
-        { status: 404 },
-      )
+      // Register new player idempotently: fetch nickname from OpenDota profile
+      const apiKeyForProfile = process.env.OPENDOTA_API_KEY
+      const baseForProfile = 'https://api.opendota.com/api'
+      let nickname = `Player_${dotaAccountId}`
+      try {
+        const profRes = await fetch(
+          `${baseForProfile}/players/${dotaAccountId}${
+            apiKeyForProfile ? `?api_key=${apiKeyForProfile}` : ''
+          }`,
+          { next: { revalidate: 0 } },
+        )
+        if (profRes.ok) {
+          const prof = await profRes.json()
+          const maybe = prof?.profile?.personaname
+          if (typeof maybe === 'string' && maybe.trim().length > 0) {
+            nickname = String(maybe).trim()
+          }
+        }
+      } catch {
+        // ignore, keep default nickname
+      }
+      const { data: up, error: upErr } = await sb
+        .from('fzth_players')
+        .upsert([{ dota_account_id: dotaAccountId, nickname }], {
+          onConflict: 'dota_account_id',
+        })
+        .select('id')
+        .limit(1)
+      if (upErr) throw upErr
+      playerUuid = up?.[0]?.id as string | undefined
+      if (!playerUuid) {
+        return NextResponse.json(
+          { error: 'Unable to create/resolve fzth player' },
+          { status: 500 },
+        )
+      }
     }
 
     const apiKey = process.env.OPENDOTA_API_KEY
@@ -166,6 +198,65 @@ export async function GET(req: Request) {
       start_time: string
       party_size: number | null
     }>
+
+    // Also upsert into matches_digest (authoritative store)
+    let importedDigest = 0
+    if (rows.length > 0) {
+      const digestRows = rows.map((r) => {
+        const isRadiant = (r.player_slot & 0x80) === 0
+        const result =
+          (r.radiant_win && isRadiant) || (!r.radiant_win && !isRadiant)
+            ? 'win'
+            : 'lose'
+        return {
+          match_id: r.match_id,
+          player_account_id: Number(dotaAccountId),
+          hero_id: r.hero_id,
+          kills: r.kills,
+          deaths: r.deaths,
+          assists: r.assists,
+          duration_seconds: r.duration_seconds,
+          start_time: r.start_time,
+          radiant_win: r.radiant_win,
+          party_size: r.party_size,
+          result,
+        }
+      })
+      const { error: digErr } = await sb
+        .from('matches_digest')
+        .upsert(digestRows, { onConflict: 'player_account_id,match_id' })
+      if (digErr) {
+        console.warn(
+          'SYNC_PLAYER: matches_digest upsert failed, fallback row-by-row',
+          {
+            playerId: dotaAccountId,
+            error: digErr?.message ?? String(digErr),
+          },
+        )
+        for (const d of digestRows) {
+          const { data: ex } = await sb
+            .from('matches_digest')
+            .select('match_id')
+            .eq('player_account_id', d.player_account_id)
+            .eq('match_id', d.match_id)
+            .limit(1)
+          if (ex && ex.length > 0) {
+            await sb
+              .from('matches_digest')
+              .update(d)
+              .eq('player_account_id', d.player_account_id)
+              .eq('match_id', d.match_id)
+          } else {
+            const { error: insErr } = await sb
+              .from('matches_digest')
+              .insert([d])
+            if (!insErr) importedDigest += 1
+          }
+        }
+      } else {
+        importedDigest = digestRows.length
+      }
+    }
 
     let imported = 0
     let updated = 0
@@ -409,8 +500,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       status: 'ok',
       imported,
-      updated,
-      kp: {
+      kpi: {
         totalMatches: agg.totalMatches,
         winrate: agg.winrate,
         avgKda: agg.avgKda,
