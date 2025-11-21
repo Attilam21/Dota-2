@@ -174,15 +174,22 @@ export async function GET(req: Request) {
         .from('player_matches')
         .upsert(rows, { onConflict: 'match_id,player_id' })
       if (upErr) {
-        // If onConflict key name differs on DB, try insert one-by-one to preserve idempotency
+        console.warn(
+          'SYNC_PLAYER: player_matches upsert failed, fallback to row-by-row',
+          {
+            playerId: playerUuid,
+            error: upErr?.message ?? String(upErr),
+          },
+        )
+        // If onConflict key name differs on DB, try insert/update per-row to preserve idempotency
         for (const row of rows) {
-          const { data: exists } = await sb
+          const { data: exists, error: exErr } = await sb
             .from('player_matches')
             .select('match_id')
             .eq('player_id', row.player_id)
             .eq('match_id', row.match_id)
             .limit(1)
-          if (exists && exists.length > 0) {
+          if (!exErr && exists && exists.length > 0) {
             const { error: updErr } = await sb
               .from('player_matches')
               .update(row)
@@ -197,20 +204,54 @@ export async function GET(req: Request) {
           }
         }
       } else {
-        // Can't know exact split; treat all as updated/imported heuristically
+        // Heuristic: count as imported
         imported = rows.length
       }
     }
 
     // Recompute KPIs from player_matches
-    const { data: pmatches, error: selErr } = await sb
-      .from('player_matches')
-      .select(
-        'match_id, radiant_win, kills, deaths, assists, duration_seconds, hero_id',
-      )
-      .eq('player_id', playerUuid)
-    if (selErr) throw selErr
-    const lst = pmatches ?? []
+    // Prefer KPIs from player_matches; if not available, fallback to matches_digest
+    let lst: any[] = []
+    let selErr: any = null
+    {
+      const { data, error } = await sb
+        .from('player_matches')
+        .select(
+          'match_id, radiant_win, kills, deaths, assists, duration_seconds, hero_id',
+        )
+        .eq('player_id', playerUuid)
+      if (!error && data) {
+        lst = data
+      } else {
+        selErr = error
+      }
+    }
+    if (!lst || lst.length === 0) {
+      // Fallback to matches_digest (by dota account id)
+      const { data: mdRows, error: mdErr } = await sb
+        .from('matches_digest')
+        .select(
+          'match_id, result, kills, deaths, assists, duration_seconds, hero_id',
+        )
+        .eq('player_account_id', dotaAccountId)
+      if (mdErr) {
+        console.warn('SYNC_PLAYER: fallback to matches_digest failed', {
+          playerId: playerUuid,
+          error: mdErr?.message ?? String(mdErr),
+        })
+      } else {
+        lst =
+          (mdRows ?? []).map((r: any) => ({
+            match_id: r.match_id,
+            radiant_win: r.result === 'win',
+            kills: r.kills ?? 0,
+            deaths: r.deaths ?? 0,
+            assists: r.assists ?? 0,
+            duration_seconds: r.duration_seconds ?? 0,
+            hero_id: r.hero_id ?? 0,
+          })) ?? []
+      }
+    }
     const total = lst.length
     const wins = lst.filter((m: any) => !!m.radiant_win).length
     const winrate = total > 0 ? Math.round((wins / total) * 100) : 0
@@ -224,33 +265,65 @@ export async function GET(req: Request) {
     const avgKda =
       total > 0 ? Number(((sumK + sumA) / Math.max(1, sumD)).toFixed(2)) : 0
     const avgDurationSec = total > 0 ? Math.round(sumDur / total) : 0
+    console.log('SYNC_PLAYER: KPI computed', {
+      playerId: playerUuid,
+      total,
+      winrate,
+      avgKda,
+      avgDurationSec,
+    })
 
-    // Upsert player_stats_agg (best-effort; tolerate schema diffs)
+    // Upsert player_stats_agg robust
     {
-      const payload: Record<string, any> = {
+      const payload = {
         player_id: playerUuid,
         total_matches: total,
         winrate,
         avg_kda: avgKda,
         avg_duration_sec: avgDurationSec,
       }
-      const { error } = await sb.from('player_stats_agg').upsert([payload], {
-        onConflict: 'player_id',
-      })
-      if (error) {
-        // try minimal insert/update
-        const { data: exists } = await sb
+      const { error: upAggErr } = await sb
+        .from('player_stats_agg')
+        .upsert([payload], { onConflict: 'player_id' })
+      if (upAggErr) {
+        console.warn('SYNC_PLAYER: player_stats_agg upsert failed', {
+          playerId: playerUuid,
+          error: upAggErr?.message ?? String(upAggErr),
+        })
+        const { data: exists, error: exErr } = await sb
           .from('player_stats_agg')
           .select('player_id')
           .eq('player_id', playerUuid)
           .limit(1)
-        if (exists && exists.length > 0) {
-          await sb
+        if (!exErr && exists && exists.length > 0) {
+          const { error: updErr } = await sb
             .from('player_stats_agg')
-            .update({ total_matches: total, winrate })
+            .update(payload)
             .eq('player_id', playerUuid)
+          if (updErr) {
+            console.error(
+              'SYNC_PLAYER: CRITICAL - player_stats_agg not updated',
+              {
+                playerId: playerUuid,
+                total,
+                error: updErr?.message ?? String(updErr),
+              },
+            )
+          }
         } else {
-          await sb.from('player_stats_agg').insert([{ player_id: playerUuid }])
+          const { error: insErr } = await sb
+            .from('player_stats_agg')
+            .insert([payload])
+          if (insErr) {
+            console.error(
+              'SYNC_PLAYER: CRITICAL - player_stats_agg not inserted',
+              {
+                playerId: playerUuid,
+                total,
+                error: insErr?.message ?? String(insErr),
+              },
+            )
+          }
         }
       }
     }

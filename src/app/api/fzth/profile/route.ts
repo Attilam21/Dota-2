@@ -89,22 +89,25 @@ export async function GET(req: Request) {
       .eq('player_id', playerUuid)
       .limit(1)
     const s = (statsAgg?.[0] as any) || null
-    const kpi: FzthProfileResponse['kpi'] = s
-      ? {
-          totalMatches: s.total_matches ?? s.matches ?? 0,
-          winrate: s.winrate ?? 0,
-          avgKda: s.kda_avg ?? s.avg_kda ?? s.kda ?? 0,
-          avgDurationMin:
-            s.avg_duration_min ??
-            s.avg_duration_minutes ??
-            (Number.isFinite(s.avg_duration_sec)
-              ? Math.round((s.avg_duration_sec as number) / 60)
-              : s.avg_duration ?? 0),
-        }
-      : null
+    const kpi: FzthProfileResponse['kpi'] =
+      s &&
+      (s.total_matches != null ||
+        s.winrate != null ||
+        s.avg_kda != null ||
+        s.avg_duration_sec != null)
+        ? {
+            totalMatches: s.total_matches ?? 0,
+            winrate: s.winrate ?? 0,
+            avgKda: s.avg_kda ?? 0,
+            avgDurationMin:
+              s.avg_duration_sec != null
+                ? Math.round((s.avg_duration_sec as number) / 60)
+                : 0,
+          }
+        : null
     // Server log for KPI mapping
     // eslint-disable-next-line no-console
-    console.log('FZTH profile KPI', {
+    console.log('FZTH PROFILE: using player_stats_agg row', {
       playerId: dotaId,
       row: s,
       kpi,
@@ -209,7 +212,7 @@ export async function GET(req: Request) {
       insights,
     }
     // eslint-disable-next-line no-console
-    console.log('FZTH profile payload', {
+    console.log('FZTH PROFILE: response payload', {
       playerId: resp.playerId,
       internalPlayerId: resp.internalPlayerId,
       kpi: resp.kpi,

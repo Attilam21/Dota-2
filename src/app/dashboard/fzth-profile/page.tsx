@@ -154,6 +154,11 @@ function FzthProfileContent(): React.JSX.Element {
 
           {/* KPI sintetici */}
           <div className="rounded-lg border border-neutral-800 p-4">
+            {!data.kpi && (
+              <div className="mb-2 text-xs text-yellow-400">
+                Nessun dato aggregato disponibile, esegui la sincronizzazione.
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               <div className="rounded bg-neutral-900/40 p-3">
                 <div className="text-xs text-neutral-400">Partite</div>
