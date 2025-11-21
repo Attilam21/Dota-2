@@ -14,6 +14,7 @@ import {
   type HeroSnapshot as HeroSnap,
 } from '@/lib/analytics/overview'
 import LineChart from '@/components/charts/LineChart'
+import MultiLineChart from '@/components/charts/MultiLineChart'
 import ExplanationCard from '@/components/charts/ExplanationCard'
 import type { PlayerOverviewKPI } from '@/services/dota/kpiService'
 
@@ -72,6 +73,12 @@ function DashboardOverview(): React.JSX.Element {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [overviewKPI, setOverviewKPI] = useState<PlayerOverviewKPI | null>(null)
   const [kpiLoading, setKpiLoading] = useState<boolean>(false)
+  const [openTasksCount, setOpenTasksCount] = useState<number>(0)
+  const [fzthLevel, setFzthLevel] = useState<{
+    level: number
+    xp: number
+    nextXp: number | null
+  } | null>(null)
 
   useEffect(() => {
     let active = true
@@ -127,6 +134,63 @@ function DashboardOverview(): React.JSX.Element {
       }
     }
     loadKPI()
+    return () => {
+      active = false
+    }
+  }, [playerId, refreshTrigger])
+
+  // Carica task aperti
+  useEffect(() => {
+    let active = true
+    async function loadTasks() {
+      if (!playerId) return
+      try {
+        const res = await fetch(
+          `/api/tasks/list?playerId=${playerId}&status=open`,
+          {
+            cache: 'no-store',
+          },
+        )
+        if (res.ok) {
+          const data = await res.json()
+          if (active && data.tasks) {
+            setOpenTasksCount(data.tasks.length)
+          }
+        }
+      } catch (e) {
+        // Ignora errori task
+      }
+    }
+    loadTasks()
+    return () => {
+      active = false
+    }
+  }, [playerId, refreshTrigger])
+
+  // Carica livello FZTH
+  useEffect(() => {
+    let active = true
+    async function loadFzthLevel() {
+      if (!playerId) return
+      try {
+        const res = await fetch(`/api/fzth/profile?playerId=${playerId}`, {
+          cache: 'no-store',
+        })
+        if (res.ok) {
+          const data = await res.json()
+          if (active && data.level) {
+            setFzthLevel({
+              level: data.level.currentLevel || 1,
+              xp: data.level.currentXp || 0,
+              nextXp: data.level.nextLevelXp || null,
+            })
+          }
+        }
+      } catch (e) {
+        // Ignora errori
+      }
+    }
+    loadFzthLevel()
     return () => {
       active = false
     }
@@ -264,7 +328,266 @@ function DashboardOverview(): React.JSX.Element {
 
       {!loading && !error && rows && rows.length > 0 && (
         <>
-          {/* KPI */}
+          {/* A. Header rapido */}
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-semibold">Panoramica</h1>
+                <p className="text-sm text-neutral-400">Player #{playerId}</p>
+              </div>
+              <div className="flex items-center gap-4">
+                {/* FZTH Score */}
+                <div className="text-center">
+                  <div className="text-xs text-neutral-400">FZTH Score</div>
+                  <div className="text-2xl font-bold">{performanceIndex}</div>
+                  <div className="text-xs text-neutral-500">
+                    {classifyPerformanceLevel(performanceIndex)}
+                  </div>
+                </div>
+                {/* Livello FZTH */}
+                {fzthLevel && (
+                  <div className="text-center">
+                    <div className="text-xs text-neutral-400">Livello</div>
+                    <div className="text-2xl font-bold">{fzthLevel.level}</div>
+                    {fzthLevel.nextXp && (
+                      <div className="text-xs text-neutral-500">
+                        {fzthLevel.xp} / {fzthLevel.nextXp} XP
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Ultimi 20 match: KPI rapidi */}
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
+                <div className="text-xs text-neutral-400">
+                  Winrate (ultimi 20)
+                </div>
+                <div className="text-lg font-semibold">
+                  {(() => {
+                    const last20 = rows.slice(0, 20)
+                    const wins = last20.filter((r) => r.result === 'win').length
+                    return last20.length > 0
+                      ? `${((wins / last20.length) * 100).toFixed(1)}%`
+                      : '0%'
+                  })()}
+                </div>
+              </div>
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
+                <div className="text-xs text-neutral-400">
+                  KDA medio (ultimi 20)
+                </div>
+                <div className="text-lg font-semibold">
+                  {(() => {
+                    const last20 = rows.slice(0, 20)
+                    const avgKda =
+                      last20.length > 0
+                        ? last20.reduce((acc, r) => {
+                            const kda =
+                              (r.kills + r.assists) / Math.max(1, r.deaths)
+                            return acc + kda
+                          }, 0) / last20.length
+                        : 0
+                    return avgKda.toFixed(2)
+                  })()}
+                </div>
+              </div>
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
+                <div className="text-xs text-neutral-400">GPM medio</div>
+                <div className="text-lg font-semibold">
+                  {overviewKPI?.avgGpm
+                    ? `${Math.round(overviewKPI.avgGpm)}`
+                    : 'N/D'}
+                </div>
+              </div>
+              <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
+                <div className="text-xs text-neutral-400">XPM medio</div>
+                <div className="text-lg font-semibold">
+                  {overviewKPI?.avgXpm
+                    ? `${Math.round(overviewKPI.avgXpm)}`
+                    : 'N/D'}
+                </div>
+              </div>
+            </div>
+
+            {/* Mini card Punti di forza e Aree critiche */}
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-lg border border-green-800 bg-green-900/20 p-3">
+                <div className="mb-2 text-xs font-medium text-green-300">
+                  💪 Punti di forza
+                </div>
+                <div className="text-sm text-neutral-300">
+                  {insights
+                    .filter((i) => i.type === 'strength')
+                    .slice(0, 2)
+                    .map((i) => i.title)
+                    .join(', ') || 'Nessun punto di forza identificato'}
+                </div>
+              </div>
+              <div className="rounded-lg border border-red-800 bg-red-900/20 p-3">
+                <div className="mb-2 text-xs font-medium text-red-300">
+                  ⚠️ Aree critiche
+                </div>
+                <div className="text-sm text-neutral-300">
+                  {insights
+                    .filter((i) => i.type === 'weakness')
+                    .slice(0, 2)
+                    .map((i) => i.title)
+                    .join(', ') || 'Nessuna area critica identificata'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* B. Trend sintetico - Grafico unico con Winrate, KDA, GPM */}
+          <div className="rounded-lg border border-neutral-800 p-4">
+            <h2 className="mb-3 text-sm text-neutral-300">
+              Trend sintetico (ultimi 20 match)
+            </h2>
+            {overviewKPI && (
+              <MultiLineChart
+                data={rows
+                  .slice(0, 20)
+                  .reverse()
+                  .map((r, idx) => {
+                    const last20 = rows.slice(0, 20)
+                    const matchesUpToIdx = last20.slice(0, idx + 1)
+                    const wins = matchesUpToIdx.filter(
+                      (m) => m.result === 'win',
+                    ).length
+                    const winrate =
+                      matchesUpToIdx.length > 0
+                        ? (wins / matchesUpToIdx.length) * 100
+                        : 0
+                    const avgKda =
+                      matchesUpToIdx.length > 0
+                        ? matchesUpToIdx.reduce((acc, m) => {
+                            const kda =
+                              (m.kills + m.assists) / Math.max(1, m.deaths)
+                            return acc + kda
+                          }, 0) / matchesUpToIdx.length
+                        : 0
+                    return {
+                      x: idx,
+                      winrate: Number(winrate.toFixed(1)),
+                      kda: Number(avgKda.toFixed(2)),
+                      gpm: overviewKPI.gpmSeries[idx]?.gpm || 0,
+                    }
+                  })}
+                lines={[
+                  { key: 'winrate', color: '#22c55e', label: 'Winrate %' },
+                  { key: 'kda', color: '#60a5fa', label: 'KDA' },
+                  { key: 'gpm', color: '#f59e0b', label: 'GPM' },
+                ]}
+              />
+            )}
+          </div>
+
+          {/* C. Snapshot Hero Pool - Top 3 */}
+          <div className="rounded-lg border border-neutral-800 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm text-neutral-300">Snapshot Hero Pool</h2>
+              <Link
+                href="/dashboard/heroes"
+                className="text-xs text-blue-400 hover:underline"
+              >
+                Vedi Hero Pool completo →
+              </Link>
+            </div>
+            {heroSnap.length === 0 ? (
+              <div className="text-sm text-neutral-500">
+                Nessun dato disponibile
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                {heroSnap.slice(0, 3).map((h) => {
+                  const icon = getHeroIconUrl(h.heroId)
+                  const name = getHeroName(h.heroId)
+                  return (
+                    <div
+                      key={h.heroId}
+                      className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3"
+                    >
+                      <div className="mb-2 flex items-center gap-2">
+                        {icon ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={icon}
+                            alt={name}
+                            width={24}
+                            height={24}
+                            className="h-6 w-6 rounded"
+                            loading="lazy"
+                            onError={(e) => {
+                              ;(
+                                e.currentTarget as HTMLImageElement
+                              ).style.display = 'none'
+                            }}
+                          />
+                        ) : (
+                          <div className="flex h-6 w-6 items-center justify-center rounded bg-neutral-700 text-xs">
+                            {name.charAt(0)}
+                          </div>
+                        )}
+                        <span className="text-sm font-medium">{name}</span>
+                      </div>
+                      <div className="space-y-1 text-xs text-neutral-400">
+                        <div>{h.matches} partite</div>
+                        <div>
+                          Winrate:{' '}
+                          <span className="text-green-400">{h.winRate}%</span>
+                        </div>
+                        <div>KDA: {h.kdaAvg}</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* D. Collegamento rapido ai Task */}
+          <div className="rounded-lg border border-blue-800 bg-blue-900/20 p-4">
+            {openTasksCount > 0 ? (
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-blue-300">
+                    Hai {openTasksCount} task da completare
+                  </div>
+                  <div className="text-xs text-neutral-400">
+                    Completa i task per migliorare le tue prestazioni
+                  </div>
+                </div>
+                <Link
+                  href="/dashboard/coaching"
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Vai ai Task →
+                </Link>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-blue-300">
+                    Genera nuovi task basati sui tuoi KPI
+                  </div>
+                  <div className="text-xs text-neutral-400">
+                    Crea task personalizzati per migliorare le tue prestazioni
+                  </div>
+                </div>
+                <Link
+                  href="/dashboard/coaching"
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Genera Task →
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* KPI dettagliati (mantenuti per retrocompatibilità) */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
             <KpiCard label="Winrate" value={`${stats?.winRate ?? 0}%`} />
             <KpiCard label="KDA medio" value={`${stats?.kdaAvg ?? 0}`} />

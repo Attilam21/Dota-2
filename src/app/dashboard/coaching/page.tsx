@@ -1,7 +1,8 @@
 'use client'
 
-import React, { Suspense, useEffect, useState } from 'react'
+import React, { Suspense, useEffect, useState, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { getPlayerIdFromSearchParams } from '@/lib/playerId'
 
 type TaskStatus = 'open' | 'completed' | 'failed'
@@ -206,6 +207,54 @@ function CoachingContent(): React.JSX.Element {
     return value.toFixed(1)
   }
 
+  // Raggruppa task per categoria
+  const groupedTasks = useMemo(() => {
+    const groups: Record<string, DotaTask[]> = {
+      performance: [],
+      farming: [],
+      aggression: [],
+      consistency: [],
+      heroPool: [],
+      other: [],
+    }
+
+    tasks.forEach((task) => {
+      const type = task.type.toLowerCase()
+      if (type.includes('early') || type.includes('death')) {
+        groups.performance.push(task)
+      } else if (
+        type.includes('farm') ||
+        type.includes('gpm') ||
+        type.includes('lh')
+      ) {
+        groups.farming.push(task)
+      } else if (
+        type.includes('kp') ||
+        type.includes('fight') ||
+        type.includes('aggress')
+      ) {
+        groups.aggression.push(task)
+      } else if (type.includes('consist') || type.includes('winrate')) {
+        groups.consistency.push(task)
+      } else if (type.includes('hero') || type.includes('pool')) {
+        groups.heroPool.push(task)
+      } else {
+        groups.other.push(task)
+      }
+    })
+
+    return groups
+  }, [tasks])
+
+  const categoryLabels: Record<string, string> = {
+    performance: 'Performance & Sopravvivenza',
+    farming: 'Farming & Economia',
+    aggression: 'Aggressività & Fight',
+    consistency: 'Consistenza & Winrate',
+    heroPool: 'Hero Pool',
+    other: 'Altri',
+  }
+
   return (
     <div className="space-y-6 p-6 text-white">
       <div>
@@ -282,63 +331,88 @@ function CoachingContent(): React.JSX.Element {
       )}
 
       {!loading && tasks.length > 0 && (
-        <div className="space-y-4">
-          {tasks.map((task) => (
-            <div
-              key={task.id}
-              className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-4"
-            >
-              <div className="mb-3 flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="mb-1 flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-neutral-200">
-                      {task.title}
-                    </h3>
-                    {getStatusBadge(task.status)}
-                  </div>
-                  <p className="mb-2 text-sm text-neutral-300">
-                    {task.description}
-                  </p>
-                  <div className="mb-2 text-xs text-neutral-400">
-                    Basato su KPI:{' '}
-                    {Object.keys(task.kpi_payload || {})
-                      .map((k) => getKpiLabel(k))
-                      .join(', ')}
-                  </div>
-                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
-                    <div className="mb-1 text-xs font-medium text-neutral-300">
-                      Dettagli KPI:
-                    </div>
-                    <div className="text-xs text-neutral-400">
-                      {formatKpiSummary(task)}
-                    </div>
+        <div className="space-y-6">
+          {Object.entries(groupedTasks).map(
+            ([category, categoryTasks]: [string, DotaTask[]]) => {
+              if (categoryTasks.length === 0) return null
+              return (
+                <div key={category} className="space-y-3">
+                  <h3 className="text-sm font-semibold text-neutral-300">
+                    {categoryLabels[category] || category}
+                  </h3>
+                  <div className="space-y-3">
+                    {categoryTasks.map((task: DotaTask) => (
+                      <div
+                        key={task.id}
+                        className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-4"
+                      >
+                        <div className="mb-3 flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="mb-1 flex items-center gap-2">
+                              <h3 className="text-lg font-semibold text-neutral-200">
+                                {task.title}
+                              </h3>
+                              {getStatusBadge(task.status)}
+                            </div>
+                            <p className="mb-2 text-sm text-neutral-300">
+                              {task.description}
+                            </p>
+                            <div className="mb-2 text-xs text-neutral-400">
+                              Basato su KPI:{' '}
+                              {Object.keys(task.kpi_payload || {})
+                                .map((k) => getKpiLabel(k))
+                                .join(', ')}
+                            </div>
+                            <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
+                              <div className="mb-1 text-xs font-medium text-neutral-300">
+                                Dettagli KPI:
+                              </div>
+                              <div className="text-xs text-neutral-400">
+                                {formatKpiSummary(task)}
+                              </div>
+                            </div>
+                            <div className="mt-3">
+                              <Link
+                                href="/dashboard/performance#style-of-play"
+                                className="text-xs text-blue-400 hover:underline"
+                              >
+                                Vai al grafico correlato →
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between border-t border-neutral-800 pt-3">
+                          <div className="text-xs text-neutral-500">
+                            Creato:{' '}
+                            {new Date(task.created_at).toLocaleString('it-IT', {
+                              dateStyle: 'short',
+                              timeStyle: 'short',
+                            })}
+                            {task.resolved_at && (
+                              <>
+                                {' '}
+                                · Risolto:{' '}
+                                {new Date(task.resolved_at).toLocaleString(
+                                  'it-IT',
+                                  {
+                                    dateStyle: 'short',
+                                    timeStyle: 'short',
+                                  },
+                                )}
+                              </>
+                            )}
+                          </div>
+                          <div className="text-xs text-neutral-500">
+                            Tipo: {task.type}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
-              <div className="mt-3 flex items-center justify-between border-t border-neutral-800 pt-3">
-                <div className="text-xs text-neutral-500">
-                  Creato:{' '}
-                  {new Date(task.created_at).toLocaleString('it-IT', {
-                    dateStyle: 'short',
-                    timeStyle: 'short',
-                  })}
-                  {task.resolved_at && (
-                    <>
-                      {' '}
-                      · Risolto:{' '}
-                      {new Date(task.resolved_at).toLocaleString('it-IT', {
-                        dateStyle: 'short',
-                        timeStyle: 'short',
-                      })}
-                    </>
-                  )}
-                </div>
-                <div className="text-xs text-neutral-500">
-                  Tipo: {task.type}
-                </div>
-              </div>
-            </div>
-          ))}
+              )
+            },
+          )}
         </div>
       )}
 

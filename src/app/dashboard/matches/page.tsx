@@ -46,6 +46,8 @@ function MatchesPageContent(): React.JSX.Element {
   const [data, setData] = useState<MatchRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
+  const [filterHero, setFilterHero] = useState<number | null>(null)
+  const [filterDuration, setFilterDuration] = useState<string>('all') // 'all', 'short', 'medium', 'long'
 
   useEffect(() => {
     let active = true
@@ -95,91 +97,179 @@ function MatchesPageContent(): React.JSX.Element {
       )}
 
       {!loading && !error && data && (
-        <div className="overflow-x-auto rounded-lg border border-neutral-800">
-          <table className="min-w-full text-sm">
-            <thead className="bg-neutral-900/60 text-neutral-300">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium">Match ID</th>
-                <th className="px-3 py-2 text-left font-medium">Eroe</th>
-                <th className="px-3 py-2 text-left font-medium">K / D / A</th>
-                <th className="px-3 py-2 text-left font-medium">
-                  Durata (min)
-                </th>
-                <th className="px-3 py-2 text-left font-medium">Risultato</th>
-                <th className="px-3 py-2 text-left font-medium">Data</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data as MatchRow[]).map((m: MatchRow) => {
-                const durationMinutes = Math.round(m.duration_seconds / 60)
-                const result = renderResult(m.result)
-                return (
-                  <tr key={m.match_id} className="border-t border-neutral-800">
-                    <td className="px-3 py-2">
-                      <Link
-                        href={`/dashboard/matches/${m.match_id}?playerId=${playerId}`}
-                        className="text-blue-400 hover:underline"
+        <>
+          {/* Filtri */}
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-4">
+            <div className="mb-3 text-sm font-medium text-neutral-300">
+              Filtri
+            </div>
+            <div className="flex flex-wrap gap-4">
+              <div>
+                <label className="mb-1 block text-xs text-neutral-400">
+                  Durata
+                </label>
+                <select
+                  value={filterDuration}
+                  onChange={(e) => setFilterDuration(e.target.value)}
+                  className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+                >
+                  <option value="all">Tutte</option>
+                  <option value="short">Corte (&lt;30 min)</option>
+                  <option value="medium">Medie (30-50 min)</option>
+                  <option value="long">Lunghe (&gt;50 min)</option>
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-neutral-400">
+                  Eroe
+                </label>
+                <select
+                  value={filterHero || ''}
+                  onChange={(e) =>
+                    setFilterHero(
+                      e.target.value ? Number(e.target.value) : null,
+                    )
+                  }
+                  className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs text-neutral-200"
+                >
+                  <option value="">Tutti gli eroi</option>
+                  {Array.from(new Set(data.map((m) => m.hero_id))).map(
+                    (heroId) => (
+                      <option key={heroId} value={heroId}>
+                        {getHeroName(heroId)}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabella con filtri applicati */}
+          <div className="overflow-x-auto rounded-lg border border-neutral-800">
+            <table className="min-w-full text-sm">
+              <thead className="bg-neutral-900/60 text-neutral-300">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">Match ID</th>
+                  <th className="px-3 py-2 text-left font-medium">Eroe</th>
+                  <th className="px-3 py-2 text-left font-medium">K / D / A</th>
+                  <th className="px-3 py-2 text-left font-medium">
+                    Durata (min)
+                  </th>
+                  <th className="px-3 py-2 text-left font-medium">Risultato</th>
+                  <th className="px-3 py-2 text-left font-medium">Data</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data
+                  .filter((m) => {
+                    if (filterHero && m.hero_id !== filterHero) return false
+                    const durationMinutes = Math.round(m.duration_seconds / 60)
+                    if (filterDuration === 'short' && durationMinutes >= 30)
+                      return false
+                    if (
+                      filterDuration === 'medium' &&
+                      (durationMinutes < 30 || durationMinutes > 50)
+                    )
+                      return false
+                    if (filterDuration === 'long' && durationMinutes <= 50)
+                      return false
+                    return true
+                  })
+                  .map((m: MatchRow) => {
+                    const durationMinutes = Math.round(m.duration_seconds / 60)
+                    const result = renderResult(m.result)
+                    return (
+                      <tr
+                        key={m.match_id}
+                        className="border-t border-neutral-800"
                       >
-                        {m.match_id}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        {(() => {
-                          const name = getHeroName(m.hero_id)
-                          const icon = getHeroIconUrl(m.hero_id)
-                          if (icon) {
-                            return (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img
-                                src={icon}
-                                alt={name}
-                                width={24}
-                                height={24}
-                                className="h-6 w-6 rounded"
-                                loading="lazy"
-                                onError={(e) => {
-                                  ;(
-                                    e.currentTarget as HTMLImageElement
-                                  ).style.display = 'none'
-                                }}
-                              />
-                            )
-                          }
-                          const initial = name?.charAt(0) || '?'
-                          return (
-                            <div className="flex h-6 w-6 items-center justify-center rounded bg-neutral-700 text-[10px]">
-                              {initial}
-                            </div>
-                          )
-                        })()}
-                        <span>{getHeroName(m.hero_id)}</span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-2">
-                      {m.kills} / {m.deaths} / {m.assists}
-                    </td>
-                    <td className="px-3 py-2">{durationMinutes}</td>
-                    <td className="px-3 py-2">
-                      <span
-                        className={
-                          result === 'Vittoria'
-                            ? 'text-green-400'
-                            : 'text-red-400'
-                        }
-                      >
-                        {result}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
-                      {new Date(m.start_time).toLocaleString('it-IT')}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+                        <td className="px-3 py-2">
+                          <Link
+                            href={`/dashboard/matches/${m.match_id}?playerId=${playerId}`}
+                            className="text-blue-400 hover:underline"
+                          >
+                            {m.match_id}
+                          </Link>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              const name = getHeroName(m.hero_id)
+                              const icon = getHeroIconUrl(m.hero_id)
+                              if (icon) {
+                                return (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={icon}
+                                    alt={name}
+                                    width={24}
+                                    height={24}
+                                    className="h-6 w-6 rounded"
+                                    loading="lazy"
+                                    onError={(e) => {
+                                      ;(
+                                        e.currentTarget as HTMLImageElement
+                                      ).style.display = 'none'
+                                    }}
+                                  />
+                                )
+                              }
+                              const initial = name?.charAt(0) || '?'
+                              return (
+                                <div className="flex h-6 w-6 items-center justify-center rounded bg-neutral-700 text-[10px]">
+                                  {initial}
+                                </div>
+                              )
+                            })()}
+                            <span>{getHeroName(m.hero_id)}</span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-2">
+                          {m.kills} / {m.deaths} / {m.assists}
+                        </td>
+                        <td className="px-3 py-2">{durationMinutes}</td>
+                        <td className="px-3 py-2">
+                          <span
+                            className={
+                              result === 'Vittoria'
+                                ? 'text-green-400'
+                                : 'text-red-400'
+                            }
+                          >
+                            {result}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">
+                          {new Date(m.start_time).toLocaleString('it-IT')}
+                        </td>
+                      </tr>
+                    )
+                  })}
+              </tbody>
+            </table>
+            <div className="mt-2 text-xs text-neutral-500">
+              Mostrate{' '}
+              {
+                data.filter((m) => {
+                  if (filterHero && m.hero_id !== filterHero) return false
+                  const durationMinutes = Math.round(m.duration_seconds / 60)
+                  if (filterDuration === 'short' && durationMinutes >= 30)
+                    return false
+                  if (
+                    filterDuration === 'medium' &&
+                    (durationMinutes < 30 || durationMinutes > 50)
+                  )
+                    return false
+                  if (filterDuration === 'long' && durationMinutes <= 50)
+                    return false
+                  return true
+                }).length
+              }{' '}
+              di {data.length} partite
+            </div>
+          </div>
+        </>
       )}
     </div>
   )

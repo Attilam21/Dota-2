@@ -9,6 +9,180 @@ import BarChart from '@/components/charts/BarChart'
 import ExplanationCard from '@/components/charts/ExplanationCard'
 import type { HeroPoolKPI } from '@/services/dota/kpiService'
 
+// Componente per Hero Pool Matrix
+function HeroPoolMatrix({
+  heroes,
+}: {
+  heroes: Array<{
+    heroId: number
+    matches: number
+    winRate: number
+    kdaAvg: number
+  }>
+}) {
+  if (heroes.length === 0) {
+    return <div className="text-sm text-neutral-500">Dati non disponibili</div>
+  }
+
+  const maxMatches = Math.max(...heroes.map((h) => h.matches), 1)
+  const maxWinrate = Math.max(...heroes.map((h) => h.winRate), 1)
+
+  // Calcola quadranti
+  const quadrantHeroes = {
+    comfort: heroes.filter(
+      (h) => h.matches >= maxMatches * 0.3 && h.winRate >= 50,
+    ),
+    highWinrate: heroes.filter(
+      (h) => h.matches < maxMatches * 0.3 && h.winRate >= 50,
+    ),
+    overused: heroes.filter(
+      (h) => h.matches >= maxMatches * 0.3 && h.winRate < 50,
+    ),
+    unexplored: heroes.filter(
+      (h) => h.matches < maxMatches * 0.3 && h.winRate < 50,
+    ),
+  }
+
+  const width = 560
+  const height = 400
+
+  return (
+    <div className="w-full">
+      <svg width="100%" viewBox={`0 0 ${width} ${height}`}>
+        {/* Griglia */}
+        <line
+          x1={width / 2}
+          y1="0"
+          x2={width / 2}
+          y2={height}
+          stroke="currentColor"
+          strokeOpacity="0.2"
+          strokeWidth="1"
+        />
+        <line
+          x1="0"
+          y1={height / 2}
+          x2={width}
+          y2={height / 2}
+          stroke="currentColor"
+          strokeOpacity="0.2"
+          strokeWidth="1"
+        />
+
+        {/* Etichette assi */}
+        <text
+          x={width / 2}
+          y={height - 10}
+          fontSize="12"
+          fill="currentColor"
+          textAnchor="middle"
+        >
+          Frequenza utilizzo →
+        </text>
+        <text
+          x="10"
+          y={height / 2}
+          fontSize="12"
+          fill="currentColor"
+          transform={`rotate(-90, 10, ${height / 2})`}
+        >
+          Performance (Winrate) ↑
+        </text>
+
+        {/* Punti eroi */}
+        {heroes.map((hero) => {
+          const x = (hero.matches / maxMatches) * (width - 100) + 50
+          const y = height - (hero.winRate / maxWinrate) * (height - 100) - 50
+          const color =
+            hero.matches >= maxMatches * 0.3 && hero.winRate >= 50
+              ? '#22c55e' // Comfort
+              : hero.matches < maxMatches * 0.3 && hero.winRate >= 50
+                ? '#60a5fa' // High winrate
+                : hero.matches >= maxMatches * 0.3 && hero.winRate < 50
+                  ? '#ef4444' // Overused
+                  : '#9ca3af' // Unexplored
+
+          return (
+            <g key={hero.heroId}>
+              <circle cx={x} cy={y} r="6" fill={color} />
+              <title>
+                {getHeroName(hero.heroId)}: {hero.matches} partite,{' '}
+                {hero.winRate}% WR
+              </title>
+            </g>
+          )
+        })}
+
+        {/* Etichette quadranti */}
+        <text
+          x={width * 0.75}
+          y={height * 0.25}
+          fontSize="10"
+          fill="#22c55e"
+          fontWeight="bold"
+        >
+          Comfort Picks
+        </text>
+        <text
+          x={width * 0.25}
+          y={height * 0.25}
+          fontSize="10"
+          fill="#60a5fa"
+          fontWeight="bold"
+        >
+          High Winrate / Low Usage
+        </text>
+        <text
+          x={width * 0.75}
+          y={height * 0.75}
+          fontSize="10"
+          fill="#ef4444"
+          fontWeight="bold"
+        >
+          Overused / Underperforming
+        </text>
+        <text
+          x={width * 0.25}
+          y={height * 0.75}
+          fontSize="10"
+          fill="#9ca3af"
+          fontWeight="bold"
+        >
+          Unexplored
+        </text>
+      </svg>
+
+      {/* Legenda quadranti */}
+      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded-full bg-green-500" />
+          <span className="text-neutral-400">
+            Comfort Picks ({quadrantHeroes.comfort.length})
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded-full bg-blue-500" />
+          <span className="text-neutral-400">
+            High Winrate / Low Usage ({quadrantHeroes.highWinrate.length})
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded-full bg-red-500" />
+          <span className="text-neutral-400">
+            Overused / Underperforming ({quadrantHeroes.overused.length})
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded-full bg-neutral-500" />
+          <span className="text-neutral-400">
+            Unexplored ({quadrantHeroes.unexplored.length})
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 type MatchRow = {
   id: string
   player_account_id: number
@@ -421,6 +595,29 @@ function HeroesContent(): React.JSX.Element {
               </div>
             )}
 
+          {/* Hero Pool Matrix */}
+          {heroPoolKPI && heroPoolKPI.heroes.length > 0 && (
+            <div className="rounded-lg border border-neutral-800 p-4">
+              <h2 className="mb-3 text-sm text-neutral-300">
+                Hero Pool Matrix
+              </h2>
+              <HeroPoolMatrix
+                heroes={heroPoolKPI.heroes.map((h) => ({
+                  heroId: h.heroId,
+                  matches: h.matches,
+                  winRate: h.winRate,
+                  kdaAvg: h.kdaAvg,
+                }))}
+              />
+              <ExplanationCard
+                title="Come leggere la Hero Pool Matrix"
+                description="Il grafico mostra la relazione tra frequenza di utilizzo (asse X) e performance (asse Y - winrate). I quadranti identificano: Comfort Picks (alto uso, alta performance), High Winrate/Low Usage (poco usati ma performanti), Overused/Underperforming (usati spesso ma con bassa performance), Unexplored (poco usati e bassa performance)."
+                timeRange="Tutte le partite disponibili"
+                interpretation="Usa questo grafico per identificare quali eroi dovresti giocare di più (High Winrate) e quali meno (Overused)."
+              />
+            </div>
+          )}
+
           {/* Grafico comparativo winrate e KDA */}
           {heroPoolKPI && heroPoolKPI.top5ByMatches.length > 0 && (
             <div className="rounded-lg border border-neutral-800 p-4">
@@ -445,6 +642,103 @@ function HeroesContent(): React.JSX.Element {
                 timeRange="Tutte le partite disponibili"
                 interpretation="Se molti eroi sono rossi, considera di ampliare il tuo pool o migliorare con gli eroi attuali."
               />
+            </div>
+          )}
+
+          {/* Indicatori per eroe - tabella estesa */}
+          {heroPoolKPI && heroPoolKPI.heroes.length > 0 && (
+            <div className="rounded-lg border border-neutral-800 p-4">
+              <h2 className="mb-3 text-sm text-neutral-300">
+                Indicatori Dettagliati per Eroe
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-neutral-900/60 text-neutral-300">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium">Eroe</th>
+                      <th className="px-3 py-2 text-left font-medium">
+                        Partite
+                      </th>
+                      <th className="px-3 py-2 text-left font-medium">
+                        Winrate
+                      </th>
+                      <th className="px-3 py-2 text-left font-medium">KDA</th>
+                      <th className="px-3 py-2 text-left font-medium">GPM</th>
+                      <th className="px-3 py-2 text-left font-medium">XPM</th>
+                      <th className="px-3 py-2 text-left font-medium">
+                        Ruolo/Lane
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {heroPoolKPI.heroes
+                      .sort((a, b) => b.matches - a.matches)
+                      .map((h) => {
+                        const icon = getHeroIconUrl(h.heroId)
+                        const name = getHeroName(h.heroId)
+                        return (
+                          <tr
+                            key={h.heroId}
+                            className="border-t border-neutral-800 hover:bg-neutral-900/40"
+                          >
+                            <td className="px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                {icon ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={icon}
+                                    alt={name}
+                                    width={20}
+                                    height={20}
+                                    className="h-5 w-5 rounded"
+                                    loading="lazy"
+                                    onError={(e) => {
+                                      ;(
+                                        e.currentTarget as HTMLImageElement
+                                      ).style.display = 'none'
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="flex h-5 w-5 items-center justify-center rounded bg-neutral-700 text-[10px]">
+                                    {name.charAt(0)}
+                                  </div>
+                                )}
+                                <span>{name}</span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2">{h.matches}</td>
+                            <td className="px-3 py-2">
+                              <span
+                                className={
+                                  h.winRate >= 60
+                                    ? 'text-green-400'
+                                    : h.winRate < 45
+                                      ? 'text-red-400'
+                                      : 'text-neutral-300'
+                                }
+                              >
+                                {h.winRate}%
+                              </span>
+                            </td>
+                            <td className="px-3 py-2">{h.kdaAvg.toFixed(2)}</td>
+                            <td className="px-3 py-2">
+                              {h.avgGpm > 0 ? Math.round(h.avgGpm) : 'N/D'}
+                            </td>
+                            <td className="px-3 py-2">
+                              {h.avgXpm > 0 ? Math.round(h.avgXpm) : 'N/D'}
+                            </td>
+                            <td className="px-3 py-2">
+                              <span className="text-xs text-neutral-400">
+                                {h.primaryRole || 'N/D'} /{' '}
+                                {h.primaryLane || 'N/D'}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

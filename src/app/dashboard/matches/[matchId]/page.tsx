@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import ExplanationCard from '@/components/charts/ExplanationCard'
 import type { AdvancedMatchKPI } from '@/services/dota/kpiService'
 
@@ -180,6 +181,110 @@ export default function MatchDetailPage() {
               </span>
             </div>
           </div>
+
+          {/* Mini-analisi automatica */}
+          {data && (
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-4">
+              <h2 className="mb-3 text-sm font-medium text-neutral-200">
+                Mini-analisi automatica
+              </h2>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {/* Momento chiave */}
+                {advancedKPI && advancedKPI.goldTimeline.length > 0 && (
+                  <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
+                    <div className="text-xs text-neutral-400">
+                      Momento chiave
+                    </div>
+                    <div className="text-sm font-semibold">
+                      {(() => {
+                        const maxGold = Math.max(
+                          ...advancedKPI.goldTimeline.map((t) => t.gold),
+                        )
+                        const keyPoint = advancedKPI.goldTimeline.find(
+                          (t) => t.gold === maxGold,
+                        )
+                        return keyPoint
+                          ? `Minuto ${keyPoint.minute}: ${keyPoint.gold.toFixed(
+                              0,
+                            )} gold`
+                          : 'N/D'
+                      })()}
+                    </div>
+                  </div>
+                )}
+                {/* Early game rating */}
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
+                  <div className="text-xs text-neutral-400">
+                    Early game rating
+                  </div>
+                  <div className="text-sm font-semibold">
+                    {(() => {
+                      const earlyKda =
+                        data.player.deaths > 0
+                          ? (data.player.kills + data.player.assists) /
+                            data.player.deaths
+                          : data.player.kills + data.player.assists
+                      const rating =
+                        earlyKda >= 2.0
+                          ? 'Ottimo'
+                          : earlyKda >= 1.0
+                            ? 'Buono'
+                            : 'Da migliorare'
+                      return rating
+                    })()}
+                  </div>
+                </div>
+                {/* Mid game impact */}
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
+                  <div className="text-xs text-neutral-400">
+                    Mid game impact
+                  </div>
+                  <div className="text-sm font-semibold">
+                    {(() => {
+                      const midImpact =
+                        (data.player.gpm ?? 0) >= 400 &&
+                        (data.player.heroDamage ?? 0) >= 10000
+                          ? 'Alto'
+                          : (data.player.gpm ?? 0) >= 300 &&
+                              (data.player.heroDamage ?? 0) >= 5000
+                            ? 'Medio'
+                            : 'Basso'
+                      return midImpact
+                    })()}
+                  </div>
+                </div>
+                {/* Late game survivability */}
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
+                  <div className="text-xs text-neutral-400">
+                    Late game survivability
+                  </div>
+                  <div className="text-sm font-semibold">
+                    {(() => {
+                      const durationMinutes = minutes(
+                        data.match.durationSeconds,
+                      )
+                      const lateGame = durationMinutes >= 40
+                      const survivability =
+                        lateGame && data.player.deaths <= 5
+                          ? 'Buona'
+                          : lateGame && data.player.deaths <= 8
+                            ? 'Media'
+                            : 'Da migliorare'
+                      return survivability
+                    })()}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4">
+                <Link
+                  href="/dashboard/coaching"
+                  className="text-sm text-blue-400 hover:underline"
+                >
+                  Crea Task da questo match →
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* KPI Card */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
