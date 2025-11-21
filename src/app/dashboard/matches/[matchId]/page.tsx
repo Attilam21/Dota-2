@@ -209,11 +209,19 @@ export default function MatchDetailPage() {
         ← Torna alle partite recenti
       </button>
 
-      {/* Loading state con skeleton elegante */}
+      {/* Loading state con skeleton elegante - transizione smooth */}
       {loading && (
-        <div className="space-y-6">
-          <SkeletonLoader variant="card" height="4rem" />
+        <div className="space-y-6 duration-300 animate-in fade-in">
+          {/* Header skeleton */}
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+            <SkeletonLoader variant="text" className="mb-2 w-1/3" />
+            <SkeletonLoader variant="text" className="w-1/4" />
+          </div>
+
+          {/* KPI Cards skeleton */}
           <SkeletonGrid cols={3} />
+
+          {/* Charts skeleton */}
           <SkeletonChart />
           <SkeletonChart />
         </div>
