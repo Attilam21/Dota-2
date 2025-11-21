@@ -105,9 +105,15 @@ function PerformanceContent(): React.JSX.Element {
   const consistencyMetrics = useMemo(() => {
     if (!overviewKPI) return null
 
-    const kdas = overviewKPI.kdaSeries.map((s) => s.kda)
-    const gpms = overviewKPI.gpmSeries.map((s) => s.gpm).filter((g) => g > 0)
-    const durations = overviewKPI.kdaSeries.map((s, i) => {
+    // Protezione array vuoti o undefined
+    const kdaSeries = overviewKPI.kdaSeries || []
+    const gpmSeries = overviewKPI.gpmSeries || []
+
+    if (kdaSeries.length === 0) return null
+
+    const kdas = kdaSeries.map((s) => s.kda)
+    const gpms = gpmSeries.map((s) => s.gpm).filter((g) => g > 0)
+    const durations = kdaSeries.map((s, i) => {
       // Approssima durata dalla serie
       return 40 // placeholder, dovrebbe venire dai dati match
     })
@@ -198,7 +204,9 @@ function PerformanceContent(): React.JSX.Element {
                   </button>
                 </div>
               </div>
-              {overviewKPI && (
+              {overviewKPI &&
+              overviewKPI.kdaSeries &&
+              overviewKPI.kdaSeries.length > 0 ? (
                 <>
                   <div className="h-[280px]">
                     <MultiLineChart
@@ -207,8 +215,8 @@ function PerformanceContent(): React.JSX.Element {
                         .map((kda, idx) => ({
                           x: idx,
                           kda: kda.kda,
-                          gpm: overviewKPI.gpmSeries[idx]?.gpm || 0,
-                          xpm: overviewKPI.xpmSeries[idx]?.xpm || 0,
+                          gpm: overviewKPI.gpmSeries?.[idx]?.gpm || 0,
+                          xpm: overviewKPI.xpmSeries?.[idx]?.xpm || 0,
                         }))}
                       lines={[
                         { key: 'kda', color: '#60a5fa', label: 'KDA' },
@@ -225,6 +233,10 @@ function PerformanceContent(): React.JSX.Element {
                     timeRange={`Ultimi ${intervalFilter} match`}
                   />
                 </>
+              ) : (
+                <div className="text-sm text-neutral-500">
+                  Dati non disponibili per il grafico
+                </div>
               )}
             </div>
           </div>

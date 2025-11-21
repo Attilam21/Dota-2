@@ -361,16 +361,17 @@ export default function MatchDetailPage() {
               </h2>
 
               {/* Timeline avanzata */}
-              {advancedKPI.goldTimeline.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="mb-2 text-sm text-neutral-300">
-                    Timeline Gold e XP
-                  </h3>
-                  <div className="text-xs text-neutral-400">
-                    Dati timeline disponibili per analisi dettagliata
+              {advancedKPI.goldTimeline &&
+                advancedKPI.goldTimeline.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="mb-2 text-sm text-neutral-300">
+                      Timeline Gold e XP
+                    </h3>
+                    <div className="text-xs text-neutral-400">
+                      Dati timeline disponibili per analisi dettagliata
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
               {/* Item build */}
               {advancedKPI.itemBuild.length > 0 && (

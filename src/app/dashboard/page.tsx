@@ -452,7 +452,7 @@ function DashboardOverview(): React.JSX.Element {
         x: idx,
         winrate: Number(winrate.toFixed(1)),
         kda: Number(avgKda.toFixed(2)),
-        gpm: overviewKPI.gpmSeries[idx]?.gpm || 0,
+        gpm: overviewKPI.gpmSeries?.[idx]?.gpm || 0,
       }
     })
   }, [rows, overviewKPI])
@@ -467,7 +467,7 @@ function DashboardOverview(): React.JSX.Element {
       last20.length > 0
         ? last20.reduce((acc, r) => {
             // Approssima GPM se non disponibile
-            return acc + (overviewKPI.gpmSeries[0]?.gpm || 400)
+            return acc + (overviewKPI.gpmSeries?.[0]?.gpm || 400)
           }, 0) / last20.length
         : 400
 
