@@ -61,7 +61,7 @@ export default function DotaMatchPlayerAnalysisPage() {
   }, [matchId, accountId])
 
   return (
-    <div className="space-y-6 p-6 text-white">
+    <div className="space-y-6 text-white">
       {/* Back button */}
       <div className="flex items-center gap-3">
         <button
