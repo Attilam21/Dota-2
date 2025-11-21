@@ -46,29 +46,14 @@ function MatchesPageContent(): React.JSX.Element {
   const [data, setData] = useState<MatchRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
-  const [liveFallback, setLiveFallback] = useState<boolean>(false)
 
   useEffect(() => {
     let active = true
     async function load() {
       try {
         setLoading(true)
-        // 1) sincronizza OpenDota -> Supabase
-        const syncRes = await fetch(
-          `/api/sync/recent-matches?playerId=${playerId}`,
-          { cache: 'no-store' },
-        )
-        // Se OpenDota non è disponibile, la route risponde 200 con fallback: true
-        if (syncRes.ok) {
-          const syncJson = await syncRes.json().catch(() => ({}))
-          if (syncJson?.fallback === true) {
-            setLiveFallback(true)
-          }
-        } else {
-          // error locale della nostra API: segnala ma non bloccare la lista
-          console.error('Sync API error', syncRes.status)
-        }
-        // 2) leggi da Supabase tramite API interna
+        // SYNC DISABILITATO — ora usiamo solo OpenDota come sorgente dati tramite l'adapter
+        // I dati vengono letti direttamente da OpenDota via /api/matches/list che usa opendotaAdapter
         const listRes = await fetch(`/api/matches/list?playerId=${playerId}`, {
           cache: 'no-store',
         })
@@ -95,7 +80,7 @@ function MatchesPageContent(): React.JSX.Element {
       <div>
         <h1 className="text-2xl font-semibold">Partite recenti</h1>
         <p className="text-sm text-neutral-300">
-          Dati sincronizzati da OpenDota e letti da Supabase (via API interne).
+          Dati letti direttamente da OpenDota tramite API.
         </p>
         <p className="text-xs text-neutral-500">Player #{playerId}</p>
       </div>
@@ -103,15 +88,9 @@ function MatchesPageContent(): React.JSX.Element {
       {loading && (
         <div className="text-neutral-400">Caricamento partite recenti...</div>
       )}
-      {error && !liveFallback && (
+      {error && (
         <div className="text-red-400">
           Errore nel caricamento delle partite: {error}
-        </div>
-      )}
-      {liveFallback && (
-        <div className="rounded border border-yellow-800 bg-yellow-950/40 p-3 text-xs text-yellow-300">
-          Dati live OpenDota temporaneamente non disponibili. Stai vedendo i
-          dati salvati nello storico.
         </div>
       )}
 
