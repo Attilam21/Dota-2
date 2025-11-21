@@ -161,6 +161,13 @@ export default function MatchDetailPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              {/* Link alla nuova analisi avanzata FZTH */}
+              <Link
+                href={`/dota/matches/${data.match.matchId}/players/${playerId}`}
+                className="rounded bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700"
+              >
+                📊 Analisi Avanzata FZTH
+              </Link>
               <span
                 className={`rounded px-2 py-1 text-xs ${
                   data.match.radiantWin

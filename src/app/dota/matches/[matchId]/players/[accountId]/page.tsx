@@ -63,12 +63,22 @@ export default function DotaMatchPlayerAnalysisPage() {
   return (
     <div className="space-y-6 p-6 text-white">
       {/* Back button */}
-      <button
-        onClick={() => router.push('/dashboard/matches')}
-        className="text-sm text-neutral-300 hover:text-white"
-      >
-        ← Torna alle partite
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => router.push('/dashboard/matches')}
+          className="text-sm text-neutral-300 hover:text-white"
+        >
+          ← Torna alle partite
+        </button>
+        {matchId && accountId && (
+          <Link
+            href={`/dashboard/matches/${matchId}?playerId=${accountId}`}
+            className="text-sm text-blue-400 hover:text-blue-300"
+          >
+            ← Dettaglio match standard
+          </Link>
+        )}
+      </div>
 
       {/* Loading state */}
       {loading && (
