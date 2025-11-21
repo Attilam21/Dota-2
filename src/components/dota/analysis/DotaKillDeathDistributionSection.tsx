@@ -3,6 +3,7 @@
 import BarChart from '@/components/charts/BarChart'
 import ExplanationCard from '@/components/charts/ExplanationCard'
 import type { DotaPlayerMatchAnalysis } from '@/types/dotaAnalysis'
+import { formatPercentageOrNA } from '@/utils/dotaFormatting'
 
 interface DotaKillDeathDistributionSectionProps {
   analysis: DotaPlayerMatchAnalysis
@@ -10,10 +11,23 @@ interface DotaKillDeathDistributionSectionProps {
 
 /**
  * Componente per visualizzare la distribuzione di kill e morti per fase (Early/Mid/Late)
+ *
+ * Dati letti da: dota_player_match_analysis.kills_early/mid/late, deaths_early/mid/late, kill_pct_early/mid/late, death_pct_early/mid/late
+ * Mapping: analysis.killDistribution.{early, mid, late}, analysis.killPercentageDistribution.{early, mid, late}
+ *          analysis.deathDistribution.{early, mid, late}, analysis.deathPercentageDistribution.{early, mid, late}
+ *
+ * IMPORTANTE: I valori sono sempre presenti (default 0 dal DB), ma usiamo formatPercentageOrNA per sicurezza.
  */
 export default function DotaKillDeathDistributionSection({
   analysis,
 }: DotaKillDeathDistributionSectionProps) {
+  // Log tracciabilità dati
+  console.log('[DOTA-KILL-DEATH-DIST] Rendering kill/death distribution', {
+    kills: analysis.killDistribution,
+    killPct: analysis.killPercentageDistribution,
+    deaths: analysis.deathDistribution,
+    deathPct: analysis.deathPercentageDistribution,
+  })
   // Dati per grafico kill distribution
   const killData = [
     {
@@ -98,7 +112,10 @@ export default function DotaKillDeathDistributionSection({
           <div className="rounded border border-neutral-800 bg-neutral-900/70 p-2">
             <div className="text-xs text-neutral-400">Early</div>
             <div className="text-sm font-semibold text-green-400">
-              {analysis.killPercentageDistribution.early.toFixed(1)}%
+              {formatPercentageOrNA(
+                analysis.killPercentageDistribution.early,
+                1,
+              )}
             </div>
             <div className="text-xs text-neutral-500">
               {analysis.killDistribution.early} kill
@@ -107,7 +124,7 @@ export default function DotaKillDeathDistributionSection({
           <div className="rounded border border-neutral-800 bg-neutral-900/70 p-2">
             <div className="text-xs text-neutral-400">Mid</div>
             <div className="text-sm font-semibold text-orange-400">
-              {analysis.killPercentageDistribution.mid.toFixed(1)}%
+              {formatPercentageOrNA(analysis.killPercentageDistribution.mid, 1)}
             </div>
             <div className="text-xs text-neutral-500">
               {analysis.killDistribution.mid} kill
@@ -116,7 +133,10 @@ export default function DotaKillDeathDistributionSection({
           <div className="rounded border border-neutral-800 bg-neutral-900/70 p-2">
             <div className="text-xs text-neutral-400">Late</div>
             <div className="text-sm font-semibold text-red-400">
-              {analysis.killPercentageDistribution.late.toFixed(1)}%
+              {formatPercentageOrNA(
+                analysis.killPercentageDistribution.late,
+                1,
+              )}
             </div>
             <div className="text-xs text-neutral-500">
               {analysis.killDistribution.late} kill
@@ -149,7 +169,10 @@ export default function DotaKillDeathDistributionSection({
           <div className="rounded border border-neutral-800 bg-neutral-900/70 p-2">
             <div className="text-xs text-neutral-400">Early</div>
             <div className="text-sm font-semibold text-red-400">
-              {analysis.deathPercentageDistribution.early.toFixed(1)}%
+              {formatPercentageOrNA(
+                analysis.deathPercentageDistribution.early,
+                1,
+              )}
             </div>
             <div className="text-xs text-neutral-500">
               {analysis.deathDistribution.early} morti
@@ -158,7 +181,10 @@ export default function DotaKillDeathDistributionSection({
           <div className="rounded border border-neutral-800 bg-neutral-900/70 p-2">
             <div className="text-xs text-neutral-400">Mid</div>
             <div className="text-sm font-semibold text-orange-400">
-              {analysis.deathPercentageDistribution.mid.toFixed(1)}%
+              {formatPercentageOrNA(
+                analysis.deathPercentageDistribution.mid,
+                1,
+              )}
             </div>
             <div className="text-xs text-neutral-500">
               {analysis.deathDistribution.mid} morti
@@ -167,7 +193,10 @@ export default function DotaKillDeathDistributionSection({
           <div className="rounded border border-neutral-800 bg-neutral-900/70 p-2">
             <div className="text-xs text-neutral-400">Late</div>
             <div className="text-sm font-semibold text-green-400">
-              {analysis.deathPercentageDistribution.late.toFixed(1)}%
+              {formatPercentageOrNA(
+                analysis.deathPercentageDistribution.late,
+                1,
+              )}
             </div>
             <div className="text-xs text-neutral-500">
               {analysis.deathDistribution.late} morti

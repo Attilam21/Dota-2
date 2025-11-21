@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { getHeroIconUrl, getHeroName } from '@/lib/dotaHeroes'
 import { getRolePositionLabel } from '@/types/dotaAnalysis'
 import type { DotaPlayerMatchAnalysis } from '@/types/dotaAnalysis'
+import { formatValueOrNA } from '@/utils/dotaFormatting'
 
 interface DotaOverviewCardProps {
   analysis: DotaPlayerMatchAnalysis
@@ -14,12 +15,24 @@ interface DotaOverviewCardProps {
 /**
  * Componente per l'header/overview della dashboard analisi Dota 2
  * Mostra: Hero, ruolo, K/D/A, GPM, XPM, CS, durata match
+ *
+ * Dati letti da:
+ * - analysis.rolePosition (da dota_player_match_analysis.role_position)
+ * - match detail API per K/D/A, GPM, XPM, CS (da matches_digest o OpenDota)
+ *
+ * IMPORTANTE: Usa formatValueOrNA per mostrare "—" solo quando il valore è realmente null/undefined.
  */
 export default function DotaOverviewCard({
   analysis,
   matchId,
   accountId,
 }: DotaOverviewCardProps) {
+  // Log tracciabilità dati
+  console.log('[DOTA-OVERVIEW] Rendering overview card', {
+    matchId,
+    accountId,
+    rolePosition: analysis.rolePosition,
+  })
   const [matchDetail, setMatchDetail] = useState<{
     heroId?: number
     durationSeconds?: number
@@ -73,10 +86,7 @@ export default function DotaOverviewCard({
 
   const heroId = matchDetail?.heroId
 
-  const formatValue = (value: number | undefined | null): string => {
-    if (value === null || value === undefined) return '—'
-    return value.toFixed(value < 10 ? 1 : 0)
-  }
+  // formatValue ora usa formatValueOrNA da utils/dotaFormatting
 
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
@@ -135,7 +145,8 @@ export default function DotaOverviewCard({
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
           <div className="mb-2 text-xs text-neutral-400">GPM / XPM</div>
           <div className="text-lg font-semibold text-neutral-200">
-            {formatValue(matchDetail?.gpm)} / {formatValue(matchDetail?.xpm)}
+            {formatValueOrNA(matchDetail?.gpm)} /{' '}
+            {formatValueOrNA(matchDetail?.xpm)}
           </div>
         </div>
 
@@ -143,13 +154,13 @@ export default function DotaOverviewCard({
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
           <div className="mb-2 text-xs text-neutral-400">CS / Denies</div>
           <div className="text-lg font-semibold text-neutral-200">
-            {formatValue(matchDetail?.lastHits)} /{' '}
-            {formatValue(matchDetail?.denies)}
+            {formatValueOrNA(matchDetail?.lastHits)} /{' '}
+            {formatValueOrNA(matchDetail?.denies)}
           </div>
         </div>
       </div>
 
-      {/* Durata match */}
+      {/* Durata match - mostra solo se disponibile */}
       {matchDetail?.durationSeconds && (
         <div className="mt-4 text-xs text-neutral-400">
           Durata: {Math.round(matchDetail.durationSeconds / 60)} minuti

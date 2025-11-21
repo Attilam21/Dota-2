@@ -3,6 +3,7 @@
 import BarChart from '@/components/charts/BarChart'
 import ExplanationCard from '@/components/charts/ExplanationCard'
 import type { DotaPlayerMatchAnalysis } from '@/types/dotaAnalysis'
+import { formatPercentageOrNA } from '@/utils/dotaFormatting'
 
 interface DotaDeathByRoleSectionProps {
   analysis: DotaPlayerMatchAnalysis
@@ -10,10 +11,19 @@ interface DotaDeathByRoleSectionProps {
 
 /**
  * Componente per visualizzare la distribuzione delle morti per ruolo avversario (Pos1-5)
+ *
+ * Dati letti da: dota_player_match_analysis.death_pct_pos1..pos5
+ * Mapping: analysis.deathByRole.{pos1, pos2, pos3, pos4, pos5}
+ *
+ * IMPORTANTE: I valori sono sempre presenti (default 0 dal DB), ma usiamo formatPercentageOrNA per sicurezza.
  */
 export default function DotaDeathByRoleSection({
   analysis,
 }: DotaDeathByRoleSectionProps) {
+  // Log tracciabilità dati
+  console.log('[DOTA-DEATH-BY-ROLE] Rendering death by role section', {
+    deathByRole: analysis.deathByRole,
+  })
   const roleLabels: Record<1 | 2 | 3 | 4 | 5, string> = {
     1: 'Pos1 (Carry)',
     2: 'Pos2 (Mid)',
@@ -115,7 +125,7 @@ export default function DotaDeathByRoleSection({
                     : 'text-neutral-200'
                 }`}
               >
-                {value.toFixed(1)}%
+                {formatPercentageOrNA(value, 1)}
               </div>
               <div className="mt-1 text-[10px] text-neutral-500">
                 {roleDescriptions[pos]}

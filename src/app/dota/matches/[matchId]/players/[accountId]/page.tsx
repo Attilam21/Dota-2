@@ -34,6 +34,12 @@ export default function DotaMatchPlayerAnalysisPage() {
         setLoading(true)
         setError(null)
 
+        // Log tracciabilità: caricamento analisi
+        console.log('[DOTA-MATCH-ANALYSIS-PAGE] Loading analysis', {
+          matchId,
+          accountId,
+        })
+
         const res = await fetch(
           `/api/dota/matches/${matchId}/players/${accountId}/analysis`,
           { cache: 'no-store' },
@@ -41,14 +47,28 @@ export default function DotaMatchPlayerAnalysisPage() {
 
         if (!res.ok) {
           const msg = await res.json().catch(() => ({}))
+          console.error('[DOTA-MATCH-ANALYSIS-PAGE] API error', {
+            status: res.status,
+            error: msg?.error,
+          })
           throw new Error(msg?.error || `HTTP ${res.status}`)
         }
 
         const json: DotaPlayerMatchAnalysis = await res.json()
+
+        // Log tracciabilità: analisi caricata
+        console.log('[DOTA-MATCH-ANALYSIS-PAGE] Analysis loaded successfully', {
+          matchId: json.matchId,
+          accountId: json.accountId,
+          rolePosition: json.rolePosition,
+          hasDeathEvents: !!json.deathEvents?.length,
+          deathEventsCount: json.deathEvents?.length ?? 0,
+        })
+
         if (active) setAnalysis(json)
       } catch (e: any) {
         if (active) setError(e?.message ?? 'Errore sconosciuto')
-        console.error('Error loading Dota match analysis:', e)
+        console.error('[DOTA-MATCH-ANALYSIS-PAGE] Error loading analysis:', e)
       } finally {
         if (active) setLoading(false)
       }

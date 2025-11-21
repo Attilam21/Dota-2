@@ -1,6 +1,7 @@
 'use client'
 
 import type { DotaPlayerMatchAnalysis } from '@/types/dotaAnalysis'
+import { formatNumberOrNA, isValueMissing } from '@/utils/dotaFormatting'
 
 interface DotaDeathCostSectionProps {
   analysis: DotaPlayerMatchAnalysis
@@ -8,22 +9,34 @@ interface DotaDeathCostSectionProps {
 
 /**
  * Componente per visualizzare il costo opportunità delle morti (gold/xp/cs persi)
+ *
+ * Dati letti da: dota_player_match_analysis.total_gold_lost, total_xp_lost, total_cs_lost
+ * Mapping: analysis.deathCostSummary.{totalGoldLost, totalXpLost, totalCsLost}
+ *
+ * IMPORTANTE: Non usa fallback a zero. Mostra "—" solo se il valore è realmente null/undefined/NaN.
  */
 export default function DotaDeathCostSection({
   analysis,
 }: DotaDeathCostSectionProps) {
+  // Log tracciabilità dati
+  console.log('[DOTA-DEATH-COST] Rendering death cost section', {
+    totalGoldLost: analysis.deathCostSummary.totalGoldLost,
+    totalXpLost: analysis.deathCostSummary.totalXpLost,
+    totalCsLost: analysis.deathCostSummary.totalCsLost,
+    hasDeathEvents: !!analysis.deathEvents?.length,
+    deathEventsCount: analysis.deathEvents?.length ?? 0,
+  })
+
   const { totalGoldLost, totalXpLost, totalCsLost } = analysis.deathCostSummary
 
-  const formatNumber = (value: number): string => {
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(1)}k`
-    }
-    return value.toFixed(0)
-  }
-
-  // Calcola il costo totale stimato (gold equivalente)
+  // Calcola il costo totale stimato (gold equivalente) solo se tutti i valori sono disponibili
   // Stima: 1 XP ≈ 1 gold, 1 CS ≈ 50 gold
-  const estimatedTotalCost = totalGoldLost + totalXpLost + totalCsLost * 50
+  const estimatedTotalCost =
+    !isValueMissing(totalGoldLost) &&
+    !isValueMissing(totalXpLost) &&
+    !isValueMissing(totalCsLost)
+      ? totalGoldLost! + totalXpLost! + totalCsLost! * 50
+      : null
 
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
@@ -39,7 +52,7 @@ export default function DotaDeathCostSection({
         <div className="rounded-lg border border-red-800/50 bg-red-900/20 p-4">
           <div className="mb-1 text-xs text-red-300">Gold Perso</div>
           <div className="text-2xl font-bold text-red-200">
-            {formatNumber(totalGoldLost)}
+            {formatNumberOrNA(totalGoldLost)}
           </div>
           <div className="mt-1 text-xs text-red-400/80">
             Durante tutti i respawn
@@ -49,7 +62,7 @@ export default function DotaDeathCostSection({
         <div className="rounded-lg border border-yellow-800/50 bg-yellow-900/20 p-4">
           <div className="mb-1 text-xs text-yellow-300">XP Perso</div>
           <div className="text-2xl font-bold text-yellow-200">
-            {formatNumber(totalXpLost)}
+            {formatNumberOrNA(totalXpLost)}
           </div>
           <div className="mt-1 text-xs text-yellow-400/80">
             Esperienza non guadagnata
@@ -59,7 +72,7 @@ export default function DotaDeathCostSection({
         <div className="rounded-lg border border-orange-800/50 bg-orange-900/20 p-4">
           <div className="mb-1 text-xs text-orange-300">CS Perso</div>
           <div className="text-2xl font-bold text-orange-200">
-            {formatNumber(totalCsLost)}
+            {formatNumberOrNA(totalCsLost)}
           </div>
           <div className="mt-1 text-xs text-orange-400/80">
             Last hits mancati
@@ -67,16 +80,18 @@ export default function DotaDeathCostSection({
         </div>
       </div>
 
-      {/* Costo totale stimato */}
-      <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
-        <div className="text-xs text-neutral-400">Costo totale stimato</div>
-        <div className="text-lg font-semibold text-neutral-200">
-          ~{formatNumber(estimatedTotalCost)} gold equivalenti
+      {/* Costo totale stimato - mostrato solo se tutti i valori sono disponibili */}
+      {estimatedTotalCost !== null && (
+        <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
+          <div className="text-xs text-neutral-400">Costo totale stimato</div>
+          <div className="text-lg font-semibold text-neutral-200">
+            ~{formatNumberOrNA(estimatedTotalCost)} gold equivalenti
+          </div>
+          <div className="mt-1 text-xs text-neutral-500">
+            (Gold + XP + CS persi convertiti in gold)
+          </div>
         </div>
-        <div className="mt-1 text-xs text-neutral-500">
-          (Gold + XP + CS persi convertiti in gold)
-        </div>
-      </div>
+      )}
 
       {/* Tabella eventi dettagliati (se disponibili) */}
       {analysis.deathEvents && analysis.deathEvents.length > 0 && (
@@ -130,13 +145,13 @@ export default function DotaDeathCostSection({
                       </span>
                     </td>
                     <td className="px-2 py-2 text-right text-red-300">
-                      {formatNumber(event.goldLost)}
+                      {formatNumberOrNA(event.goldLost)}
                     </td>
                     <td className="px-2 py-2 text-right text-yellow-300">
-                      {formatNumber(event.xpLost)}
+                      {formatNumberOrNA(event.xpLost)}
                     </td>
                     <td className="px-2 py-2 text-right text-orange-300">
-                      {formatNumber(event.csLost)}
+                      {formatNumberOrNA(event.csLost)}
                     </td>
                     <td className="px-2 py-2 text-right text-neutral-400">
                       {event.downtimeSeconds}s
@@ -149,17 +164,19 @@ export default function DotaDeathCostSection({
         </div>
       )}
 
-      {/* Insight */}
-      <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
-        <div className="text-xs font-medium text-neutral-300">💡 Insight</div>
-        <div className="mt-1 text-xs text-neutral-400">
-          {totalGoldLost > 5000
-            ? 'Costo molto alto: valuta di migliorare la sopravvivenza per ridurre le risorse perse.'
-            : totalGoldLost > 2000
-              ? 'Costo moderato: alcune morti evitabili potrebbero ridurre ulteriormente le perdite.'
-              : 'Costo contenuto: buona gestione della sopravvivenza.'}
+      {/* Insight - mostrato solo se totalGoldLost è disponibile */}
+      {!isValueMissing(totalGoldLost) && (
+        <div className="mt-4 rounded-lg border border-neutral-800 bg-neutral-900/70 p-3">
+          <div className="text-xs font-medium text-neutral-300">💡 Insight</div>
+          <div className="mt-1 text-xs text-neutral-400">
+            {totalGoldLost! > 5000
+              ? 'Costo molto alto: valuta di migliorare la sopravvivenza per ridurre le risorse perse.'
+              : totalGoldLost! > 2000
+                ? 'Costo moderato: alcune morti evitabili potrebbero ridurre ulteriormente le perdite.'
+                : 'Costo contenuto: buona gestione della sopravvivenza.'}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

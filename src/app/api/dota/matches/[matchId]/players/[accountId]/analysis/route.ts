@@ -717,13 +717,15 @@ async function upsertMatchesDigest(
     )
 
   if (digestError) {
-    console.error('matches_digest upsert error:', digestError)
+    console.error('[DOTA2-ANALYSIS] UPSERT_MATCHES_DIGEST_ERROR', {
+      matchId,
+      accountId,
+      error: digestError.message,
+      code: digestError.code,
+      details: digestError.details,
+    })
     // Non-blocking: log error but don't fail the analysis
     // This ensures analysis still works even if matches_digest update fails
-  } else {
-    console.log(
-      `matches_digest updated for match ${matchId}, player ${accountId}`,
-    )
   }
 }
 
@@ -903,9 +905,12 @@ export async function GET(
   const matchId = Number(params.matchId)
   const accountId = Number(params.accountId)
 
-  console.log(
-    `[DOTA2-ANALYSIS] GET request: matchId=${params.matchId} (parsed: ${matchId}), accountId=${params.accountId} (parsed: ${accountId})`,
-  )
+  // Log strutturato: START
+  console.log('[DOTA2-ANALYSIS] START', {
+    matchId: Number(params.matchId),
+    accountId: Number(params.accountId),
+    timestamp: new Date().toISOString(),
+  })
 
   if (!matchId || !accountId || isNaN(matchId) || isNaN(accountId)) {
     console.error(
@@ -992,24 +997,32 @@ export async function GET(
     try {
       if (deathEventsCount > 0) {
         await upsertDeathEvents(matchId, accountId, analysis.deathEvents!)
-        console.log(
-          `[DOTA2-ANALYSIS] ✓ Successfully stored ${deathEventsCount} death events in dota_player_death_events`,
-        )
+        console.log('[DOTA2-ANALYSIS] UPSERT_DEATH_EVENTS_OK', {
+          matchId,
+          accountId,
+          eventsCount: deathEventsCount,
+        })
       } else {
-        console.log(
-          `[DOTA2-ANALYSIS] ⚠ No death events to store (player had ${player.deaths} deaths, but OpenDota didn't provide deaths_log or killed_by)`,
-        )
+        console.log('[DOTA2-ANALYSIS] UPSERT_DEATH_EVENTS_SKIP', {
+          matchId,
+          accountId,
+          reason: 'No death events to store',
+          playerDeaths: player.deaths,
+        })
         // Still call upsertDeathEvents to clean up old events
         await upsertDeathEvents(matchId, accountId, [])
-        console.log(
-          `[DOTA2-ANALYSIS] ✓ Cleaned up old death events (if any existed)`,
-        )
+        console.log('[DOTA2-ANALYSIS] UPSERT_DEATH_EVENTS_CLEANUP_OK', {
+          matchId,
+          accountId,
+        })
       }
     } catch (deathEventsError: any) {
-      console.error(
-        `[DOTA2-ANALYSIS] ✗ CRITICAL ERROR: Failed to store death events in dota_player_death_events`,
-      )
-      console.error(`[DOTA2-ANALYSIS] Error details:`, deathEventsError)
+      console.error('[DOTA2-ANALYSIS] UPSERT_DEATH_EVENTS_KO', {
+        matchId,
+        accountId,
+        error: deathEventsError.message,
+        stack: deathEventsError.stack,
+      })
       // Death events are critical - return error to client
       return NextResponse.json(
         {
@@ -1028,26 +1041,27 @@ export async function GET(
     )
     try {
       await upsertMatchAnalysis(matchId, accountId, analysis)
-      console.log(
-        `[DOTA2-ANALYSIS] ✓ Successfully stored match analysis in dota_player_match_analysis`,
-      )
-      console.log(
-        `[DOTA2-ANALYSIS]   - Role position: ${analysis.rolePosition}`,
-      )
-      console.log(
-        `[DOTA2-ANALYSIS]   - Kills: E=${analysis.killDistribution.early} M=${analysis.killDistribution.mid} L=${analysis.killDistribution.late}`,
-      )
-      console.log(
-        `[DOTA2-ANALYSIS]   - Deaths: E=${analysis.deathDistribution.early} M=${analysis.deathDistribution.mid} L=${analysis.deathDistribution.late}`,
-      )
-      console.log(
-        `[DOTA2-ANALYSIS]   - Death cost: Gold=${analysis.deathCostSummary.totalGoldLost} XP=${analysis.deathCostSummary.totalXpLost} CS=${analysis.deathCostSummary.totalCsLost}`,
-      )
+      console.log('[DOTA2-ANALYSIS] UPSERT_MATCH_ANALYSIS_OK', {
+        matchId,
+        accountId,
+        rolePosition: analysis.rolePosition,
+        killsEarly: analysis.killDistribution.early,
+        killsMid: analysis.killDistribution.mid,
+        killsLate: analysis.killDistribution.late,
+        deathsEarly: analysis.deathDistribution.early,
+        deathsMid: analysis.deathDistribution.mid,
+        deathsLate: analysis.deathDistribution.late,
+        totalGoldLost: analysis.deathCostSummary.totalGoldLost,
+        totalXpLost: analysis.deathCostSummary.totalXpLost,
+        totalCsLost: analysis.deathCostSummary.totalCsLost,
+      })
     } catch (analysisError: any) {
-      console.error(
-        `[DOTA2-ANALYSIS] ✗ Error storing match analysis (non-fatal, continuing):`,
-        analysisError,
-      )
+      console.error('[DOTA2-ANALYSIS] UPSERT_MATCH_ANALYSIS_KO', {
+        matchId,
+        accountId,
+        error: analysisError.message,
+        stack: analysisError.stack,
+      })
       // Continue even if analysis storage fails
     }
 
@@ -1063,37 +1077,51 @@ export async function GET(
         player,
         analysis.rolePosition,
       )
-      console.log(`[DOTA2-ANALYSIS] ✓ Successfully updated matches_digest`)
-      console.log(
-        `[DOTA2-ANALYSIS]   - KDA: ${(
-          (player.kills + player.assists) /
-          Math.max(1, player.deaths)
-        ).toFixed(2)}`,
-      )
-      console.log(
-        `[DOTA2-ANALYSIS]   - GPM: ${player.gold_per_min ?? 'N/A'}, XPM: ${
-          player.xp_per_min ?? 'N/A'
-        }`,
-      )
+      const kda =
+        player.deaths > 0
+          ? (player.kills + player.assists) / player.deaths
+          : player.kills + player.assists
+      console.log('[DOTA2-ANALYSIS] UPSERT_MATCHES_DIGEST_OK', {
+        matchId,
+        accountId,
+        kda: Number(kda.toFixed(2)),
+        rolePosition: analysis.rolePosition,
+        gpm: player.gold_per_min ?? null,
+        xpm: player.xp_per_min ?? null,
+        lastHits: player.last_hits ?? null,
+        denies: player.denies ?? null,
+        lane: player.lane ?? null,
+        role: player.role ?? null,
+      })
     } catch (digestError: any) {
-      console.error(
-        `[DOTA2-ANALYSIS] ✗ Error updating matches_digest (non-fatal, continuing):`,
-        digestError,
-      )
+      console.error('[DOTA2-ANALYSIS] UPSERT_MATCHES_DIGEST_KO', {
+        matchId,
+        accountId,
+        error: digestError.message,
+        stack: digestError.stack,
+      })
       // Continue even if matches_digest update fails
     }
 
     // ============================================================================
     // STEP 5: Return calculated analysis
     // ============================================================================
-    console.log(
-      `[DOTA2-ANALYSIS] ✓ Analysis complete and stored. Returning response.`,
-    )
+    console.log('[DOTA2-ANALYSIS] SUCCESS', {
+      matchId,
+      accountId,
+      hasDeathEvents: !!analysis.deathEvents?.length,
+      deathEventsCount: analysis.deathEvents?.length ?? 0,
+      totalGoldLost: analysis.deathCostSummary.totalGoldLost,
+    })
 
     return NextResponse.json(analysis)
   } catch (error: any) {
-    console.error(`[DOTA2-ANALYSIS] ✗ FATAL ERROR in GET handler:`, error)
-    console.error(`[DOTA2-ANALYSIS] Error stack:`, error.stack)
+    console.error('[DOTA2-ANALYSIS] FATAL_ERROR', {
+      matchId: params.matchId,
+      accountId: params.accountId,
+      error: error.message,
+      stack: error.stack,
+    })
     return NextResponse.json(
       {
         error: error.message || 'Internal server error',
