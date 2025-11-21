@@ -194,3 +194,63 @@ export function getKpiValuesForTask(
 
   return values
 }
+
+/**
+ * Interfaccia per un Task completo pronto per essere salvato
+ */
+export interface DotaTask {
+  type: DotaTaskType
+  title: string
+  description: string
+  kpiKeys: string[]
+  kpiPayload: Record<string, number> // Snapshot dei valori KPI al momento della creazione
+  params: Record<string, number> // Parametri/soglie del task
+  priority?: 'high' | 'medium' | 'low'
+}
+
+/**
+ * Costruisce una lista di Task da uno snapshot di KPI
+ *
+ * @param playerId - Account ID Dota 2 del giocatore
+ * @param kpiSnapshot - Snapshot aggregato dei KPI calcolati
+ * @returns Array di Task pronti per essere salvati
+ */
+export function buildTaskFromKpi(
+  playerId: string,
+  kpiSnapshot: TaskEvaluationKPIs,
+): DotaTask[] {
+  // Usa evaluateTasks per ottenere le definizioni
+  const taskDefinitions = evaluateTasks(kpiSnapshot)
+
+  // Converti le definizioni in Task completi con payload KPI
+  const tasks: DotaTask[] = taskDefinitions.map((def) => {
+    // Ottieni i valori KPI attuali per questo task
+    const kpiValues = getKpiValuesForTask(def.type, kpiSnapshot)
+
+    // Costruisci il payload KPI
+    const kpiPayload: Record<string, number> = {}
+    for (const key of def.kpiKeys || []) {
+      kpiPayload[key] = kpiValues[key] ?? 0
+    }
+
+    // Costruisci i parametri (soglie target)
+    const params: Record<string, number> = {}
+    if (def.suggestedThresholds) {
+      for (const [key, value] of Object.entries(def.suggestedThresholds)) {
+        params[key] = value
+      }
+    }
+
+    return {
+      type: def.type,
+      title: def.title,
+      description: def.description,
+      kpiKeys: def.kpiKeys || [],
+      kpiPayload,
+      params,
+      priority: def.priority,
+    }
+  })
+
+  return tasks
+}
