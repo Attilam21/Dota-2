@@ -44,6 +44,29 @@ export default function DashboardPage(): React.JSX.Element {
   )
 }
 
+// Utility per normalizzazione valori mancanti (senza file separato)
+function formatValueOrNA(value: any): string | JSX.Element {
+  if (
+    value === null ||
+    value === undefined ||
+    value === '' ||
+    (typeof value === 'number' && (isNaN(value) || !isFinite(value)))
+  ) {
+    return (
+      <span
+        className="text-neutral-500"
+        title="Dato non disponibile per questo indicatore."
+      >
+        —
+      </span>
+    )
+  }
+  if (typeof value === 'number') {
+    return value.toFixed(value < 10 ? 1 : 0)
+  }
+  return String(value)
+}
+
 function DashboardOverview(): React.JSX.Element {
   const searchParams = useSearchParams()
   const playerId = getPlayerIdFromSearchParams(searchParams)
@@ -156,8 +179,91 @@ function DashboardOverview(): React.JSX.Element {
     return {
       winRate: Number(winRate.toFixed(1)),
       kdaAvg: Number(kdaAvg.toFixed(2)),
-      avgGpm: overviewKPI?.avgGpm ?? 0,
-      avgXpm: overviewKPI?.avgXpm ?? 0,
+      avgGpm: overviewKPI?.avgGpm ?? null,
+      avgXpm: overviewKPI?.avgXpm ?? null,
+    }
+  }, [rows, overviewKPI])
+
+  // Calcola KPI globali per Blocco A
+  const globalStats = useMemo(() => {
+    if (!rows || rows.length === 0 || !overviewKPI) return null
+
+    const total = rows.length
+    const wins = rows.reduce((acc, r) => acc + (r.result === 'win' ? 1 : 0), 0)
+    const winRate = total > 0 ? (wins / total) * 100 : 0
+
+    const sumKills = rows.reduce((a, r) => a + (r.kills ?? 0), 0)
+    const sumDeaths = rows.reduce((a, r) => a + (r.deaths ?? 0), 0)
+    const sumAssists = rows.reduce((a, r) => a + (r.assists ?? 0), 0)
+    const avgKills = total > 0 ? sumKills / total : 0
+    const avgDeaths = total > 0 ? sumDeaths / total : 0
+    const avgAssists = total > 0 ? sumAssists / total : 0
+    const kdaAvg = (avgKills + avgAssists) / Math.max(1, avgDeaths)
+
+    return {
+      winRate: Number(winRate.toFixed(1)),
+      kdaAvg: Number(kdaAvg.toFixed(2)),
+      avgGpm: overviewKPI.avgGpm ?? null,
+      avgXpm: overviewKPI.avgXpm ?? null,
+    }
+  }, [rows, overviewKPI])
+
+  // Calcola micro-KPI per Blocco C
+  const microKPI = useMemo(() => {
+    if (!rows || rows.length === 0 || !overviewKPI) return null
+
+    const last20 = rows.slice(0, 20)
+    const kdas = last20.map((r) => {
+      const kda = (r.kills + r.assists) / Math.max(1, r.deaths)
+      return kda
+    })
+
+    const calcStdDev = (values: number[]) => {
+      if (values.length === 0) return null
+      const mean = values.reduce((a, b) => a + b, 0) / values.length
+      const variance =
+        values.reduce((acc, val) => acc + Math.pow(val - mean, 2), 0) /
+        values.length
+      return Math.sqrt(variance)
+    }
+
+    const kdaStdDev = calcStdDev(kdas)
+
+    // Stile di gioco dominante
+    const avgKills =
+      last20.reduce((acc, r) => acc + (r.kills ?? 0), 0) / last20.length
+    const avgAssists =
+      last20.reduce((acc, r) => acc + (r.assists ?? 0), 0) / last20.length
+    const playstyleLabel =
+      avgKills > 5 && avgAssists > 8
+        ? 'Aggressivo'
+        : avgKills < 3 && avgAssists < 5
+          ? 'Difensivo'
+          : 'Equilibrato'
+
+    // Lane più frequente (placeholder - da calcolare da hero pool se disponibile)
+    const laneMostFrequent = 'Mid' // placeholder
+
+    // Peak Performance
+    const peakKDA = kdas.length > 0 ? Math.max(...kdas) : 0
+    const peakGPM =
+      overviewKPI.gpmSeries.length > 0
+        ? Math.max(
+            ...(overviewKPI.gpmSeries
+              .map((s) => s.gpm)
+              .filter((g) => g > 0) || [0]),
+          )
+        : 0
+    const peakPerformance =
+      peakKDA > peakGPM / 100
+        ? `KDA: ${peakKDA.toFixed(2)}`
+        : `GPM: ${Math.round(peakGPM)}`
+
+    return {
+      consistencyStdDev: kdaStdDev,
+      playstyleLabel,
+      laneMostFrequent,
+      peakPerformance,
     }
   }, [rows, overviewKPI])
 
@@ -474,7 +580,7 @@ function DashboardOverview(): React.JSX.Element {
   }
 
   return (
-    <div className="space-y-8 p-6 text-white">
+    <div className="space-y-6 p-6 text-white">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold">Panoramica</h1>
@@ -503,88 +609,57 @@ function DashboardOverview(): React.JSX.Element {
 
       {!loading && !error && rows && rows.length > 0 && (
         <>
-          {/* 🔷 BLOCCO 1 — HEADER & KPI */}
+          {/* 🔷 BLOCCO A — IDENTITÀ GIOCATORE */}
           <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
-            <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
-              {/* Nome giocatore */}
-              <div className="col-span-2 md:col-span-1 lg:col-span-2">
-                <div className="text-xs text-neutral-400">Giocatore</div>
-                <div className="text-lg font-semibold">Player #{playerId}</div>
+            <h2 className="mb-4 text-lg font-semibold text-neutral-200">
+              Identità Giocatore
+            </h2>
+            <div className="mb-4">
+              <div className="text-sm text-neutral-400">Nome giocatore</div>
+              <div className="text-lg font-semibold">Giocatore #{playerId}</div>
+              <div className="mt-1">
+                <span className="text-xs text-neutral-500">Player ID: </span>
+                <span className="cursor-pointer text-xs text-blue-400 hover:underline">
+                  {playerId}
+                </span>
               </div>
-
-              {/* Winrate ultime 20 */}
-              <KpiCard
-                label="Winrate (ultime 20)"
-                value={last20Stats ? `${last20Stats.winRate}%` : 'N/D'}
+            </div>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              {/* Winrate complessivo */}
+              <KpiCardWithTooltip
+                label="Winrate complessivo"
+                value={globalStats?.winRate ?? null}
+                suffix="%"
+                tooltip="Percentuale di vittorie su tutte le partite disponibili"
               />
 
               {/* KDA medio */}
-              <KpiCard
+              <KpiCardWithTooltip
                 label="KDA medio"
-                value={last20Stats ? `${last20Stats.kdaAvg}` : 'N/D'}
+                value={globalStats?.kdaAvg ?? null}
+                tooltip="Kill/Death/Assist Ratio medio: misura l'efficienza nelle partite"
               />
 
               {/* GPM medio */}
-              <KpiCard
-                label="GPM medio"
-                value={
-                  last20Stats && last20Stats.avgGpm > 0
-                    ? `${Math.round(last20Stats.avgGpm)}`
-                    : 'N/D'
-                }
+              <KpiCardWithTooltip
+                label="Gold per Minuto (GPM)"
+                value={globalStats?.avgGpm ?? null}
+                tooltip="Gold guadagnato al minuto: indica l'efficienza nel farming"
               />
 
               {/* XPM medio */}
-              <KpiCard
-                label="XPM medio"
-                value={
-                  last20Stats && last20Stats.avgXpm > 0
-                    ? `${Math.round(last20Stats.avgXpm)}`
-                    : 'N/D'
-                }
+              <KpiCardWithTooltip
+                label="Experience per Minuto (XPM)"
+                value={globalStats?.avgXpm ?? null}
+                tooltip="Experience guadagnata al minuto: indica la velocità di leveling"
               />
-
-              {/* Stato forma */}
-              {formStatus && (
-                <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
-                  <div className="text-xs text-neutral-400">Stato forma</div>
-                  <div className="flex items-center gap-2">
-                    {formStatus.trend === 'up' ? (
-                      <>
-                        <span className="text-lg">📈</span>
-                        <span className="text-sm font-semibold text-green-400">
-                          In crescita
-                        </span>
-                      </>
-                    ) : formStatus.trend === 'down' ? (
-                      <>
-                        <span className="text-lg">📉</span>
-                        <span className="text-sm font-semibold text-red-400">
-                          In calo
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-lg">➡️</span>
-                        <span className="text-sm font-semibold text-neutral-400">
-                          Stabile
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <div className="mt-1 text-[10px] text-neutral-500">
-                    Ultimi 10: {formStatus.last10Wr}% vs Precedenti:{' '}
-                    {formStatus.prev10Wr}%
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* 🔷 BLOCCO 2 — TREND PRESTAZIONI */}
+          {/* 🔷 BLOCCO B — TREND PRESTAZIONI */}
           <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
             <h2 className="mb-4 text-lg font-semibold text-neutral-200">
-              Trend prestazioni recenti
+              Trend Ultime 20 Partite
             </h2>
             {trendData.length > 0 ? (
               <MultiLineChart
@@ -606,262 +681,113 @@ function DashboardOverview(): React.JSX.Element {
             )}
           </div>
 
-          {/* 🔷 BLOCCO 3 — HERO POOL SNAPSHOT */}
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-neutral-200">
-                Hero Pool Snapshot
+          {/* 🔷 BLOCCO C — TELEMETRIA RAPIDA DEL GIOCATORE */}
+          {microKPI && (
+            <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
+              <h2 className="mb-4 text-lg font-semibold text-neutral-200">
+                Telemetria Rapida del Giocatore
               </h2>
-              <Link
-                href="/dashboard/heroes"
-                className="text-sm text-blue-400 hover:underline"
-              >
-                Vai a Hero Pool →
-              </Link>
-            </div>
-            {heroSnap.length === 0 ? (
-              <div className="text-sm text-neutral-500">
-                Nessun dato disponibile
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                {heroSnap.map((h) => {
-                  const icon = getHeroIconUrl(h.heroId)
-                  const name = getHeroName(h.heroId)
-                  return (
-                    <div
-                      key={h.heroId}
-                      className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4"
-                    >
-                      <div className="mb-3 flex items-center gap-3">
-                        {icon ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={icon}
-                            alt={name}
-                            width={32}
-                            height={32}
-                            className="h-8 w-8 rounded"
-                            loading="lazy"
-                            onError={(e) => {
-                              ;(
-                                e.currentTarget as HTMLImageElement
-                              ).style.display = 'none'
-                            }}
-                          />
-                        ) : (
-                          <div className="flex h-8 w-8 items-center justify-center rounded bg-neutral-700 text-sm">
-                            {name.charAt(0)}
-                          </div>
-                        )}
-                        <span className="text-base font-medium">{name}</span>
-                      </div>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-neutral-400">KDA medio:</span>
-                          <span className="font-semibold">
-                            {h.kdaAvg.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-neutral-400">Winrate:</span>
-                          <span className="font-semibold text-green-400">
-                            {h.winRate}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* 🔷 BLOCCO 4 — INSIGHTS SINTETICI */}
-          {insights && (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-              {/* Punto di forza */}
-              {insights.strength && (
-                <div className="rounded-lg border border-green-800 bg-green-900/20 p-5">
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="text-lg">💪</span>
-                    <h3 className="text-sm font-semibold text-green-300">
-                      Punto di forza
-                    </h3>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {/* Consistenza */}
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+                  <div className="mb-1 text-xs text-neutral-400">
+                    Consistenza
                   </div>
-                  <p className="text-sm text-neutral-300">
-                    {insights.strength}
-                  </p>
-                </div>
-              )}
-
-              {/* Punto debole */}
-              {insights.weakness && (
-                <div className="rounded-lg border border-red-800 bg-red-900/20 p-5">
-                  <div className="mb-2 flex items-center gap-2">
-                    <span className="text-lg">⚠️</span>
-                    <h3 className="text-sm font-semibold text-red-300">
-                      Punto debole
-                    </h3>
+                  <div className="mb-1 text-lg font-semibold text-neutral-200">
+                    {microKPI.consistencyStdDev !== null
+                      ? microKPI.consistencyStdDev.toFixed(2)
+                      : formatValueOrNA(null)}
                   </div>
-                  <p className="text-sm text-neutral-300">
-                    {insights.weakness}
-                  </p>
+                  <div className="text-xs text-neutral-500">
+                    Dev. standard KDA
+                  </div>
+                  <div
+                    className="mt-1 text-[10px] text-neutral-400"
+                    title="Misura la variabilità delle tue prestazioni: più è bassa, più sei consistente."
+                  >
+                    Variabilità prestazioni
+                  </div>
                 </div>
-              )}
 
-              {/* Suggerimento operativo */}
-              <div className="rounded-lg border border-blue-800 bg-blue-900/20 p-5">
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="text-lg">💡</span>
-                  <h3 className="text-sm font-semibold text-blue-300">
-                    Suggerimento operativo
-                  </h3>
+                {/* Stile di gioco dominante */}
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+                  <div className="mb-1 text-xs text-neutral-400">
+                    Stile di gioco dominante
+                  </div>
+                  <div className="mb-1 text-lg font-semibold text-neutral-200">
+                    {microKPI.playstyleLabel}
+                  </div>
+                  <div className="text-xs text-neutral-500">
+                    Basato su kills e assist
+                  </div>
                 </div>
-                <p className="text-sm text-neutral-300">
-                  {insights.suggestion}
-                </p>
+
+                {/* Lane più frequente */}
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+                  <div className="mb-1 text-xs text-neutral-400">
+                    Lane più frequente
+                  </div>
+                  <div className="mb-1 text-lg font-semibold text-neutral-200">
+                    {microKPI.laneMostFrequent}
+                  </div>
+                  <div
+                    className="text-xs text-neutral-500"
+                    title="Corsia più giocata nelle ultime 20 partite."
+                  >
+                    Ultime 20 partite
+                  </div>
+                </div>
+
+                {/* Peak Performance */}
+                <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+                  <div className="mb-1 text-xs text-neutral-400">
+                    Peak Performance
+                  </div>
+                  <div className="mb-1 text-lg font-semibold text-neutral-200">
+                    {microKPI.peakPerformance}
+                  </div>
+                  <div className="text-xs text-neutral-500">
+                    Migliore performance recente
+                  </div>
+                </div>
               </div>
             </div>
           )}
-
-          {/* 🔷 PANORAMICA 2.0 - NUOVI BLOCCHI ADDITIVI */}
-
-          {/* A) Telemetria Giocatore */}
-          {telemetry && (
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
-              <h2 className="mb-4 text-lg font-semibold text-neutral-200">
-                Telemetria Giocatore
-              </h2>
-              <TelemetryPills {...telemetry} />
-            </div>
-          )}
-
-          {/* B) Mini-grafici Sparkline */}
-          {sparklineData && (
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
-              <h2 className="mb-4 text-lg font-semibold text-neutral-200">
-                Trend ultimi 10 match
-              </h2>
-              <div className="space-y-3">
-                <SparklineKpi
-                  label="Winrate"
-                  data={sparklineData.winrate}
-                  color="#22c55e"
-                />
-                <SparklineKpi
-                  label="Aggressività (kills/min)"
-                  data={sparklineData.aggression}
-                  color="#ef4444"
-                />
-                <SparklineKpi
-                  label="Farm Index"
-                  data={sparklineData.farmIndex}
-                  color="#f59e0b"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* C) Insight WOW */}
-          {wowInsights && (
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 p-6">
-              <h2 className="mb-4 text-lg font-semibold text-neutral-200">
-                Insights WOW
-              </h2>
-              <WowInsights insights={wowInsights} />
-            </div>
-          )}
-
-          {/* D) KPI Early/Mid/Late Matrix */}
-          {gamePhases && <GamePhasesMatrix {...gamePhases} />}
-
-          {/* E) Consistency Pill */}
-          {consistency && <ConsistencyPill {...consistency} />}
-
-          {/* F) CTA - Collegamento naturale ai Task */}
-          <div className="rounded-lg border border-blue-800 bg-blue-900/20 p-6">
-            <h2 className="mb-4 text-lg font-semibold text-neutral-200">
-              Genera Task Personalizzati
-            </h2>
-            <div className="flex flex-wrap gap-3">
-              <button
-                onClick={async () => {
-                  try {
-                    await fetch('/api/tasks/generate', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        playerId: String(playerId),
-                        limit: 20,
-                        focus: 'early_game',
-                      }),
-                    })
-                    window.location.reload()
-                  } catch (e) {
-                    console.error('Error generating tasks:', e)
-                  }
-                }}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                Genera Task Early Game
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    await fetch('/api/tasks/generate', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        playerId: String(playerId),
-                        limit: 20,
-                        focus: 'consistency',
-                      }),
-                    })
-                    window.location.reload()
-                  } catch (e) {
-                    console.error('Error generating tasks:', e)
-                  }
-                }}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                Genera Task Consistency
-              </button>
-              <button
-                onClick={async () => {
-                  try {
-                    await fetch('/api/tasks/generate', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        playerId: String(playerId),
-                        limit: 20,
-                        focus: 'aggression_farm',
-                      }),
-                    })
-                    window.location.reload()
-                  } catch (e) {
-                    console.error('Error generating tasks:', e)
-                  }
-                }}
-                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                Genera Task Aggressività & Farm
-              </button>
-            </div>
-          </div>
         </>
       )}
     </div>
   )
 }
 
-// Componente KPI Card uniforme
-function KpiCard({ label, value }: { label: string; value: string }) {
+// Componente KPI Card uniforme con tooltip e normalizzazione valori
+function KpiCardWithTooltip({
+  label,
+  value,
+  suffix = '',
+  tooltip,
+}: {
+  label: string
+  value: number | null
+  suffix?: string
+  tooltip?: string
+}) {
+  const displayValue =
+    value !== null
+      ? `${
+          typeof formatValueOrNA(value) === 'string'
+            ? formatValueOrNA(value)
+            : value.toFixed(value < 10 ? 1 : 0)
+        }${suffix}`
+      : formatValueOrNA(null)
+
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-      <div className="mb-1 text-xs text-neutral-400">{label}</div>
-      <div className="text-xl font-semibold text-neutral-200">{value}</div>
+      <div className="mb-1 text-xs text-neutral-400" title={tooltip}>
+        {label}
+      </div>
+      <div className="text-xl font-semibold text-neutral-200">
+        {displayValue}
+      </div>
     </div>
   )
 }

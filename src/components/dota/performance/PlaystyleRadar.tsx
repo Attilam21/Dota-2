@@ -120,6 +120,13 @@ export default function PlaystyleRadar({
           {points.map((p, i) => {
             const point = getPoint(p.angle, p.value)
             const labelPos = getPoint(p.angle, 120)
+            const tooltips: Record<string, string> = {
+              Aggressività:
+                'Aggressività: capacità di generare kill e pressione',
+              'KP%': 'KP%: partecipazione ai combattimenti',
+              Farm: 'Farm: efficienza nella raccolta risorse',
+              Macro: 'Macro: gestione degli obiettivi',
+            }
             return (
               <g key={i}>
                 <circle cx={point.x} cy={point.y} r="4" fill="#60a5fa" />
@@ -131,6 +138,7 @@ export default function PlaystyleRadar({
                   textAnchor="middle"
                   dominantBaseline="middle"
                 >
+                  <title>{tooltips[p.label] || p.label}</title>
                   {p.label}
                 </text>
                 <text
