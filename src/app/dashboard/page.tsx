@@ -46,6 +46,8 @@ type HeroSummary = {
   winRate: number
 }
 
+import SyncPlayerPanel from '@/components/SyncPlayerPanel'
+
 export default function DashboardPage(): React.JSX.Element {
   return (
     <Suspense
@@ -64,6 +66,7 @@ function DashboardOverview(): React.JSX.Element {
   const [rows, setRows] = useState<MatchRow[] | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -95,7 +98,18 @@ function DashboardOverview(): React.JSX.Element {
     return () => {
       active = false
     }
-  }, [playerId])
+  }, [playerId, refreshTrigger])
+
+  const refreshData = () => {
+    setRefreshTrigger((prev) => prev + 1)
+    // Also trigger a reload of the player list in the header if possible, 
+    // but since that's in a separate component, a full page refresh might be needed 
+    // or we rely on the user navigating. 
+    // For now, just re-fetching matches is good.
+    // Ideally we would use a context or SWR/TanStack Query for this.
+    // To ensure the PlayerSelector also updates, we can force a router refresh.
+    window.location.reload()
+  }
 
   const stats: PlayerOverviewStats | null = useMemo(() => {
     if (!rows || rows.length === 0) return null
@@ -113,10 +127,10 @@ function DashboardOverview(): React.JSX.Element {
     const avgDurationMinutes =
       total > 0
         ? Math.round(
-            rows.reduce((a, r) => a + (r.duration_seconds ?? 0), 0) /
-              total /
-              60,
-          )
+          rows.reduce((a, r) => a + (r.duration_seconds ?? 0), 0) /
+          total /
+          60,
+        )
         : 0
     return {
       totalMatches: total,
@@ -169,8 +183,12 @@ function DashboardOverview(): React.JSX.Element {
   if (!playerId) {
     return (
       <div className="p-8 text-white">
-        <div className="rounded-lg border border-neutral-800 p-8 text-center text-neutral-300">
-          Seleziona un account per vedere la panoramica
+        <div className="mx-auto max-w-2xl rounded-lg border border-neutral-800 bg-neutral-900/30 p-8 text-center">
+          <h2 className="mb-4 text-xl font-semibold">Benvenuto nella dashboard Dota 2</h2>
+          <p className="mb-6 text-neutral-300">
+            Per iniziare, inserisci l'ID del tuo account Dota 2 e sincronizza i dati.
+          </p>
+          <SyncPlayerPanel onSyncCompleted={refreshData} />
         </div>
       </div>
     )
@@ -182,6 +200,10 @@ function DashboardOverview(): React.JSX.Element {
         <div>
           <h1 className="text-2xl font-semibold">Panoramica giocatore</h1>
           <p className="text-sm text-neutral-400">Player #{playerId}</p>
+        </div>
+        {/* Optional: Allow syncing another player even if one is selected */}
+        <div className="hidden lg:block">
+          {/* Could put a mini sync button here if needed, but for now keep it simple */}
         </div>
       </div>
 
@@ -196,7 +218,10 @@ function DashboardOverview(): React.JSX.Element {
 
       {!loading && !error && (!rows || rows.length === 0) && (
         <div className="rounded-lg border border-neutral-800 p-6 text-neutral-300">
-          Nessuna partita disponibile per questo giocatore.
+          <div className="mb-4">
+            Non sono ancora presenti partite. Inserisci un ID Dota 2 nel pannello di sincronizzazione per scaricare le tue partite da OpenDota.
+          </div>
+          <SyncPlayerPanel onSyncCompleted={refreshData} />
         </div>
       )}
 
@@ -269,7 +294,7 @@ function DashboardOverview(): React.JSX.Element {
                               className="h-5 w-5 rounded"
                               loading="lazy"
                               onError={(e) => {
-                                ;(
+                                ; (
                                   e.currentTarget as HTMLImageElement
                                 ).style.display = 'none'
                               }}
@@ -301,9 +326,8 @@ function DashboardOverview(): React.JSX.Element {
                   (r, idx) => (
                     <div
                       key={idx}
-                      className={`h-3 w-3 rounded ${
-                        r === 'win' ? 'bg-green-500' : 'bg-red-500'
-                      }`}
+                      className={`h-3 w-3 rounded ${r === 'win' ? 'bg-green-500' : 'bg-red-500'
+                        }`}
                       title={r}
                     />
                   ),
@@ -368,13 +392,12 @@ function DashboardOverview(): React.JSX.Element {
                   </div>
                   <div className="h-2 w-full rounded bg-neutral-900">
                     <div
-                      className={`h-2 rounded ${
-                        pct > 70
+                      className={`h-2 rounded ${pct > 70
                           ? 'bg-green-500'
                           : pct >= 40
                             ? 'bg-yellow-500'
                             : 'bg-red-500'
-                      }`}
+                        }`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -437,7 +460,7 @@ function DashboardOverview(): React.JSX.Element {
                                       className="h-5 w-5 rounded"
                                       loading="lazy"
                                       onError={(e) => {
-                                        ;(
+                                        ; (
                                           e.currentTarget as HTMLImageElement
                                         ).style.display = 'none'
                                       }}

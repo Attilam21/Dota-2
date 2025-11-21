@@ -31,9 +31,11 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const playerIdParam = searchParams.get('playerId')
   const dotaAccountId = Number(playerIdParam)
+
+  // 1. Validation
   if (!playerIdParam || !Number.isFinite(dotaAccountId)) {
     return NextResponse.json(
-      { error: 'Missing or invalid playerId' },
+      { status: 'error', message: 'playerId mancante o non valido' },
       { status: 400 },
     )
   }
@@ -41,7 +43,10 @@ export async function GET(req: Request) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!supabaseUrl || !serviceKey) {
-    return NextResponse.json({ error: 'Missing Supabase env' }, { status: 500 })
+    return NextResponse.json(
+      { status: 'error', message: 'Missing Supabase env' },
+      { status: 500 },
+    )
   }
 
   try {
@@ -64,8 +69,7 @@ export async function GET(req: Request) {
       let nickname = `Player_${dotaAccountId}`
       try {
         const profRes = await fetch(
-          `${baseForProfile}/players/${dotaAccountId}${
-            apiKeyForProfile ? `?api_key=${apiKeyForProfile}` : ''
+          `${baseForProfile}/players/${dotaAccountId}${apiKeyForProfile ? `?api_key=${apiKeyForProfile}` : ''
           }`,
           { next: { revalidate: 0 } },
         )
@@ -89,10 +93,7 @@ export async function GET(req: Request) {
       if (upErr) throw upErr
       playerUuid = up?.[0]?.id as string | undefined
       if (!playerUuid) {
-        return NextResponse.json(
-          { error: 'Unable to create/resolve fzth player' },
-          { status: 500 },
-        )
+        throw new Error('Unable to create/resolve fzth player')
       }
     }
 
@@ -104,8 +105,7 @@ export async function GET(req: Request) {
     try {
       matches =
         (await fetchJson<OpenDotaMatchLite[]>(
-          `${base}/players/${dotaAccountId}/matches?limit=5000${
-            apiKey ? `&api_key=${apiKey}` : ''
+          `${base}/players/${dotaAccountId}/matches?limit=5000${apiKey ? `&api_key=${apiKey}` : ''
           }`,
           apiKey,
         )) ?? []
@@ -119,8 +119,7 @@ export async function GET(req: Request) {
       try {
         recent =
           (await fetchJson<Array<{ match_id: number }>>(
-            `${base}/players/${dotaAccountId}/recentMatches${
-              apiKey ? `?api_key=${apiKey}` : ''
+            `${base}/players/${dotaAccountId}/recentMatches${apiKey ? `?api_key=${apiKey}` : ''
             }`,
             apiKey,
           )) ?? []
@@ -132,8 +131,7 @@ export async function GET(req: Request) {
       for (const r of limited) {
         try {
           const md: any = await fetchJson<any>(
-            `${base}/matches/${r.match_id}${
-              apiKey ? `?api_key=${apiKey}` : ''
+            `${base}/matches/${r.match_id}${apiKey ? `?api_key=${apiKey}` : ''
             }`,
             apiKey,
           )
@@ -186,18 +184,18 @@ export async function GET(req: Request) {
         }
       })
       .filter(Boolean) as Array<{
-      player_id: string
-      match_id: number
-      player_slot: number
-      radiant_win: boolean
-      hero_id: number
-      kills: number
-      deaths: number
-      assists: number
-      duration_seconds: number
-      start_time: string
-      party_size: number | null
-    }>
+        player_id: string
+        match_id: number
+        player_slot: number
+        radiant_win: boolean
+        hero_id: number
+        kills: number
+        deaths: number
+        assists: number
+        duration_seconds: number
+        start_time: string
+        party_size: number | null
+      }>
 
     // Also upsert into matches_digest (authoritative store)
     let importedDigest = 0
@@ -499,7 +497,9 @@ export async function GET(req: Request) {
     )
     return NextResponse.json({
       status: 'ok',
-      imported,
+      playerId: dotaAccountId,
+      matchesInserted: imported,
+      playerUpserted: true,
       kpi: {
         totalMatches: agg.totalMatches,
         winrate: agg.winrate,
@@ -511,7 +511,7 @@ export async function GET(req: Request) {
     // eslint-disable-next-line no-console
     console.error('FZTH_SYNC_PLAYER_ERROR', e)
     return NextResponse.json(
-      { error: String(e?.message ?? 'FZTH sync error') },
+      { status: 'error', message: String(e?.message ?? 'FZTH sync error') },
       { status: 500 },
     )
   }

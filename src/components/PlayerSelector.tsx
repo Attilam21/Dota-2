@@ -34,13 +34,14 @@ export default function PlayerSelector(): React.JSX.Element {
         const json: PlayerSummary[] = await res.json()
         if (!active) return
         setPlayers(json)
-        // se non c'è playerId in URL, scegli il primo disponibile
+
+        // Se non c'è playerId in URL e abbiamo giocatori, scegli il primo
         const fromUrl = searchParams.get('playerId')
         if (
           (!fromUrl || !Number.isFinite(Number(fromUrl))) &&
           json.length > 0
         ) {
-          const first = json[0].playerId ?? DEFAULT_PLAYER_ID
+          const first = json[0].playerId
           const p = new URLSearchParams(searchParams.toString())
           p.set('playerId', String(first))
           router.replace(`${pathname}?${p.toString()}`)
@@ -79,8 +80,15 @@ export default function PlayerSelector(): React.JSX.Element {
     return (
       <span className="text-red-400">Errore nel caricamento dei giocatori</span>
     )
-  if (!players || players.length === 0)
-    return <span>Nessun giocatore trovato</span>
+
+  // Se non ci sono giocatori, mostra un messaggio informativo invece di nulla
+  if (!players || players.length === 0) {
+    return (
+      <span className="text-neutral-500 italic">
+        Nessun giocatore. Sincronizza dati.
+      </span>
+    )
+  }
 
   return (
     <select
