@@ -60,6 +60,9 @@ async function calculateAnalysisFromOpenDota(
   accountId: number,
 ): Promise<DotaPlayerMatchAnalysis> {
   // Fetch match detail from OpenDota
+  // Based on OpenDota API Spec v28.0.0
+  // NOTE: deaths_log is NOT documented in official spec, but may exist in some matches
+  // killed_by is documented as object (not array) - use as fallback
   type OpenDotaMatch = {
     match_id: number
     duration: number
@@ -76,8 +79,9 @@ async function calculateAnalysisFromOpenDota(
       gold_per_min?: number
       xp_per_min?: number
       level?: number
-      kills_log?: Array<{ time: number }>
-      deaths_log?: Array<{ time: number; by?: { hero_id?: number } }>
+      kills_log?: Array<{ time: number; key?: string }> // key = hero killed (documented)
+      deaths_log?: Array<{ time: number; by?: { hero_id?: number } }> // NOT documented, but may exist
+      killed_by?: Record<string, number> // Documented: object with hero_id keys and kill counts
       lane?: number
       role?: number | string
     }>
@@ -117,6 +121,7 @@ async function calculateAnalysisFromOpenDota(
   const csPerMin = durationMinutes > 0 ? lastHits / durationMinutes : 0
 
   // Process kills by phase
+  // NOTE: kills_log is documented with {time: integer, key: string} structure
   const killsLog = player.kills_log ?? []
   const killsByPhase = { early: 0, mid: 0, late: 0 }
   killsLog.forEach((kill) => {
@@ -125,15 +130,25 @@ async function calculateAnalysisFromOpenDota(
   })
 
   // Process deaths by phase and calculate death events
+  // STRATEGY: Use deaths_log if available (may not be documented but exists in some matches)
+  // FALLBACK: If deaths_log is empty, estimate from killed_by object and deaths count
   const deathsLog = player.deaths_log ?? []
+  const killedBy = player.killed_by ?? {}
+
   console.log(
-    `[DOTA2] Processing deaths: player.deaths=${player.deaths}, deathsLog.length=${deathsLog.length}`,
+    `[DOTA2] Processing deaths: player.deaths=${
+      player.deaths
+    }, deathsLog.length=${deathsLog.length}, killed_by keys=${
+      Object.keys(killedBy).length
+    }`,
   )
 
-  // If player has deaths but deaths_log is empty, log a warning
-  if (player.deaths > 0 && deathsLog.length === 0) {
+  // If player has deaths but deaths_log is empty, use fallback strategy
+  const useFallbackStrategy = player.deaths > 0 && deathsLog.length === 0
+
+  if (useFallbackStrategy) {
     console.warn(
-      `[DOTA2] WARNING: Player has ${player.deaths} deaths but deaths_log is empty. Death events will not be created.`,
+      `[DOTA2] WARNING: Player has ${player.deaths} deaths but deaths_log is empty. Using fallback strategy with killed_by object and estimated timing.`,
     )
   }
 
@@ -147,104 +162,272 @@ async function calculateAnalysisFromOpenDota(
   const finalLevel = player.level ?? null
   const finalLevelTime = matchData.duration
 
-  // We need to get killer info from match data
-  // For now, we'll use a simplified approach
-  deathsLog.forEach((death, idx) => {
-    const phase = getGamePhase(death.time)
-    deathsByPhase[phase]++
+  // Process death events using primary strategy (deaths_log) or fallback (killed_by + estimation)
+  if (useFallbackStrategy) {
+    // FALLBACK STRATEGY: Use killed_by object and estimate timing
+    // killed_by is an object like { "hero_id_1": count1, "hero_id_2": count2, ... }
+    // We distribute deaths evenly across match duration and use killed_by for killer info
 
-    // Calculate level at death with improved estimation
-    // Strategy:
-    // 1. If final level is available, use it as upper bound
-    // 2. Estimate level based on time progression (non-linear: early levels faster)
-    // 3. Use formula: level ≈ 1 + (time / duration) * (finalLevel - 1) with early game boost
-    let levelAtDeath: number
-    if (finalLevel !== null && finalLevel > 0) {
-      // Use final level as reference for better estimation
-      // Early game (0-10 min): faster leveling, mid/late: slower
-      const timeRatio = death.time / finalLevelTime
-      if (timeRatio < 0.2) {
-        // Early game: levels 1-6 faster (first 20% of time)
-        levelAtDeath = Math.min(
-          finalLevel,
-          Math.max(1, Math.floor(1 + timeRatio * 5 * 1.5)), // Boost early levels
-        )
-      } else {
-        // Mid/late game: more linear progression
-        levelAtDeath = Math.min(
-          finalLevel,
-          Math.max(
-            1,
-            Math.floor(1 + ((timeRatio - 0.2) * (finalLevel - 1)) / 0.8),
+    const totalDeaths = player.deaths
+    const estimatedDeathInterval =
+      totalDeaths > 0 ? matchData.duration / totalDeaths : 0
+
+    Object.entries(killedBy).forEach(([heroIdStr, killCount], idx) => {
+      const killerHeroId = parseInt(heroIdStr, 10)
+      if (isNaN(killerHeroId) || killCount <= 0) return
+
+      // Create estimated death events for this killer
+      // Distribute deaths evenly across match duration
+      for (let i = 0; i < killCount; i++) {
+        const estimatedTime = Math.min(
+          matchData.duration,
+          Math.floor(
+            idx * estimatedDeathInterval +
+              (i * estimatedDeathInterval) / killCount,
           ),
         )
-      }
-    } else {
-      // Fallback: linear estimation (original method)
-      levelAtDeath = Math.min(
-        30,
-        Math.max(1, Math.floor((death.time / matchData.duration) * 30)),
-      )
-    }
-    const downtimeSeconds = calculateRespawnTime(levelAtDeath)
-    const { goldLost, xpLost, csLost } = calculateDeathCost(
-      downtimeSeconds,
-      gpm,
-      xpm,
-      csPerMin,
-    )
+        const phase = getGamePhase(estimatedTime)
+        deathsByPhase[phase]++
 
-    // Try to find killer from match data
-    // Note: OpenDota deaths_log may have 'by' field with hero_id
-    let killerHeroId: number | undefined
-    let killerRolePosition: RolePosition | undefined
-
-    if (death.by?.hero_id) {
-      killerHeroId = death.by.hero_id
-      // Find killer player to get role
-      const killerPlayer = matchData.players.find(
-        (p) => p.hero_id === killerHeroId,
-      )
-      if (
-        killerPlayer?.role !== undefined &&
-        typeof killerPlayer.role === 'number'
-      ) {
-        const roleMap: Record<number, RolePosition> = {
-          0: 1,
-          1: 2,
-          2: 3,
-          4: 4,
+        // Estimate level at death
+        let levelAtDeath: number
+        if (finalLevel !== null && finalLevel > 0) {
+          const timeRatio = estimatedTime / finalLevelTime
+          if (timeRatio < 0.2) {
+            levelAtDeath = Math.min(
+              finalLevel,
+              Math.max(1, Math.floor(1 + timeRatio * 5 * 1.5)),
+            )
+          } else {
+            levelAtDeath = Math.min(
+              finalLevel,
+              Math.max(
+                1,
+                Math.floor(1 + ((timeRatio - 0.2) * (finalLevel - 1)) / 0.8),
+              ),
+            )
+          }
+        } else {
+          levelAtDeath = Math.min(
+            30,
+            Math.max(1, Math.floor((estimatedTime / matchData.duration) * 30)),
+          )
         }
-        killerRolePosition = roleMap[killerPlayer.role] ?? undefined
-        if (killerRolePosition) {
-          deathsByRole[killerRolePosition]++
+
+        const downtimeSeconds = calculateRespawnTime(levelAtDeath)
+        const { goldLost, xpLost, csLost } = calculateDeathCost(
+          downtimeSeconds,
+          gpm,
+          xpm,
+          csPerMin,
+        )
+
+        // Find killer role from match data
+        let killerRolePosition: RolePosition | undefined
+        const killerPlayer = matchData.players.find(
+          (p) => p.hero_id === killerHeroId,
+        )
+        if (
+          killerPlayer?.role !== undefined &&
+          typeof killerPlayer.role === 'number'
+        ) {
+          const roleMap: Record<number, RolePosition> = {
+            0: 1,
+            1: 2,
+            2: 3,
+            4: 4,
+          }
+          killerRolePosition = roleMap[killerPlayer.role] ?? undefined
+          if (killerRolePosition) {
+            deathsByRole[killerRolePosition]++
+          }
         }
+
+        const deathEvent: DotaPlayerDeathEvent = {
+          matchId,
+          accountId,
+          timeSeconds: estimatedTime,
+          phase,
+          levelAtDeath,
+          downtimeSeconds,
+          goldLost,
+          xpLost,
+          csLost,
+          killerHeroId,
+          killerRolePosition,
+        }
+
+        deathEvents.push(deathEvent)
+      }
+    })
+
+    // If killed_by doesn't cover all deaths, create remaining events without killer info
+    const deathsWithKiller = deathEvents.length
+    const remainingDeaths = totalDeaths - deathsWithKiller
+    if (remainingDeaths > 0) {
+      console.log(
+        `[DOTA2] Creating ${remainingDeaths} additional death events without killer info (killed_by didn't cover all deaths)`,
+      )
+      for (let i = 0; i < remainingDeaths; i++) {
+        const estimatedTime = Math.min(
+          matchData.duration,
+          Math.floor((deathsWithKiller + i) * estimatedDeathInterval),
+        )
+        const phase = getGamePhase(estimatedTime)
+        deathsByPhase[phase]++
+
+        let levelAtDeath: number
+        if (finalLevel !== null && finalLevel > 0) {
+          const timeRatio = estimatedTime / finalLevelTime
+          if (timeRatio < 0.2) {
+            levelAtDeath = Math.min(
+              finalLevel,
+              Math.max(1, Math.floor(1 + timeRatio * 5 * 1.5)),
+            )
+          } else {
+            levelAtDeath = Math.min(
+              finalLevel,
+              Math.max(
+                1,
+                Math.floor(1 + ((timeRatio - 0.2) * (finalLevel - 1)) / 0.8),
+              ),
+            )
+          }
+        } else {
+          levelAtDeath = Math.min(
+            30,
+            Math.max(1, Math.floor((estimatedTime / matchData.duration) * 30)),
+          )
+        }
+
+        const downtimeSeconds = calculateRespawnTime(levelAtDeath)
+        const { goldLost, xpLost, csLost } = calculateDeathCost(
+          downtimeSeconds,
+          gpm,
+          xpm,
+          csPerMin,
+        )
+
+        const deathEvent: DotaPlayerDeathEvent = {
+          matchId,
+          accountId,
+          timeSeconds: estimatedTime,
+          phase,
+          levelAtDeath,
+          downtimeSeconds,
+          goldLost,
+          xpLost,
+          csLost,
+          killerHeroId: undefined,
+          killerRolePosition: undefined,
+        }
+
+        deathEvents.push(deathEvent)
       }
     }
+  } else {
+    // PRIMARY STRATEGY: Use deaths_log (if available)
+    deathsLog.forEach((death, idx) => {
+      const phase = getGamePhase(death.time)
+      deathsByPhase[phase]++
 
-    // Ensure all required fields are present
-    // If OpenDota doesn't provide enough data, save event with available data
-    // and set missing cost fields to 0 (but don't skip the event)
-    const deathEvent: DotaPlayerDeathEvent = {
-      matchId,
-      accountId,
-      timeSeconds: death.time ?? 0, // Fallback to 0 if missing
-      phase, // 'early' | 'mid' | 'late' (from getGamePhase)
-      levelAtDeath: levelAtDeath ?? 1, // Fallback to 1 if missing
-      downtimeSeconds: downtimeSeconds ?? 0, // Fallback to 0 if missing
-      goldLost: goldLost ?? 0, // Fallback to 0 if calculation failed
-      xpLost: xpLost ?? 0, // Fallback to 0 if calculation failed
-      csLost: csLost ?? 0, // Fallback to 0 if calculation failed
-      killerHeroId: killerHeroId ?? undefined,
-      killerRolePosition: killerRolePosition ?? undefined,
-      // posX and posY remain undefined (not available from OpenDota standard endpoint)
-    }
+      // Calculate level at death with improved estimation
+      // Strategy:
+      // 1. If final level is available, use it as upper bound
+      // 2. Estimate level based on time progression (non-linear: early levels faster)
+      // 3. Use formula: level ≈ 1 + (time / duration) * (finalLevel - 1) with early game boost
+      let levelAtDeath: number
+      if (finalLevel !== null && finalLevel > 0) {
+        // Use final level as reference for better estimation
+        // Early game (0-10 min): faster leveling, mid/late: slower
+        const timeRatio = death.time / finalLevelTime
+        if (timeRatio < 0.2) {
+          // Early game: levels 1-6 faster (first 20% of time)
+          levelAtDeath = Math.min(
+            finalLevel,
+            Math.max(1, Math.floor(1 + timeRatio * 5 * 1.5)), // Boost early levels
+          )
+        } else {
+          // Mid/late game: more linear progression
+          levelAtDeath = Math.min(
+            finalLevel,
+            Math.max(
+              1,
+              Math.floor(1 + ((timeRatio - 0.2) * (finalLevel - 1)) / 0.8),
+            ),
+          )
+        }
+      } else {
+        // Fallback: linear estimation (original method)
+        levelAtDeath = Math.min(
+          30,
+          Math.max(1, Math.floor((death.time / matchData.duration) * 30)),
+        )
+      }
+      const downtimeSeconds = calculateRespawnTime(levelAtDeath)
+      const { goldLost, xpLost, csLost } = calculateDeathCost(
+        downtimeSeconds,
+        gpm,
+        xpm,
+        csPerMin,
+      )
 
-    deathEvents.push(deathEvent)
-  })
+      // Try to find killer from match data
+      // Note: OpenDota deaths_log may have 'by' field with hero_id
+      let killerHeroId: number | undefined
+      let killerRolePosition: RolePosition | undefined
+
+      if (death.by?.hero_id) {
+        killerHeroId = death.by.hero_id
+        // Find killer player to get role
+        const killerPlayer = matchData.players.find(
+          (p) => p.hero_id === killerHeroId,
+        )
+        if (
+          killerPlayer?.role !== undefined &&
+          typeof killerPlayer.role === 'number'
+        ) {
+          const roleMap: Record<number, RolePosition> = {
+            0: 1,
+            1: 2,
+            2: 3,
+            4: 4,
+          }
+          killerRolePosition = roleMap[killerPlayer.role] ?? undefined
+          if (killerRolePosition) {
+            deathsByRole[killerRolePosition]++
+          }
+        }
+      }
+
+      // Ensure all required fields are present
+      // If OpenDota doesn't provide enough data, save event with available data
+      // and set missing cost fields to 0 (but don't skip the event)
+      const deathEvent: DotaPlayerDeathEvent = {
+        matchId,
+        accountId,
+        timeSeconds: death.time ?? 0, // Fallback to 0 if missing
+        phase, // 'early' | 'mid' | 'late' (from getGamePhase)
+        levelAtDeath: levelAtDeath ?? 1, // Fallback to 1 if missing
+        downtimeSeconds: downtimeSeconds ?? 0, // Fallback to 0 if missing
+        goldLost: goldLost ?? 0, // Fallback to 0 if calculation failed
+        xpLost: xpLost ?? 0, // Fallback to 0 if calculation failed
+        csLost: csLost ?? 0, // Fallback to 0 if calculation failed
+        killerHeroId: killerHeroId ?? undefined,
+        killerRolePosition: killerRolePosition ?? undefined,
+        // posX and posY remain undefined (not available from OpenDota standard endpoint)
+      }
+
+      deathEvents.push(deathEvent)
+    })
+  }
 
   console.log(
-    `[DOTA2] Created ${deathEvents.length} death events from ${deathsLog.length} deaths_log entries`,
+    `[DOTA2] Created ${deathEvents.length} death events using ${
+      useFallbackStrategy
+        ? 'fallback strategy (killed_by + estimation)'
+        : 'primary strategy (deaths_log)'
+    }`,
   )
 
   // Calculate percentages
