@@ -17,8 +17,7 @@
  */
 
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createServerClient } from '@/utils/supabase'
+import { getAdminClient } from '@/lib/supabaseAdmin'
 import { fetchFromOpenDota } from '@/utils/opendota'
 import type {
   DotaPlayerMatchAnalysis,
@@ -259,82 +258,122 @@ async function calculateAnalysisFromOpenDota(
 }
 
 /**
- * Store analysis in Supabase
+ * Upsert death events for a match+player
+ * Deletes existing events and inserts new ones (idempotent)
  */
-async function storeAnalysisInSupabase(
-  analysis: DotaPlayerMatchAnalysis,
+async function upsertDeathEvents(
+  matchId: number,
+  accountId: number,
+  events: DotaPlayerDeathEvent[],
 ): Promise<void> {
-  const supabase = createServerClient(cookies())
+  const supabaseAdmin = getAdminClient()
 
-  // Store summary in dota_player_match_analysis
-  const { error: analysisError } = await supabase
-    .from('dota_player_match_analysis')
-    .upsert({
-      match_id: analysis.matchId,
-      account_id: analysis.accountId,
-      role_position: analysis.rolePosition,
-      kills_early: analysis.killDistribution.early,
-      kills_mid: analysis.killDistribution.mid,
-      kills_late: analysis.killDistribution.late,
-      kill_pct_early: analysis.killPercentageDistribution.early,
-      kill_pct_mid: analysis.killPercentageDistribution.mid,
-      kill_pct_late: analysis.killPercentageDistribution.late,
-      deaths_early: analysis.deathDistribution.early,
-      deaths_mid: analysis.deathDistribution.mid,
-      deaths_late: analysis.deathDistribution.late,
-      death_pct_early: analysis.deathPercentageDistribution.early,
-      death_pct_mid: analysis.deathPercentageDistribution.mid,
-      death_pct_late: analysis.deathPercentageDistribution.late,
-      total_gold_lost: analysis.deathCostSummary.totalGoldLost,
-      total_xp_lost: analysis.deathCostSummary.totalXpLost,
-      total_cs_lost: analysis.deathCostSummary.totalCsLost,
-      death_pct_pos1: analysis.deathByRole.pos1,
-      death_pct_pos2: analysis.deathByRole.pos2,
-      death_pct_pos3: analysis.deathByRole.pos3,
-      death_pct_pos4: analysis.deathByRole.pos4,
-      death_pct_pos5: analysis.deathByRole.pos5,
-      analysis_extra: analysis.analysisExtra ?? {},
-    })
-
-  if (analysisError) {
-    console.error('Error storing analysis:', analysisError)
-    throw new Error(`Failed to store analysis: ${analysisError.message}`)
-  }
-
-  // Store death events in dota_player_death_events
-  if (analysis.deathEvents && analysis.deathEvents.length > 0) {
-    // Delete existing events for this match+player (idempotent)
-    await supabase
+  if (events.length === 0) {
+    // No events to store, but ensure old ones are deleted
+    const { error: deleteError } = await supabaseAdmin
       .from('dota_player_death_events')
       .delete()
-      .eq('match_id', analysis.matchId)
-      .eq('account_id', analysis.accountId)
+      .eq('match_id', matchId)
+      .eq('account_id', accountId)
 
-    // Insert new events
-    const eventsToInsert = analysis.deathEvents.map((event) => ({
-      match_id: event.matchId,
-      account_id: event.accountId,
-      time_seconds: event.timeSeconds,
-      phase: event.phase,
-      level_at_death: event.levelAtDeath,
-      downtime_seconds: event.downtimeSeconds,
-      gold_lost: event.goldLost,
-      xp_lost: event.xpLost,
-      cs_lost: event.csLost,
-      killer_hero_id: event.killerHeroId ?? null,
-      killer_role_position: event.killerRolePosition ?? null,
-      pos_x: event.posX ?? null,
-      pos_y: event.posY ?? null,
-    }))
-
-    const { error: eventsError } = await supabase
-      .from('dota_player_death_events')
-      .insert(eventsToInsert)
-
-    if (eventsError) {
-      console.error('Error storing death events:', eventsError)
-      // Non fatal, log and continue
+    if (deleteError) {
+      console.error('dota_player_death_events delete error:', deleteError)
+      throw new Error(
+        `Failed to delete existing death events: ${deleteError.message}`,
+      )
     }
+    return
+  }
+
+  // Delete existing events for this match+player (idempotent)
+  const { error: deleteError } = await supabaseAdmin
+    .from('dota_player_death_events')
+    .delete()
+    .eq('match_id', matchId)
+    .eq('account_id', accountId)
+
+  if (deleteError) {
+    console.error('dota_player_death_events delete error:', deleteError)
+    throw new Error(
+      `Failed to delete existing death events: ${deleteError.message}`,
+    )
+  }
+
+  // Insert new events
+  const eventsToInsert = events.map((event) => ({
+    match_id: event.matchId,
+    account_id: event.accountId,
+    time_seconds: event.timeSeconds,
+    phase: event.phase,
+    level_at_death: event.levelAtDeath,
+    downtime_seconds: event.downtimeSeconds,
+    gold_lost: event.goldLost,
+    xp_lost: event.xpLost,
+    cs_lost: event.csLost,
+    killer_hero_id: event.killerHeroId ?? null,
+    killer_role_position: event.killerRolePosition ?? null,
+    pos_x: event.posX ?? null,
+    pos_y: event.posY ?? null,
+  }))
+
+  const { error: insertError } = await supabaseAdmin
+    .from('dota_player_death_events')
+    .insert(eventsToInsert)
+
+  if (insertError) {
+    console.error('dota_player_death_events insert error:', insertError)
+    throw new Error(`Failed to insert death events: ${insertError.message}`)
+  }
+}
+
+/**
+ * Upsert match analysis summary for a match+player
+ * If exists, updates; if not, inserts
+ */
+async function upsertMatchAnalysis(
+  matchId: number,
+  accountId: number,
+  analysis: DotaPlayerMatchAnalysis,
+): Promise<void> {
+  const supabaseAdmin = getAdminClient()
+
+  const { error: analysisError } = await supabaseAdmin
+    .from('dota_player_match_analysis')
+    .upsert(
+      {
+        match_id: analysis.matchId,
+        account_id: analysis.accountId,
+        role_position: analysis.rolePosition,
+        kills_early: analysis.killDistribution.early,
+        kills_mid: analysis.killDistribution.mid,
+        kills_late: analysis.killDistribution.late,
+        kill_pct_early: analysis.killPercentageDistribution.early,
+        kill_pct_mid: analysis.killPercentageDistribution.mid,
+        kill_pct_late: analysis.killPercentageDistribution.late,
+        deaths_early: analysis.deathDistribution.early,
+        deaths_mid: analysis.deathDistribution.mid,
+        deaths_late: analysis.deathDistribution.late,
+        death_pct_early: analysis.deathPercentageDistribution.early,
+        death_pct_mid: analysis.deathPercentageDistribution.mid,
+        death_pct_late: analysis.deathPercentageDistribution.late,
+        total_gold_lost: analysis.deathCostSummary.totalGoldLost,
+        total_xp_lost: analysis.deathCostSummary.totalXpLost,
+        total_cs_lost: analysis.deathCostSummary.totalCsLost,
+        death_pct_pos1: analysis.deathByRole.pos1,
+        death_pct_pos2: analysis.deathByRole.pos2,
+        death_pct_pos3: analysis.deathByRole.pos3,
+        death_pct_pos4: analysis.deathByRole.pos4,
+        death_pct_pos5: analysis.deathByRole.pos5,
+        analysis_extra: analysis.analysisExtra ?? {},
+      },
+      {
+        onConflict: 'match_id,account_id',
+      },
+    )
+
+  if (analysisError) {
+    console.error('dota_player_match_analysis upsert error:', analysisError)
+    throw new Error(`Failed to upsert match analysis: ${analysisError.message}`)
   }
 }
 
@@ -345,10 +384,10 @@ async function loadAnalysisFromSupabase(
   matchId: number,
   accountId: number,
 ): Promise<DotaPlayerMatchAnalysis | null> {
-  const supabase = createServerClient(cookies())
+  const supabaseAdmin = getAdminClient()
 
   // Load summary
-  const { data: analysisData, error: analysisError } = await supabase
+  const { data: analysisData, error: analysisError } = await supabaseAdmin
     .from('dota_player_match_analysis')
     .select('*')
     .eq('match_id', matchId)
@@ -356,16 +395,24 @@ async function loadAnalysisFromSupabase(
     .single()
 
   if (analysisError || !analysisData) {
+    if (analysisError) {
+      console.error('dota_player_match_analysis load error:', analysisError)
+    }
     return null
   }
 
   // Load death events
-  const { data: eventsData } = await supabase
+  const { data: eventsData, error: eventsError } = await supabaseAdmin
     .from('dota_player_death_events')
     .select('*')
     .eq('match_id', matchId)
     .eq('account_id', accountId)
     .order('time_seconds', { ascending: true })
+
+  if (eventsError) {
+    console.error('dota_player_death_events load error:', eventsError)
+    // Non-fatal: continue without events
+  }
 
   const deathEvents: DotaPlayerDeathEvent[] =
     eventsData?.map((e) => ({
@@ -451,10 +498,20 @@ export async function GET(
     if (!analysis) {
       analysis = await calculateAnalysisFromOpenDota(matchId, accountId)
 
-      // Store in Supabase (async, non-blocking)
-      storeAnalysisInSupabase(analysis).catch((err) => {
-        console.error('Error storing analysis (non-fatal):', err)
-      })
+      // Store in Supabase using admin client (synchronous, blocking)
+      // This ensures data is saved before returning response
+      try {
+        // First store death events, then match analysis
+        await upsertDeathEvents(matchId, accountId, analysis.deathEvents ?? [])
+        await upsertMatchAnalysis(matchId, accountId, analysis)
+      } catch (storeError: any) {
+        console.error(
+          'Error storing analysis in Supabase (non-fatal, returning analysis anyway):',
+          storeError,
+        )
+        // Continue and return analysis even if storage fails
+        // This ensures the API still returns data even if DB write fails
+      }
     }
 
     return NextResponse.json(analysis)
