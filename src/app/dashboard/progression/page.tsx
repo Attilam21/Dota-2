@@ -3,6 +3,10 @@
 import React, { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { getPlayerIdFromSearchParams } from '@/lib/playerId'
+import LineChart from '@/components/charts/LineChart'
+import BarChart from '@/components/charts/BarChart'
+import ExplanationCard from '@/components/charts/ExplanationCard'
+import type { StyleOfPlayKPI } from '@/services/dota/kpiService'
 
 type HistoryKpi = {
   totalMatches: number
@@ -59,6 +63,8 @@ function ProgressionContent(): React.JSX.Element {
   const [data, setData] = useState<HistorySummaryResponse | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+  const [styleKPI, setStyleKPI] = useState<StyleOfPlayKPI | null>(null)
+  const [styleLoading, setStyleLoading] = useState<boolean>(false)
 
   useEffect(() => {
     let active = true
@@ -83,6 +89,33 @@ function ProgressionContent(): React.JSX.Element {
       }
     }
     load()
+    return () => {
+      active = false
+    }
+  }, [playerId])
+
+  // Carica KPI stile di gioco
+  useEffect(() => {
+    let active = true
+    async function loadStyleKPI() {
+      if (!playerId) return
+      try {
+        setStyleLoading(true)
+        const res = await fetch(
+          `/api/kpi/style-of-play?playerId=${playerId}&limit=100`,
+          { cache: 'no-store' },
+        )
+        if (res.ok) {
+          const kpi: StyleOfPlayKPI = await res.json()
+          if (active) setStyleKPI(kpi)
+        }
+      } catch (e) {
+        console.error('Error loading style KPI:', e)
+      } finally {
+        if (active) setStyleLoading(false)
+      }
+    }
+    loadStyleKPI()
     return () => {
       active = false
     }
@@ -242,6 +275,210 @@ function ProgressionContent(): React.JSX.Element {
               </div>
             )}
           </div>
+
+          {/* KPI Stile di gioco avanzati */}
+          {styleKPI && (
+            <>
+              <div className="rounded-lg border border-neutral-800 p-4">
+                <h2 className="mb-4 text-lg font-semibold text-neutral-200">
+                  Analisi Stile di Gioco
+                </h2>
+
+                {/* Badge playstyle */}
+                {styleKPI.playstyleBadges.length > 0 && (
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {styleKPI.playstyleBadges.map((badge) => (
+                      <span
+                        key={badge}
+                        className="rounded-full bg-blue-900/40 px-3 py-1 text-xs text-blue-300"
+                      >
+                        {badge}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* KPI Aggressività */}
+                <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="rounded-lg border border-neutral-800 p-4">
+                    <div className="text-xs text-neutral-400">Kill/minuto</div>
+                    <div className="text-xl font-semibold">
+                      {styleKPI.killsPerMinute.toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-neutral-800 p-4">
+                    <div className="text-xs text-neutral-400">Morti/minuto</div>
+                    <div className="text-xl font-semibold">
+                      {styleKPI.deathsPerMinute.toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="rounded-lg border border-neutral-800 p-4">
+                    <div className="text-xs text-neutral-400">Danni/minuto</div>
+                    <div className="text-xl font-semibold">
+                      {styleKPI.damagePerMinute > 0
+                        ? styleKPI.damagePerMinute.toFixed(0)
+                        : 'N/D'}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Grafico KP% per match */}
+                {styleKPI.fightParticipationSeries.length > 0 && (
+                  <div className="mb-6 rounded-lg border border-neutral-800 p-4">
+                    <h3 className="mb-3 text-sm text-neutral-300">
+                      Partecipazione ai fight (KP%) per partita
+                    </h3>
+                    <LineChart
+                      data={styleKPI.fightParticipationSeries
+                        .slice(0, 20)
+                        .map((d) => ({
+                          x: d.matchId,
+                          y: d.kp,
+                          label: new Date(d.date).toLocaleDateString('it-IT'),
+                        }))}
+                      color="#f59e0b"
+                    />
+                    <div className="mt-2 text-xs text-neutral-400">
+                      KP% medio: {styleKPI.fightParticipation.toFixed(1)}%
+                    </div>
+                    <ExplanationCard
+                      title="Cosa misura il KP%"
+                      description="Il KP% (Kill Participation) indica quanto partecipi ai fight del tuo team. Un KP% alto significa che sei presente agli scontri e contribuisci attivamente."
+                      timeRange="Ultime 20 partite"
+                      interpretation={
+                        styleKPI.fightParticipation >= 50
+                          ? 'Il tuo KP% è buono, sei presente ai fight.'
+                          : 'Il tuo KP% è sotto 40%, probabilmente sei poco presente agli scontri. Cerca di partecipare di più ai fight del team.'
+                      }
+                    />
+                  </div>
+                )}
+
+                {/* Grafico morti early */}
+                {styleKPI.earlyDeathsSeries.length > 0 && (
+                  <div className="mb-6 rounded-lg border border-neutral-800 p-4">
+                    <h3 className="mb-3 text-sm text-neutral-300">
+                      Morti early game (primi 10 minuti) per partita
+                    </h3>
+                    <BarChart
+                      data={styleKPI.earlyDeathsSeries
+                        .slice(0, 20)
+                        .map((d) => ({
+                          label: `M${d.matchId.toString().slice(-3)}`,
+                          value: d.earlyDeaths,
+                          color: d.earlyDeaths >= 2 ? '#ef4444' : '#22c55e',
+                        }))}
+                    />
+                    <div className="mt-2 text-xs text-neutral-400">
+                      Media morti early: {styleKPI.earlyDeathsAvg.toFixed(1)}
+                    </div>
+                    <ExplanationCard
+                      title="Cosa misura le morti early"
+                      description="Le morti nei primi 10 minuti indicano la stabilità dell'early game. Troppe morti early possono compromettere la partita."
+                      timeRange="Ultime 20 partite"
+                      interpretation={
+                        styleKPI.earlyDeathsAvg <= 1.5
+                          ? 'Hai una buona stabilità early game, continua così.'
+                          : 'Hai troppe morti early, concentrati su posizionamento e mappa awareness nei primi minuti.'
+                      }
+                    />
+                  </div>
+                )}
+
+                {/* Farming efficiency */}
+                {styleKPI.farmingEfficiency.avgGpm > 0 && (
+                  <div className="mb-6 rounded-lg border border-neutral-800 p-4">
+                    <h3 className="mb-3 text-sm text-neutral-300">
+                      Efficienza Farming
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+                      <div>
+                        <div className="text-xs text-neutral-400">
+                          GPM medio
+                        </div>
+                        <div className="text-lg font-semibold">
+                          {styleKPI.farmingEfficiency.avgGpm.toFixed(0)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-neutral-400">
+                          XPM medio
+                        </div>
+                        <div className="text-lg font-semibold">
+                          {styleKPI.farmingEfficiency.avgXpm.toFixed(0)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-neutral-400">LH/min</div>
+                        <div className="text-lg font-semibold">
+                          {styleKPI.farmingEfficiency.avgLastHitsPerMin.toFixed(
+                            1,
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-neutral-400">
+                          Denies/min
+                        </div>
+                        <div className="text-lg font-semibold">
+                          {styleKPI.farmingEfficiency.avgDeniesPerMin.toFixed(
+                            1,
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <ExplanationCard
+                      title="Efficienza farming"
+                      description="GPM e XPM indicano quanto guadagni gold e experience. LH/min e Denies/min mostrano la precisione nel farming."
+                      timeRange="Tutte le partite disponibili"
+                      interpretation={
+                        styleKPI.farmingEfficiency.avgGpm >= 400
+                          ? 'Il tuo farming è ottimo, continua così.'
+                          : 'Il tuo farming può essere migliorato. Concentrati su last hit e partecipazione ai fight per più gold.'
+                      }
+                    />
+                  </div>
+                )}
+
+                {/* Objective focus */}
+                {styleKPI.avgTowerDamage > 0 && (
+                  <div className="mb-6 rounded-lg border border-neutral-800 p-4">
+                    <h3 className="mb-3 text-sm text-neutral-300">
+                      Focus Obiettivi
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div>
+                        <div className="text-xs text-neutral-400">
+                          Danni alle torri (media)
+                        </div>
+                        <div className="text-lg font-semibold">
+                          {styleKPI.avgTowerDamage.toFixed(0)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-neutral-400">
+                          Roshan uccisi (media)
+                        </div>
+                        <div className="text-lg font-semibold">
+                          {styleKPI.avgRoshanKills.toFixed(1)}
+                        </div>
+                      </div>
+                    </div>
+                    <ExplanationCard
+                      title="Focus obiettivi"
+                      description="I danni alle torri e la partecipazione a Roshan indicano quanto ti concentri sugli obiettivi per chiudere le partite."
+                      timeRange="Tutte le partite disponibili"
+                      interpretation={
+                        styleKPI.avgTowerDamage >= 2000
+                          ? 'Hai un buon focus sugli obiettivi, continua a pushare le torri.'
+                          : 'Concentrati di più sugli obiettivi per chiudere le partite più velocemente.'
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
           {/* CTA Coaching */}
           <div className="rounded-lg border border-neutral-800 p-4">

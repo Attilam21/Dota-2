@@ -13,6 +13,9 @@ import {
   computePerformanceIndex,
   type HeroSnapshot as HeroSnap,
 } from '@/lib/analytics/overview'
+import LineChart from '@/components/charts/LineChart'
+import ExplanationCard from '@/components/charts/ExplanationCard'
+import type { PlayerOverviewKPI } from '@/services/dota/kpiService'
 
 type MatchRow = {
   id: string
@@ -67,6 +70,8 @@ function DashboardOverview(): React.JSX.Element {
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [overviewKPI, setOverviewKPI] = useState<PlayerOverviewKPI | null>(null)
+  const [kpiLoading, setKpiLoading] = useState<boolean>(false)
 
   useEffect(() => {
     let active = true
@@ -95,6 +100,33 @@ function DashboardOverview(): React.JSX.Element {
       }
     }
     load()
+    return () => {
+      active = false
+    }
+  }, [playerId, refreshTrigger])
+
+  // Carica KPI avanzati
+  useEffect(() => {
+    let active = true
+    async function loadKPI() {
+      if (!playerId) return
+      try {
+        setKpiLoading(true)
+        const res = await fetch(
+          `/api/kpi/player-overview?playerId=${playerId}&limit=20`,
+          { cache: 'no-store' },
+        )
+        if (res.ok) {
+          const kpi: PlayerOverviewKPI = await res.json()
+          if (active) setOverviewKPI(kpi)
+        }
+      } catch (e) {
+        console.error('Error loading KPI:', e)
+      } finally {
+        if (active) setKpiLoading(false)
+      }
+    }
+    loadKPI()
     return () => {
       active = false
     }
@@ -382,6 +414,157 @@ function DashboardOverview(): React.JSX.Element {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Grafici KPI avanzati */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Grafico KDA per match */}
+            <div className="rounded-lg border border-neutral-800 p-4">
+              <h2 className="mb-3 text-sm text-neutral-300">
+                Trend KDA per partita
+              </h2>
+              {overviewKPI && overviewKPI.kdaSeries.length > 0 ? (
+                <>
+                  <LineChart
+                    data={overviewKPI.kdaSeries.slice(0, 20).map((d) => ({
+                      x: d.matchId,
+                      y: d.kda,
+                      label: new Date(d.date).toLocaleDateString('it-IT'),
+                    }))}
+                    color="#60a5fa"
+                  />
+                  <ExplanationCard
+                    title="Cosa misura il KDA"
+                    description="Il KDA (Kill/Death/Assist) indica l'efficienza nelle partite. Un KDA alto significa che contribuisci di più al team con kill e assist, mantenendo poche morti."
+                    timeRange="Ultime 20 partite"
+                    interpretation={
+                      overviewKPI.kdaAvg >= 2.0
+                        ? 'Il tuo KDA è buono e stabile.'
+                        : overviewKPI.kdaAvg >= 1.5
+                          ? 'Il tuo KDA è nella media, cerca di ridurre le morti per migliorarlo.'
+                          : 'Il tuo KDA è basso, concentrati su sopravvivenza e partecipazione ai fight.'
+                    }
+                  />
+                </>
+              ) : (
+                <div className="text-sm text-neutral-500">
+                  {kpiLoading
+                    ? 'Caricamento dati KPI...'
+                    : 'Dati KDA non disponibili'}
+                </div>
+              )}
+            </div>
+
+            {/* Grafico GPM per match (placeholder - da popolare quando disponibile) */}
+            <div className="rounded-lg border border-neutral-800 p-4">
+              <h2 className="mb-3 text-sm text-neutral-300">
+                Trend GPM per partita
+              </h2>
+              {overviewKPI && overviewKPI.gpmSeries.length > 0 ? (
+                <>
+                  <LineChart
+                    data={overviewKPI.gpmSeries.slice(0, 20).map((d) => ({
+                      x: d.matchId,
+                      y: d.gpm,
+                      label: new Date(d.date).toLocaleDateString('it-IT'),
+                    }))}
+                    color="#22c55e"
+                  />
+                  <ExplanationCard
+                    title="Cosa misura il GPM"
+                    description="Il GPM (Gold Per Minute) indica quanto gold guadagni al minuto. Un GPM alto significa farming efficiente e buona gestione dell'economia."
+                    timeRange="Ultime 20 partite"
+                    interpretation={
+                      overviewKPI.avgGpm >= 400
+                        ? 'Il tuo GPM è ottimo, stai farmando bene.'
+                        : overviewKPI.avgGpm >= 300
+                          ? 'Il tuo GPM è nella media, cerca di migliorare il farming.'
+                          : 'Il tuo GPM è basso, concentrati su last hit e partecipazione ai fight per più gold.'
+                    }
+                  />
+                </>
+              ) : (
+                <div className="text-sm text-neutral-500">
+                  {kpiLoading
+                    ? 'Caricamento dati KPI...'
+                    : 'Dati GPM non disponibili (richiedono dettagli match completi)'}
+                </div>
+              )}
+            </div>
+
+            {/* Grafico XPM per match */}
+            <div className="rounded-lg border border-neutral-800 p-4">
+              <h2 className="mb-3 text-sm text-neutral-300">
+                Trend XPM per partita
+              </h2>
+              {overviewKPI && overviewKPI.xpmSeries.length > 0 ? (
+                <>
+                  <LineChart
+                    data={overviewKPI.xpmSeries.slice(0, 20).map((d) => ({
+                      x: d.matchId,
+                      y: d.xpm,
+                      label: new Date(d.date).toLocaleDateString('it-IT'),
+                    }))}
+                    color="#f59e0b"
+                  />
+                  <ExplanationCard
+                    title="Cosa misura l'XPM"
+                    description="L'XPM (Experience Per Minute) indica quanto experience guadagni al minuto. Un XPM alto significa che stai livellando velocemente e sei più forte prima."
+                    timeRange="Ultime 20 partite"
+                    interpretation={
+                      overviewKPI.avgXpm >= 500
+                        ? 'Il tuo XPM è ottimo, stai livellando velocemente.'
+                        : overviewKPI.avgXpm >= 400
+                          ? 'Il tuo XPM è nella media, cerca di partecipare di più ai fight per più experience.'
+                          : 'Il tuo XPM è basso, concentrati su farming e partecipazione agli scontri.'
+                    }
+                  />
+                </>
+              ) : (
+                <div className="text-sm text-neutral-500">
+                  {kpiLoading
+                    ? 'Caricamento dati KPI...'
+                    : 'Dati XPM non disponibili (richiedono dettagli match completi)'}
+                </div>
+              )}
+            </div>
+
+            {/* Grafico Damage per match */}
+            <div className="rounded-lg border border-neutral-800 p-4">
+              <h2 className="mb-3 text-sm text-neutral-300">
+                Danni agli eroi per partita
+              </h2>
+              {overviewKPI && overviewKPI.damageSeries.length > 0 ? (
+                <>
+                  <LineChart
+                    data={overviewKPI.damageSeries.slice(0, 20).map((d) => ({
+                      x: d.matchId,
+                      y: d.damage,
+                      label: new Date(d.date).toLocaleDateString('it-IT'),
+                    }))}
+                    color="#ef4444"
+                  />
+                  <ExplanationCard
+                    title="Cosa misura il Damage"
+                    description="I danni agli eroi indicano quanto impatto hai negli scontri. Danni alti significano che stai contribuendo attivamente ai fight del team."
+                    timeRange="Ultime 20 partite"
+                    interpretation={
+                      overviewKPI.avgHeroDamage >= 15000
+                        ? 'Stai facendo molti danni, ottimo impatto nei fight.'
+                        : overviewKPI.avgHeroDamage >= 10000
+                          ? 'I tuoi danni sono nella media, cerca di essere più presente agli scontri.'
+                          : 'I tuoi danni sono bassi, concentrati su partecipazione ai fight e item damage.'
+                    }
+                  />
+                </>
+              ) : (
+                <div className="text-sm text-neutral-500">
+                  {kpiLoading
+                    ? 'Caricamento dati KPI...'
+                    : 'Dati Damage non disponibili (richiedono dettagli match completi)'}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* FZTH level */}
