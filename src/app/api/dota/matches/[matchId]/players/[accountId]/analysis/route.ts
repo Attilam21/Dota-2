@@ -126,6 +126,17 @@ async function calculateAnalysisFromOpenDota(
 
   // Process deaths by phase and calculate death events
   const deathsLog = player.deaths_log ?? []
+  console.log(
+    `[DOTA2] Processing deaths: player.deaths=${player.deaths}, deathsLog.length=${deathsLog.length}`,
+  )
+
+  // If player has deaths but deaths_log is empty, log a warning
+  if (player.deaths > 0 && deathsLog.length === 0) {
+    console.warn(
+      `[DOTA2] WARNING: Player has ${player.deaths} deaths but deaths_log is empty. Death events will not be created.`,
+    )
+  }
+
   const deathsByPhase = { early: 0, mid: 0, late: 0 }
   const deathEvents: DotaPlayerDeathEvent[] = []
   const deathsByRole: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
@@ -211,20 +222,30 @@ async function calculateAnalysisFromOpenDota(
       }
     }
 
-    deathEvents.push({
+    // Ensure all required fields are present
+    // If OpenDota doesn't provide enough data, save event with available data
+    // and set missing cost fields to 0 (but don't skip the event)
+    const deathEvent: DotaPlayerDeathEvent = {
       matchId,
       accountId,
-      timeSeconds: death.time,
-      phase,
-      levelAtDeath,
-      downtimeSeconds,
-      goldLost,
-      xpLost,
-      csLost,
-      killerHeroId,
-      killerRolePosition,
-    })
+      timeSeconds: death.time ?? 0, // Fallback to 0 if missing
+      phase, // 'early' | 'mid' | 'late' (from getGamePhase)
+      levelAtDeath: levelAtDeath ?? 1, // Fallback to 1 if missing
+      downtimeSeconds: downtimeSeconds ?? 0, // Fallback to 0 if missing
+      goldLost: goldLost ?? 0, // Fallback to 0 if calculation failed
+      xpLost: xpLost ?? 0, // Fallback to 0 if calculation failed
+      csLost: csLost ?? 0, // Fallback to 0 if calculation failed
+      killerHeroId: killerHeroId ?? undefined,
+      killerRolePosition: killerRolePosition ?? undefined,
+      // posX and posY remain undefined (not available from OpenDota standard endpoint)
+    }
+
+    deathEvents.push(deathEvent)
   })
+
+  console.log(
+    `[DOTA2] Created ${deathEvents.length} death events from ${deathsLog.length} deaths_log entries`,
+  )
 
   // Calculate percentages
   const totalKills = player.kills
