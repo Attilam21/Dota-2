@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { recomputePlayerStatsAgg } from '../../../../lib/fzth/recomputeStats'
 
 type OpenDotaMatchLite = {
   match_id: number
@@ -396,12 +397,8 @@ export async function GET(req: Request) {
       }
     }
 
-    const kp = {
-      totalMatches: total,
-      winrate,
-      avgKda,
-      avgDurationSec,
-    }
+    // Recompute aggregates from matches_digest (authoritative)
+    const agg = await recomputePlayerStatsAgg(sb, dotaAccountId)
 
     console.log(
       'FZTH sync-player completed for',
@@ -413,7 +410,12 @@ export async function GET(req: Request) {
       status: 'ok',
       imported,
       updated,
-      kp,
+      kp: {
+        totalMatches: agg.totalMatches,
+        winrate: agg.winrate,
+        avgKda: agg.avgKda,
+        avgDurationSec: agg.avgDurationSec,
+      },
     })
   } catch (e: any) {
     // eslint-disable-next-line no-console
