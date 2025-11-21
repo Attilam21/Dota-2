@@ -6,7 +6,7 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 })
 
-const Wrapper = ({ children }: { children: ReactElement }) => (
+const Wrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 )
 

@@ -13,10 +13,10 @@ export function createAdminClient(): SupabaseClient {
   if (!url || !serviceKey) {
     throw new Error('Missing Supabase service credentials')
   }
-  return createClient(url, serviceKey, {
+  return createClient<any>(url, serviceKey, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
-  })
+  }) as SupabaseClient
 }
