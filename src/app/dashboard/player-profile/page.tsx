@@ -146,7 +146,7 @@ function buildHeroStats(rows: MatchRow[]): HeroSummary[] {
 function buildRoleStats(rows: MatchRow[]): RoleSummary[] {
   const map = new Map<string, { matches: number; wins: number }>()
   for (const r of rows) {
-    const key = String(r.role ?? 'N/D')
+    const key = String(r.role ?? '—')
     const cur = map.get(key) ?? { matches: 0, wins: 0 }
     cur.matches += 1
     if (r.result === 'win') cur.wins += 1
@@ -163,7 +163,7 @@ function buildRoleStats(rows: MatchRow[]): RoleSummary[] {
 function buildLaneStats(rows: MatchRow[]): LaneSummary[] {
   const map = new Map<string, { matches: number; wins: number }>()
   for (const r of rows) {
-    const key = String(r.lane ?? 'N/D')
+    const key = String(r.lane ?? '—')
     const cur = map.get(key) ?? { matches: 0, wins: 0 }
     cur.matches += 1
     if (r.result === 'win') cur.wins += 1
@@ -435,7 +435,7 @@ function PlayerProfileContent(): React.JSX.Element {
                 <span className="text-neutral-200">
                   {top3Heroes
                     .map((h) => `#${h.heroId} (${h.matches})`)
-                    .join(' · ') || 'N/D'}
+                    .join(' · ') || '—'}
                 </span>
               </div>
             </div>

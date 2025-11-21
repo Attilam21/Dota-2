@@ -197,9 +197,17 @@ export default function MatchDetailPage() {
                     </div>
                     <div className="text-sm font-semibold">
                       {(() => {
-                        const maxGold = Math.max(
-                          ...advancedKPI.goldTimeline.map((t) => t.gold),
+                        if (
+                          !advancedKPI.goldTimeline ||
+                          advancedKPI.goldTimeline.length === 0
+                        ) {
+                          return '—'
+                        }
+                        const goldValues = advancedKPI.goldTimeline.map(
+                          (t) => t.gold,
                         )
+                        if (goldValues.length === 0) return '—'
+                        const maxGold = Math.max(...goldValues)
                         const keyPoint = advancedKPI.goldTimeline.find(
                           (t) => t.gold === maxGold,
                         )
@@ -207,7 +215,7 @@ export default function MatchDetailPage() {
                           ? `Minuto ${keyPoint.minute}: ${keyPoint.gold.toFixed(
                               0,
                             )} gold`
-                          : 'N/D'
+                          : '—'
                       })()}
                     </div>
                   </div>
@@ -428,7 +436,9 @@ export default function MatchDetailPage() {
                     Partecipazione ai fight
                   </div>
                   <div className="text-lg font-semibold">
-                    {advancedKPI.fightParticipation.toFixed(1)}%
+                    {advancedKPI.fightParticipation != null
+                      ? `${advancedKPI.fightParticipation.toFixed(1)}%`
+                      : '—'}
                   </div>
                 </div>
               )}
@@ -444,10 +454,10 @@ export default function MatchDetailPage() {
                     : 'Questa partita è stata persa a causa di:'}
                 </div>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-neutral-400">
-                  {data.player.kda >= 2.0 && (
+                  {data.player.kda != null && data.player.kda >= 2.0 && (
                     <li>Buon KDA ({data.player.kda.toFixed(2)})</li>
                   )}
-                  {data.player.kda < 1.0 && (
+                  {data.player.kda != null && data.player.kda < 1.0 && (
                     <li>KDA basso ({data.player.kda.toFixed(2)})</li>
                   )}
                   {data.player.gpm && data.player.gpm >= 400 && (

@@ -163,9 +163,13 @@ function CoachingContent(): React.JSX.Element {
     if (kpiKeys.length === 0) return 'Nessun KPI disponibile'
 
     const summaries = kpiKeys.map((key) => {
-      const current = task.kpi_payload[key] ?? 0
-      const target = task.params[key]
-      if (target !== undefined) {
+      const current = task.kpi_payload?.[key] ?? 0
+      const target = task.params?.[key]
+      if (
+        target !== undefined &&
+        target !== null &&
+        typeof target === 'number'
+      ) {
         // Formatta in modo più leggibile
         const keyLabel = getKpiLabel(key)
         return `${keyLabel}: ${formatKpiValue(

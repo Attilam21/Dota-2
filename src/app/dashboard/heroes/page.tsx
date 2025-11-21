@@ -416,7 +416,7 @@ function HeroesContent(): React.JSX.Element {
               value={
                 kpis.mostPlayed
                   ? `${kpis.mostPlayed.heroName} • ${kpis.mostPlayed.matches}`
-                  : 'N/D'
+                  : '—'
               }
             />
             <KpiCard
@@ -424,7 +424,7 @@ function HeroesContent(): React.JSX.Element {
               value={
                 kpis.bestWr
                   ? `${kpis.bestWr.heroName} • ${kpis.bestWr.winrate}%`
-                  : 'N/D'
+                  : '—'
               }
             />
             <KpiCard
@@ -432,7 +432,7 @@ function HeroesContent(): React.JSX.Element {
               value={
                 kpis.worstWr
                   ? `${kpis.worstWr.heroName} • ${kpis.worstWr.winrate}%`
-                  : 'N/D'
+                  : '—'
               }
             />
           </div>
@@ -721,17 +721,22 @@ function HeroesContent(): React.JSX.Element {
                                 {h.winRate}%
                               </span>
                             </td>
-                            <td className="px-3 py-2">{h.kdaAvg.toFixed(2)}</td>
                             <td className="px-3 py-2">
-                              {h.avgGpm > 0 ? Math.round(h.avgGpm) : 'N/D'}
+                              {h.kdaAvg != null ? h.kdaAvg.toFixed(2) : '—'}
                             </td>
                             <td className="px-3 py-2">
-                              {h.avgXpm > 0 ? Math.round(h.avgXpm) : 'N/D'}
+                              {h.avgGpm != null && h.avgGpm > 0
+                                ? Math.round(h.avgGpm)
+                                : '—'}
+                            </td>
+                            <td className="px-3 py-2">
+                              {h.avgXpm != null && h.avgXpm > 0
+                                ? Math.round(h.avgXpm)
+                                : '—'}
                             </td>
                             <td className="px-3 py-2">
                               <span className="text-xs text-neutral-400">
-                                {h.primaryRole || 'N/D'} /{' '}
-                                {h.primaryLane || 'N/D'}
+                                {h.primaryRole || '—'} / {h.primaryLane || '—'}
                               </span>
                             </td>
                           </tr>
@@ -830,8 +835,14 @@ function HeroesContent(): React.JSX.Element {
                           {h.winrate}%
                         </span>
                       </td>
-                      <td className="px-3 py-2">{h.avgKda}</td>
-                      <td className="px-3 py-2">{h.avgDurationMinutes}</td>
+                      <td className="px-3 py-2">
+                        {h.avgKda != null ? h.avgKda.toFixed(2) : '—'}
+                      </td>
+                      <td className="px-3 py-2">
+                        {h.avgDurationMinutes != null
+                          ? `${h.avgDurationMinutes} min`
+                          : '—'}
+                      </td>
                       <td className="px-3 py-2">
                         <Link
                           href={`/dashboard/matches?playerId=${playerId}&heroId=${h.heroId}`}

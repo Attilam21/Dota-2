@@ -166,7 +166,7 @@ function ProgressionContent(): React.JSX.Element {
               value={
                 kpi?.currentLevelTitle
                   ? `${kpi.currentLevel} – ${kpi.currentLevelTitle}`
-                  : 'N/D'
+                  : '—'
               }
             />
           </div>
@@ -317,7 +317,7 @@ function ProgressionContent(): React.JSX.Element {
                     <div className="text-xl font-semibold">
                       {styleKPI.damagePerMinute > 0
                         ? styleKPI.damagePerMinute.toFixed(0)
-                        : 'N/D'}
+                        : '—'}
                     </div>
                   </div>
                 </div>

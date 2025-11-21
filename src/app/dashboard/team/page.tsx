@@ -112,7 +112,7 @@ function TeamContent(): React.JSX.Element {
               value={
                 data.topByMatches
                   ? `${data.topByMatches.label} • ${data.topByMatches.matches}`
-                  : 'N/D'
+                  : '—'
               }
             />
             <KpiCard
@@ -120,7 +120,7 @@ function TeamContent(): React.JSX.Element {
               value={
                 data.topByWinrate
                   ? `${data.topByWinrate.label} • ${data.topByWinrate.winrate}%`
-                  : 'N/D'
+                  : '—'
               }
             />
             <KpiCard
@@ -128,7 +128,7 @@ function TeamContent(): React.JSX.Element {
               value={
                 data.worstByWinrate
                   ? `${data.worstByWinrate.label} • ${data.worstByWinrate.winrate}%`
-                  : 'N/D'
+                  : '—'
               }
             />
           </div>

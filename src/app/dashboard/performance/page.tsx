@@ -331,10 +331,22 @@ function PerformanceContent(): React.JSX.Element {
                   Stile di Gioco – Radar
                 </h3>
                 <PlaystyleRadar
-                  aggression={styleKPI.killsPerMinute * 20}
-                  kp={styleKPI.fightParticipation}
-                  farm={(styleKPI.farmingEfficiency.avgGpm / 600) * 100}
-                  macro={(styleKPI.avgTowerDamage / 3000) * 100}
+                  aggression={Math.min(
+                    100,
+                    Math.max(0, styleKPI.killsPerMinute * 20),
+                  )}
+                  kp={Math.min(100, Math.max(0, styleKPI.fightParticipation))}
+                  farm={Math.min(
+                    100,
+                    Math.max(
+                      0,
+                      ((styleKPI.farmingEfficiency.avgGpm || 0) / 600) * 100,
+                    ),
+                  )}
+                  macro={Math.min(
+                    100,
+                    Math.max(0, ((styleKPI.avgTowerDamage || 0) / 3000) * 100),
+                  )}
                 />
                 <div className="mt-3 rounded-lg border border-neutral-800 bg-neutral-900/50 p-3">
                   <div className="mb-2 text-xs font-medium text-neutral-200">

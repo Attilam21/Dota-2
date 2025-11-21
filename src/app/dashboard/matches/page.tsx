@@ -215,7 +215,7 @@ function MatchesPageContent(): React.JSX.Element {
                                   />
                                 )
                               }
-                              const initial = name?.charAt(0) || '?'
+                              const initial = name.charAt(0) || '?'
                               return (
                                 <div className="flex h-6 w-6 items-center justify-center rounded bg-neutral-700 text-[10px]">
                                   {initial}

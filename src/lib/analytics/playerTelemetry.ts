@@ -81,6 +81,8 @@ export function calculateAggressivenessIndex(matches: MatchRow[]): number {
   }
 
   const avgDurationMinutes = totalDuration / (last20.length * 60)
+  // Evita divisione per zero se avgDurationMinutes è 0
+  if (avgDurationMinutes <= 0) return 0
   const killsPerMin = totalKills / (last20.length * avgDurationMinutes)
   const assistsPerMin = totalAssists / (last20.length * avgDurationMinutes)
 
