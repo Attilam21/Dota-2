@@ -140,31 +140,30 @@ export default function MatchDetailPage() {
 
         const kpi: DotaPlayerMatchAnalysis = await res.json()
 
-        // Log valori ricevuti dalla fetch
-        console.log('[DASHBOARD-MATCH] Advanced KPI received from API', {
-          matchId: kpi.matchId,
-          accountId: kpi.accountId,
-          rolePosition: kpi.rolePosition,
-          // Death Cost Summary rimosso (dipende da deaths_log non garantito)
-          killsEarly: kpi.killDistribution.early,
-          killsMid: kpi.killDistribution.mid,
-          killsLate: kpi.killDistribution.late,
-          deathPctEarly: kpi.deathPercentageDistribution.early,
-          deathPctMid: kpi.deathPercentageDistribution.mid,
-          deathPctLate: kpi.deathPercentageDistribution.late,
-          deathByRole: kpi.deathByRole,
-        })
+        // Log valori ricevuti dalla fetch (solo Tier 1)
+        console.log(
+          '[DASHBOARD-MATCH] Advanced KPI received from API (Tier 1 only)',
+          {
+            matchId: kpi.matchId,
+            accountId: kpi.accountId,
+            rolePosition: kpi.rolePosition,
+            killsEarly: kpi.killDistribution.early,
+            killsMid: kpi.killDistribution.mid,
+            killsLate: kpi.killDistribution.late,
+          },
+        )
 
         if (active) {
           setAdvancedKPI(kpi)
-          // Log valori salvati nello stato
-          console.log('[DASHBOARD-MATCH] Advanced KPI saved to state', {
-            totalGoldLost: kpi.deathCostSummary.totalGoldLost,
-            killsEarly: kpi.killDistribution.early,
-            deathPctEarly: kpi.deathPercentageDistribution.early,
-          })
-          // Log di debug principale richiesto
-          console.log('[D2-FRONT]', 'advancedKPI:', kpi)
+          // Log valori salvati nello stato (solo Tier 1)
+          console.log(
+            '[DASHBOARD-MATCH] Advanced KPI saved to state (Tier 1 only)',
+            {
+              killsEarly: kpi.killDistribution.early,
+              killsMid: kpi.killDistribution.mid,
+              killsLate: kpi.killDistribution.late,
+            },
+          )
         }
       } catch (e: any) {
         console.error('[DASHBOARD-MATCH] Error loading advanced match KPI:', e)
@@ -187,9 +186,16 @@ export default function MatchDetailPage() {
     return data.match.radiantWin ? 'Vittoria' : 'Sconfitta'
   }, [data])
 
-  // Log di debug: mostra advancedKPI ogni volta che cambia
+  // Log di debug: mostra advancedKPI ogni volta che cambia (solo Tier 1)
   useEffect(() => {
-    console.log('[D2-FRONT]', 'advancedKPI:', advancedKPI)
+    if (advancedKPI) {
+      console.log('[D2-FRONT] Advanced KPI (Tier 1 only):', {
+        matchId: advancedKPI.matchId,
+        accountId: advancedKPI.accountId,
+        rolePosition: advancedKPI.rolePosition,
+        killDistribution: advancedKPI.killDistribution,
+      })
+    }
   }, [advancedKPI])
 
   return (

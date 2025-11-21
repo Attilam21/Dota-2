@@ -1,11 +1,8 @@
 /**
- * Dota 2 Player Match Analysis Types
+ * Dota 2 Player Match Analysis Types (TIER 1 ONLY)
  *
- * Types for detailed Dota 2 player match analysis including:
- * - Kill/death distribution by game phase
- * - Death cost analysis (gold/xp/cs lost)
- * - Death by role analysis
- * - Death events with positions (optional)
+ * Types for Dota 2 player match analysis using ONLY Tier 1 data guaranteed by OpenDota API.
+ * Removed all Tier 2/3 fields (death analysis, heatmap, etc.) that depend on non-guaranteed data.
  */
 
 /**
@@ -27,39 +24,7 @@ export type RolePosition = 1 | 2 | 3 | 4 | 5
 export type GamePhase = 'early' | 'mid' | 'late'
 
 /**
- * Individual death event for a player in a match
- */
-export interface DotaPlayerDeathEvent {
-  /** OpenDota match ID */
-  matchId: number
-  /** Dota 2 account ID (Steam32) */
-  accountId: number
-  /** Second of death in match (0 = start) */
-  timeSeconds: number
-  /** Game phase when death occurred */
-  phase: GamePhase
-  /** Player level at time of death (1-30) */
-  levelAtDeath: number
-  /** Estimated respawn time in seconds */
-  downtimeSeconds: number
-  /** Estimated gold lost during downtime */
-  goldLost: number
-  /** Estimated XP lost during downtime */
-  xpLost: number
-  /** Estimated CS lost during downtime */
-  csLost: number
-  /** Hero ID of the killer (if available) */
-  killerHeroId?: number
-  /** Role position of killer (1-5, if available) */
-  killerRolePosition?: RolePosition
-  /** X position on map at death (optional, if available from OpenDota) */
-  posX?: number
-  /** Y position on map at death (optional, if available from OpenDota) */
-  posY?: number
-}
-
-/**
- * Kill/death distribution by game phase
+ * Kill/death distribution by game phase (TIER 1 - uses kills_log guaranteed by OpenDota)
  */
 export interface PhaseDistribution {
   /** Count in early phase (0-10 minutes) */
@@ -71,7 +36,7 @@ export interface PhaseDistribution {
 }
 
 /**
- * Percentage distribution by game phase
+ * Percentage distribution by game phase (TIER 1 - calculated from PhaseDistribution)
  */
 export interface PhasePercentageDistribution {
   /** Percentage in early phase (0-100) */
@@ -83,60 +48,21 @@ export interface PhasePercentageDistribution {
 }
 
 /**
- * Death cost summary (total resources lost due to deaths)
- */
-export interface DeathCostSummary {
-  /** Total gold lost due to all deaths */
-  totalGoldLost: number
-  /** Total XP lost due to all deaths */
-  totalXpLost: number
-  /** Total CS lost due to all deaths */
-  totalCsLost: number
-}
-
-/**
- * Death by role distribution (percentage of deaths caused by each role)
- */
-export interface DeathByRole {
-  /** Percentage of deaths caused by Pos1 (Safe Lane Carry) opponents (0-100) */
-  pos1: number
-  /** Percentage of deaths caused by Pos2 (Mid) opponents (0-100) */
-  pos2: number
-  /** Percentage of deaths caused by Pos3 (Offlane) opponents (0-100) */
-  pos3: number
-  /** Percentage of deaths caused by Pos4 (Soft Support) opponents (0-100) */
-  pos4: number
-  /** Percentage of deaths caused by Pos5 (Hard Support) opponents (0-100) */
-  pos5: number
-}
-
-/**
- * Complete player match analysis for Dota 2
- * Maps to dota_player_match_analysis table in Supabase
+ * Complete player match analysis for Dota 2 (TIER 1 ONLY)
+ * Contains only data guaranteed by OpenDota API
+ * Maps to dota_player_match_analysis table in Supabase (only Tier 1 columns used)
  */
 export interface DotaPlayerMatchAnalysis {
   /** OpenDota match ID */
   matchId: number
   /** Dota 2 account ID (Steam32) */
   accountId: number
-  /** Role position played (1-5) */
+  /** Role position played (1-5) - calculated from OpenDota players[].role */
   rolePosition: RolePosition
-  /** Kill distribution by game phase */
+  /** Kill distribution by game phase (TIER 1 - from kills_log guaranteed by OpenDota) */
   killDistribution: PhaseDistribution
-  /** Kill percentage distribution by game phase */
+  /** Kill percentage distribution by game phase (TIER 1 - calculated from killDistribution) */
   killPercentageDistribution: PhasePercentageDistribution
-  /** Death distribution by game phase */
-  deathDistribution: PhaseDistribution
-  /** Death percentage distribution by game phase */
-  deathPercentageDistribution: PhasePercentageDistribution
-  /** Death cost summary (total resources lost) */
-  deathCostSummary: DeathCostSummary
-  /** Death by role distribution (percentage) */
-  deathByRole: DeathByRole
-  /** Optional: array of individual death events for detailed analysis */
-  deathEvents?: DotaPlayerDeathEvent[]
-  /** Optional: extra analysis data (e.g., heatmap, additional metrics) */
-  analysisExtra?: Record<string, unknown>
 }
 
 /**

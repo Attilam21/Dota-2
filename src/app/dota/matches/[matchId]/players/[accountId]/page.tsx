@@ -6,9 +6,6 @@ import Link from 'next/link'
 import type { DotaPlayerMatchAnalysis } from '@/types/dotaAnalysis'
 import DotaOverviewCard from '@/components/dota/analysis/DotaOverviewCard'
 import DotaKillDeathDistributionSection from '@/components/dota/analysis/DotaKillDeathDistributionSection'
-import DotaDeathCostSection from '@/components/dota/analysis/DotaDeathCostSection'
-import DotaDeathByRoleSection from '@/components/dota/analysis/DotaDeathByRoleSection'
-import DotaDeathHeatmapSection from '@/components/dota/analysis/DotaDeathHeatmapSection'
 
 export default function DotaMatchPlayerAnalysisPage() {
   const params = useParams()
@@ -34,11 +31,14 @@ export default function DotaMatchPlayerAnalysisPage() {
         setLoading(true)
         setError(null)
 
-        // Log tracciabilità: caricamento analisi
-        console.log('[DOTA-MATCH-ANALYSIS-PAGE] Loading analysis', {
-          matchId,
-          accountId,
-        })
+        // Log tracciabilità: caricamento analisi (TIER 1 ONLY)
+        console.log(
+          '[DOTA-MATCH-ANALYSIS-PAGE] Loading analysis (Tier 1 only)',
+          {
+            matchId,
+            accountId,
+          },
+        )
 
         const res = await fetch(
           `/api/dota/matches/${matchId}/players/${accountId}/analysis`,
@@ -56,14 +56,16 @@ export default function DotaMatchPlayerAnalysisPage() {
 
         const json: DotaPlayerMatchAnalysis = await res.json()
 
-        // Log tracciabilità: analisi caricata
-        console.log('[DOTA-MATCH-ANALYSIS-PAGE] Analysis loaded successfully', {
-          matchId: json.matchId,
-          accountId: json.accountId,
-          rolePosition: json.rolePosition,
-          hasDeathEvents: !!json.deathEvents?.length,
-          deathEventsCount: json.deathEvents?.length ?? 0,
-        })
+        // Log tracciabilità: analisi caricata (TIER 1 ONLY)
+        console.log(
+          '[DOTA-MATCH-ANALYSIS-PAGE] Analysis loaded successfully (Tier 1 only)',
+          {
+            matchId: json.matchId,
+            accountId: json.accountId,
+            rolePosition: json.rolePosition,
+            killDistribution: json.killDistribution,
+          },
+        )
 
         if (active) setAnalysis(json)
       } catch (e: any) {
@@ -113,14 +115,19 @@ export default function DotaMatchPlayerAnalysisPage() {
         </div>
       )}
 
-      {/* Main content */}
+      {/* Main content (TIER 1 ONLY) */}
       {!loading && !error && analysis && (
         <div className="space-y-6">
           {/* Page header */}
           <div>
-            <h1 className="text-2xl font-semibold">Analisi Match Dota 2</h1>
+            <h1 className="text-2xl font-semibold">
+              Analisi Match Dota 2 (TIER 1 ONLY)
+            </h1>
             <p className="text-sm text-neutral-400">
               Match #{analysis.matchId} • Player #{analysis.accountId}
+            </p>
+            <p className="mt-2 text-xs text-neutral-500">
+              Solo dati garantiti da OpenDota API (kills_log, player.role, etc.)
             </p>
           </div>
 
@@ -131,17 +138,8 @@ export default function DotaMatchPlayerAnalysisPage() {
             accountId={Number(accountId)}
           />
 
-          {/* Section 2: Kill & Death Distribution per fase */}
+          {/* Section 2: Kill Distribution per fase (TIER 1 ONLY) */}
           <DotaKillDeathDistributionSection analysis={analysis} />
-
-          {/* Section 3: Costo opportunità delle morti */}
-          <DotaDeathCostSection analysis={analysis} />
-
-          {/* Section 4: Death by Role */}
-          <DotaDeathByRoleSection analysis={analysis} />
-
-          {/* Section 5: Heatmap morti (opzionale) */}
-          <DotaDeathHeatmapSection analysis={analysis} />
         </div>
       )}
 
