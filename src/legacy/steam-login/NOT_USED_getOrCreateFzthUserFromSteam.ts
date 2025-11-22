@@ -1,4 +1,7 @@
 /**
+ * LEGACY: integrazione Steam disattivata.
+ * Non importare questo file finché il login reale non viene riprogettato.
+ *
  * Get or Create FZTH User from Steam
  *
  * Given a Steam ID, find or create the user in fzth_users table
@@ -6,7 +9,7 @@
 
 import { cookies } from 'next/headers'
 import { createServerClient } from '@/utils/supabase'
-import type { FzthUser } from './types'
+import type { FzthUser } from '@/lib/fzth/user/types'
 
 export async function getOrCreateFzthUserFromSteam(
   steamId: string,

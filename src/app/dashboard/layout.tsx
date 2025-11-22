@@ -10,7 +10,7 @@ export default async function DashboardLayout({
 }: {
   children: ReactNode
 }) {
-  // Get active player account (Steam or Demo)
+  // Get active player account (always Demo mode)
   const activePlayer = await getActivePlayerAccount()
 
   return (

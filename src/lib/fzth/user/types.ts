@@ -2,17 +2,21 @@
  * FZTH User Types
  *
  * Types for user management and active player account
+ *
+ * TODO: In futuro qui potrà essere reintrodotto un login reale (Steam/email).
+ * Ora l'app gira solo in modalità demo.
  */
 
-export type ActivePlayerMode = 'demo' | 'steam'
+export type ActivePlayerMode = 'demo' // Only 'demo' for now, 'steam' removed
 
 export interface ActivePlayerAccount {
-  mode: ActivePlayerMode // 'demo' se nessun login, 'steam' se utente reale
+  mode: ActivePlayerMode // Always 'demo' for now
   dotaAccountId: number // id Dota2 usato per TUTTE le query
-  fzthUserId?: string | null // uuid da fzth_users se mode = 'steam'
-  steamId?: string | null // steamId64 se mode = 'steam'
+  fzthUserId?: string | null // Always null in demo mode
+  steamId?: string | null // Always null in demo mode
 }
 
+// Legacy type - kept for potential future use
 export interface FzthUser {
   id: string // UUID
   steam_id: string | null

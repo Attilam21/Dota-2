@@ -1,13 +1,13 @@
 /**
  * Login Page
  *
- * Entry point for Steam login and Demo mode
+ * Entry point for Demo mode (no login required)
+ *
+ * TODO: In futuro qui potrà essere reintrodotto un login reale (Steam/email).
+ * Ora l'app gira solo in modalità demo.
  */
 
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { cookies } from 'next/headers'
-import { createServerClient } from '@/utils/supabase'
 
 export default function Login({
   searchParams,
@@ -16,22 +16,8 @@ export default function Login({
 }) {
   const enterDemoMode = async () => {
     'use server'
-    // Redirect to dashboard - getActivePlayerAccount() will automatically use demo mode
+    // Redirect to dashboard - always uses demo mode
     redirect('/dashboard')
-  }
-
-  const signInWithSteam = async () => {
-    'use server'
-    // TODO: Implement Steam OAuth login
-    // For now, this is a placeholder
-    // When Steam OAuth is configured, this should:
-    // 1. Redirect to Steam OAuth URL
-    // 2. Handle callback in /api/auth/callback
-    // 3. Create/update fzth_users record
-    // 4. Redirect to dashboard
-
-    // Placeholder: show message that Steam login is not yet configured
-    redirect('/login?message=Steam login is not yet configured')
   }
 
   return (
@@ -42,7 +28,7 @@ export default function Login({
             FZTH Dota 2 Dashboard
           </h1>
           <p className="mt-2 text-sm text-neutral-400">
-            Accedi per vedere le tue analisi e migliorare le tue performance
+            Esplora la dashboard in modalità demo
           </p>
         </div>
 
@@ -53,20 +39,6 @@ export default function Login({
         )}
 
         <div className="space-y-4">
-          {/* Steam Login Button */}
-          <form action={signInWithSteam}>
-            <button
-              type="submit"
-              disabled
-              className="w-full rounded-md border border-blue-600/50 bg-blue-950/30 px-4 py-3 text-sm font-semibold text-blue-300 transition-all hover:border-blue-500 hover:bg-blue-950/50 hover:text-blue-200 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Accedi con Steam
-            </button>
-            <p className="mt-1 text-center text-xs text-neutral-500">
-              Login Steam in configurazione
-            </p>
-          </form>
-
           {/* Demo Mode Button */}
           <form action={enterDemoMode}>
             <button
@@ -86,8 +58,8 @@ export default function Login({
               pre-caricato per esplorare la dashboard
             </li>
             <li>
-              <strong>Login Steam:</strong> Accedi con il tuo account Steam per
-              vedere le tue partite reali
+              <strong>Nessun login richiesto:</strong> L&apos;app funziona
+              completamente in modalità demo
             </li>
           </ul>
         </div>

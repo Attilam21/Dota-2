@@ -3,7 +3,7 @@
  *
  * GET /api/active-player
  *
- * Returns the active player account (Steam or Demo)
+ * Returns the active player account (always Demo mode)
  */
 
 import { NextResponse } from 'next/server'
