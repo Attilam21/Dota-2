@@ -1,5 +1,5 @@
 /**
- * Teammate Insights Component
+ * Companions Insights Component
  *
  * Displays textual insights based on teammate performance
  */
@@ -9,13 +9,13 @@ import { getTeammateDisplayName } from '@/lib/dota/teammates'
 import { formatPercentageOrNA } from '@/utils/dotaFormatting'
 import { MIN_MATCHES_FOR_TEAMMATE } from '@/lib/dota/teammates'
 
-interface TeammateInsightsProps {
+interface CompanionsInsightsProps {
   teammates: TeammateAggregated[]
 }
 
-export default function TeammateInsights({
+export default function CompanionsInsights({
   teammates,
-}: TeammateInsightsProps): React.JSX.Element {
+}: CompanionsInsightsProps): React.JSX.Element {
   // Filter by minimum matches
   const eligible = teammates.filter(
     (t) => t.matches >= MIN_MATCHES_FOR_TEAMMATE,
@@ -71,7 +71,7 @@ export default function TeammateInsights({
         1,
       )} su ${
         worstTeammate.matches
-      } partite; valuta se giocare meno assieme in ranked.`,
+      } partite, valuta se giocare meno insieme in ranked.`,
     )
   }
 

@@ -6,9 +6,9 @@ import { getPlayerIdFromSearchParams } from '@/lib/playerId'
 import type { PeersKPI } from '@/services/dota/kpiService'
 import { buildTeammatesProfile } from '@/lib/dota/teammates'
 import type { TeammatesProfile } from '@/types/teammates'
-import TeammateTopTable from '@/components/dota/teammates/TeammateTopTable'
-import TeammateSynergyScatter from '@/components/dota/teammates/TeammateSynergyScatter'
-import TeammateInsights from '@/components/dota/teammates/TeammateInsights'
+import CompanionsBars from '@/components/dota/teammates/CompanionsBars'
+import CompanionsTable from '@/components/dota/teammates/CompanionsTable'
+import CompanionsInsights from '@/components/dota/teammates/CompanionsInsights'
 
 export default function TeamsPeersPage() {
   return (
@@ -68,6 +68,13 @@ function TeamsPeersContent(): React.JSX.Element {
     return buildTeammatesProfile(peersKPI)
   }, [peersKPI])
 
+  // Handler for future teammate click (for player details)
+  function handleTeammateClick(teammate: any) {
+    // TODO: Future - Navigate to teammate details page
+    // For now, just log
+    console.log('Teammate clicked:', teammate.accountId)
+  }
+
   return (
     <div className="space-y-4 text-white">
       <div className="mb-4">
@@ -99,21 +106,14 @@ function TeamsPeersContent(): React.JSX.Element {
       {!loading && !error && profile && profile.teammates.length > 0 && (
         <section className="mx-auto max-w-6xl space-y-6">
           {/* BLOCCO 1: KPI Overview */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <KpiCard
               label="Compagni totali"
               value={`${profile.summary.totalTeammates}`}
-              description="Numero totale di compagni unici"
             />
             <KpiCard
-              label="Compagni con winrate positivo"
+              label="Compagni con WR positivo (≥50%)"
               value={`${profile.summary.positiveWinrate}`}
-              description="Compagni con winrate ≥ 50%"
-            />
-            <KpiCard
-              label="Compagni con winrate negativo"
-              value={`${profile.summary.negativeWinrate}`}
-              description="Compagni con winrate < 50%"
             />
             <KpiCard
               label="Miglior compagno"
@@ -125,40 +125,31 @@ function TeamsPeersContent(): React.JSX.Element {
                     } • ${profile.summary.bestTeammate.winrate}%`
                   : '—'
               }
-              description="Compagno con winrate più alto (≥5 partite)"
             />
           </div>
 
-          {/* BLOCCO 2: Tabella Top compagni */}
-          <TeammateTopTable teammates={profile.teammates} />
+          {/* BLOCCO 2: Grafico a barre orizzontali Top 15 */}
+          <CompanionsBars teammates={profile.teammates} />
 
-          {/* BLOCCO 3: Grafico Winrate vs Utilizzo */}
-          <TeammateSynergyScatter teammates={profile.teammates} />
+          {/* BLOCCO 3: Tabella compatta Top 15 */}
+          <CompanionsTable
+            teammates={profile.teammates}
+            onTeammateClick={handleTeammateClick}
+          />
 
           {/* BLOCCO 4: Insight testuali */}
-          <TeammateInsights teammates={profile.teammates} />
+          <CompanionsInsights teammates={profile.teammates} />
         </section>
       )}
     </div>
   )
 }
 
-function KpiCard({
-  label,
-  value,
-  description,
-}: {
-  label: string
-  value: string
-  description?: string
-}) {
+function KpiCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
       <div className="text-xs text-neutral-400">{label}</div>
       <div className="text-xl font-semibold text-white">{value}</div>
-      {description && (
-        <div className="mt-1 text-xs text-neutral-500">{description}</div>
-      )}
     </div>
   )
 }
