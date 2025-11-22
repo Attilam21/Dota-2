@@ -112,7 +112,7 @@ function HeroesContent(): React.JSX.Element {
       )}
 
       {!loading && !error && profile && profile.heroes.length > 0 && (
-        <div className="space-y-6">
+        <section className="mx-auto max-w-6xl space-y-6">
           {/* BLOCCO 1: Overview Hero Pool + Tabella */}
           <div className="space-y-6">
             {/* KPI Overview */}
@@ -155,6 +155,7 @@ function HeroesContent(): React.JSX.Element {
               sortDir={sortDir}
               onSort={toggleSort}
               onHeroSelect={handleHeroSelect}
+              selectedHero={selectedHero}
             />
           </div>
 
@@ -166,7 +167,7 @@ function HeroesContent(): React.JSX.Element {
 
           {/* BLOCCO 3: Hero Focus Card */}
           <HeroFocusCard hero={selectedHero} />
-        </div>
+        </section>
       )}
     </div>
   )
