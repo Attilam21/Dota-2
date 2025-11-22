@@ -10,7 +10,9 @@ interface MultiLineChartProps {
     kda?: number
     gpm?: number
     xpm?: number
+    fzthScore?: number
     label?: string
+    [key: string]: number | string | undefined
   }>
   width?: number
   height?: number

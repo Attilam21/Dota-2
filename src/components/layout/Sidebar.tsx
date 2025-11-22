@@ -19,7 +19,7 @@ const navSections = [
     title: 'Coaching',
     items: [
       { label: 'Coaching & Task', href: '/dashboard/coaching' },
-      { label: 'Profilazione FZTH', href: '/dashboard/fzth-profile' },
+      { label: 'Profilazione FZTH', href: '/dashboard/profile' },
     ],
   },
   {
