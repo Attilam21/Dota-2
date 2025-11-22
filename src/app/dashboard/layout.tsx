@@ -2,17 +2,12 @@ import type { ReactNode } from 'react'
 import { Suspense } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
 import DashboardHeader from '@/components/layout/Header'
-import { getActivePlayerAccount } from '@/lib/fzth/user/getActivePlayerAccount'
-import { UserModeSwitcher } from '@/components/layout/UserModeSwitcher'
 
 export default async function DashboardLayout({
   children,
 }: {
   children: ReactNode
 }) {
-  // Get active player account (always Demo mode)
-  const activePlayer = await getActivePlayerAccount()
-
   return (
     <div className="flex min-h-screen bg-neutral-950 text-white">
       <Sidebar />

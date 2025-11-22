@@ -77,7 +77,7 @@ function CoachingContent(): React.JSX.Element {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-6">
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 lg:px-6">
         <SkeletonLoader variant="text" className="mb-2 w-1/3" />
         <SkeletonCard />
         <SkeletonGrid cols={2} />
@@ -89,7 +89,7 @@ function CoachingContent(): React.JSX.Element {
   // Show error only if it's a real error, not just empty data
   if (error && !error.includes('table') && !error.includes('not found')) {
     return (
-      <div className="space-y-6 p-6">
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 lg:px-6">
         <div className="rounded-lg border border-red-800 bg-red-900/20 p-4 text-red-400">
           <div className="font-semibold">Errore nel caricamento</div>
           <div className="text-sm">{error}</div>
@@ -101,7 +101,7 @@ function CoachingContent(): React.JSX.Element {
   // If no data but no error (or table not found), show empty state gracefully
   if (!data) {
     return (
-      <div className="space-y-6 p-6">
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 lg:px-6">
         <div>
           <h1 className="text-2xl font-semibold text-neutral-100">
             Coaching & Task
@@ -124,7 +124,7 @@ function CoachingContent(): React.JSX.Element {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 lg:px-6">
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-semibold text-neutral-100">
@@ -136,7 +136,7 @@ function CoachingContent(): React.JSX.Element {
       </div>
 
       {/* Main Content */}
-      <div className="mx-auto max-w-7xl space-y-6">
+      <div className="space-y-6">
         {/* 1. Coaching Header */}
         <CoachingHeader data={data} />
 

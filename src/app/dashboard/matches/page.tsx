@@ -82,7 +82,7 @@ function MatchesPageContent(): React.JSX.Element {
   }, [playerId, playerLoading])
 
   return (
-    <div className="space-y-4 text-white">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 text-white lg:px-6">
       <div className="mb-4">
         <h1 className="text-2xl font-semibold">Partite recenti</h1>
         <p className="text-sm text-neutral-400">

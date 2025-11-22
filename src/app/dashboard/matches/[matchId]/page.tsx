@@ -25,7 +25,7 @@ import { CombatBlock } from '@/components/dota/matchAnalysis/CombatBlock'
 import { VisionBlock } from '@/components/dota/matchAnalysis/VisionBlock'
 import { ObjectivesBlock } from '@/components/dota/matchAnalysis/ObjectivesBlock'
 import { ActionsBlock } from '@/components/dota/matchAnalysis/ActionsBlock'
-import { AnalysisLabel } from '@/components/dota/AnalysisLabel'
+import { InfoBanner } from '@/components/dashboard/InfoBanner'
 
 export default function MatchDetailPage() {
   const params = useParams()
@@ -81,7 +81,7 @@ export default function MatchDetailPage() {
   }, [matchId, playerId])
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 lg:px-6">
       {/* Back button */}
       <button
         onClick={() =>
@@ -114,9 +114,13 @@ export default function MatchDetailPage() {
 
       {/* Main content */}
       {!loading && !error && analysis && (
-        <section className="mx-auto max-w-6xl space-y-6">
-          {/* Label */}
-          <AnalysisLabel type="match" matchId={Number(matchId)} />
+        <section className="space-y-6">
+          {/* Info Banner */}
+          <InfoBanner
+            variant="match"
+            title={`Analisi della partita #${matchId}`}
+            description="I dati e i grafici sottostanti si riferiscono esclusivamente a questo match."
+          />
 
           {/* Toolbar with Advanced Analysis Button */}
           <div className="flex items-center justify-between">

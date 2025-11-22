@@ -103,7 +103,7 @@ function ProfileContent(): React.JSX.Element {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 lg:px-6">
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-semibold text-neutral-100">
