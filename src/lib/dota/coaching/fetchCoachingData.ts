@@ -13,6 +13,7 @@ import type {
   CoachingTaskTemplate,
   CoachingImpact,
   CoachingPillarId,
+  CoachingTaskStatus,
 } from './types'
 import { getPillarLabel } from './utils'
 
@@ -153,6 +154,3 @@ export async function getCoachingDashboardData(
     impact,
   }
 }
-
-// Import type for status
-import type { CoachingTaskStatus } from './types'

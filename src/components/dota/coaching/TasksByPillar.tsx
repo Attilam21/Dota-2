@@ -2,11 +2,13 @@
  * Tasks By Pillar Component
  *
  * Displays tasks grouped by pillar with expandable task lists
+ * Supports auto-expansion based on URL query parameter
  */
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import type { CoachingDashboardData } from '@/lib/dota/coaching/types'
 import { TaskList } from './TaskList'
 import { formatPercentageOrNA } from '@/utils/dotaFormatting'
@@ -16,7 +18,17 @@ interface TasksByPillarProps {
 }
 
 export function TasksByPillar({ data }: TasksByPillarProps): React.JSX.Element {
+  const searchParams = useSearchParams()
+  const pillarParam = searchParams.get('pillar')
+
   const [expandedPillars, setExpandedPillars] = useState<Set<string>>(new Set())
+
+  // Auto-expand pillar from query param
+  useEffect(() => {
+    if (pillarParam) {
+      setExpandedPillars(new Set([pillarParam]))
+    }
+  }, [pillarParam])
 
   const togglePillar = (pillarId: string) => {
     const newExpanded = new Set(expandedPillars)
@@ -36,8 +48,9 @@ export function TasksByPillar({ data }: TasksByPillarProps): React.JSX.Element {
         </h2>
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4 text-center">
           <div className="text-sm text-neutral-400">
-            Non hai ancora task assegnati. Il coach FZTH li genererà a partire
-            dalle prossime analisi match.
+            Non hai ancora task assegnati. I task verranno generati
+            automaticamente dalla profiliazione quando entrerai in questa
+            pagina.
           </div>
         </div>
       </div>
@@ -56,17 +69,27 @@ export function TasksByPillar({ data }: TasksByPillarProps): React.JSX.Element {
             pillar.total > 0
               ? Math.round((pillar.completed / pillar.total) * 100)
               : 0
+          const isHighlighted = pillarParam === pillar.pillarId
 
           return (
             <div
               key={pillar.pillarId}
-              className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4"
+              className={`rounded-lg border p-4 ${
+                isHighlighted
+                  ? 'border-blue-600/50 bg-blue-900/20'
+                  : 'border-neutral-800 bg-neutral-900/50'
+              }`}
             >
               {/* Header */}
               <div className="mb-3">
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-neutral-200">
                     {pillar.pillarLabel}
+                    {isHighlighted && (
+                      <span className="ml-2 text-xs text-blue-300">
+                        (da profiliazione)
+                      </span>
+                    )}
                   </h3>
                   <span className="text-xs text-neutral-500">
                     {pillar.total} task

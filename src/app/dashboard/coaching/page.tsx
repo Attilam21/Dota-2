@@ -50,7 +50,7 @@ function CoachingContent(): React.JSX.Element {
         setError(null)
 
         const res = await fetch(
-          `/api/coaching/dashboard?playerId=${playerId}`,
+          `/api/coaching/dashboard?playerId=${playerId}&autoCreate=true`,
           { cache: 'no-store' },
         )
 
