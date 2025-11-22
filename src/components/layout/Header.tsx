@@ -10,15 +10,8 @@ export default function DashboardHeader() {
           FZTH Dota 2 Dashboard
         </h2>
       </div>
-      <div className="flex items-center gap-4 text-xs text-neutral-400">
-        <div className="hidden items-center gap-2 md:flex">
-          <span>Account:</span>
-          <PlayerSelector />
-        </div>
-        <div className="hidden md:block">
-          {/* periodo corrente informativo */}
-          Periodo: tutte le partite disponibili (dataset di test)
-        </div>
+      <div className="flex items-center gap-4">
+        <PlayerSelector />
       </div>
     </header>
   )

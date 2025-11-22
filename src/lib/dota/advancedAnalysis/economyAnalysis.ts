@@ -9,22 +9,34 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@/utils/supabase'
 import type { FarmEconomyAnalysis } from './types'
+import { getLastMatches } from '@/lib/dota/matches/getLastMatches'
 
 export async function getFarmEconomyAnalysis(
   playerId: number,
 ): Promise<FarmEconomyAnalysis | null> {
   const supabase = createServerClient(cookies())
 
+  // Sanity check: GLOBAL MODE
+  console.log(
+    '[ECONOMY-ANALYSIS] GLOBAL MODE - Analisi basata su ultime 20 partite',
+  )
+
   try {
-    // Get recent matches with economy data (limit to 20 for DEMO mode)
+    // Get last 20 matches using centralized function
+    const matchIds = await getLastMatches(playerId, 20)
+    if (matchIds.length === 0) {
+      return null
+    }
+
+    // Get matches with economy data
     const { data: matches, error: matchesError } = await supabase
       .from('matches_digest')
       .select(
         'match_id, gold_per_min, xp_per_min, duration_seconds, result, start_time',
       )
       .eq('player_account_id', playerId)
+      .in('match_id', matchIds)
       .order('start_time', { ascending: false })
-      .limit(20) // DEMO mode: 20 matches
 
     if (matchesError) {
       console.error('[ECONOMY-ANALYSIS] Error fetching matches:', matchesError)
@@ -56,12 +68,12 @@ export async function getFarmEconomyAnalysis(
         : 0
 
     // Calculate dead gold from dota_player_match_analysis (more accurate than summing death events)
-    const matchIds = matches.map((m) => m.match_id)
+    const analysisMatchIds = matches.map((m) => m.match_id)
     const { data: matchAnalysis, error: analysisError } = await supabase
       .from('dota_player_match_analysis')
       .select('match_id, total_gold_lost')
       .eq('account_id', playerId)
-      .in('match_id', matchIds)
+      .in('match_id', analysisMatchIds)
 
     let deadGold = 0
     if (!analysisError && matchAnalysis && matchAnalysis.length > 0) {

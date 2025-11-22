@@ -15,6 +15,11 @@ export async function getMatchLaneAnalysis(
 ): Promise<LaneAnalysis | null> {
   const supabase = createServerClient(cookies())
 
+  // Sanity check: MATCH MODE
+  console.log(
+    `[MATCH-LANE-ANALYSIS] MATCH MODE - Analisi solo per match ${matchId}`,
+  )
+
   try {
     // Get SINGLE match data (filtered by matchId)
     const { data: match, error: matchError } = await supabase

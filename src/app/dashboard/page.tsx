@@ -18,6 +18,7 @@ import SyncPlayerPanel from '@/components/SyncPlayerPanel'
 import PlayerFormSnapshotSection from '@/components/dota/dashboard/PlayerFormSnapshotSection'
 import { calculatePlayerFormSnapshot } from '@/lib/dota/formSnapshot'
 import type { PlayerFormSnapshot } from '@/types/dotaSnapshot'
+import { AnalysisLabel } from '@/components/dota/AnalysisLabel'
 
 type MatchRow = {
   id: string
@@ -73,6 +74,13 @@ function DashboardOverview(): React.JSX.Element {
   const [rows, setRows] = useState<MatchRow[] | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Sanity check: GLOBAL MODE
+  if (typeof window !== 'undefined') {
+    console.log(
+      '[PANORAMICA] GLOBAL MODE - Analisi basata su ultime 20 partite',
+    )
+  }
   const [overviewKPI, setOverviewKPI] = useState<PlayerOverviewKPI | null>(null)
   const [kpiLoading, setKpiLoading] = useState<boolean>(false)
   const [styleKPI, setStyleKPI] = useState<{
@@ -589,6 +597,7 @@ function DashboardOverview(): React.JSX.Element {
       {/* Header */}
       <div className="mb-4">
         <h1 className="text-2xl font-semibold">Panoramica</h1>
+        <AnalysisLabel type="global" />
         <p className="text-sm text-neutral-400">Player #{playerId}</p>
       </div>
 

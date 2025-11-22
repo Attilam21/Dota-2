@@ -9,22 +9,34 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@/utils/supabase'
 import type { FightsDamageAnalysis } from './types'
+import { getLastMatches } from '@/lib/dota/matches/getLastMatches'
 
 export async function getFightsDamageAnalysis(
   playerId: number,
 ): Promise<FightsDamageAnalysis | null> {
   const supabase = createServerClient(cookies())
 
+  // Sanity check: GLOBAL MODE
+  console.log(
+    '[FIGHTS-ANALYSIS] GLOBAL MODE - Analisi basata su ultime 20 partite',
+  )
+
   try {
-    // Get match analysis data (limit to 20 for DEMO mode)
+    // Get last 20 matches using centralized function
+    const matchIds = await getLastMatches(playerId, 20)
+    if (matchIds.length === 0) {
+      return null
+    }
+
+    // Get match analysis data
     const { data: matchAnalysis, error: analysisError } = await supabase
       .from('dota_player_match_analysis')
       .select(
         'match_id, kills_early, kills_mid, kills_late, deaths_early, deaths_mid, deaths_late',
       )
       .eq('account_id', playerId)
+      .in('match_id', matchIds)
       .order('created_at', { ascending: false })
-      .limit(20) // DEMO mode: 20 matches
 
     if (analysisError) {
       console.error(
@@ -39,12 +51,12 @@ export async function getFightsDamageAnalysis(
     }
 
     // Get matches_digest for total kills/deaths/assists (for KP calculation)
-    const matchIds = matchAnalysis.map((m) => m.match_id)
+    const analysisMatchIds = matchAnalysis.map((m) => m.match_id)
     const { data: matches, error: matchesError } = await supabase
       .from('matches_digest')
       .select('match_id, kills, deaths, assists, duration_seconds')
       .eq('player_account_id', playerId)
-      .in('match_id', matchIds)
+      .in('match_id', analysisMatchIds)
 
     if (matchesError) {
       console.error('[FIGHTS-ANALYSIS] Error fetching matches:', matchesError)

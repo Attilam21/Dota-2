@@ -10,20 +10,32 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@/utils/supabase'
 import type { VisionMapAnalysis } from './types'
+import { getLastMatches } from '@/lib/dota/matches/getLastMatches'
 
 export async function getVisionMapAnalysis(
   playerId: number,
 ): Promise<VisionMapAnalysis | null> {
   const supabase = createServerClient(cookies())
 
+  // Sanity check: GLOBAL MODE
+  console.log(
+    '[VISION-ANALYSIS] GLOBAL MODE - Analisi basata su ultime 20 partite',
+  )
+
   try {
-    // Get recent matches (limit to 20 for DEMO mode)
+    // Get last 20 matches using centralized function
+    const matchIds = await getLastMatches(playerId, 20)
+    if (matchIds.length === 0) {
+      return null
+    }
+
+    // Get recent matches
     const { data: matches, error: matchesError } = await supabase
       .from('matches_digest')
       .select('match_id, start_time, duration_seconds')
       .eq('player_account_id', playerId)
+      .in('match_id', matchIds)
       .order('start_time', { ascending: false })
-      .limit(20) // DEMO mode: 20 matches
 
     if (matchesError) {
       console.error('[VISION-ANALYSIS] Error fetching matches:', matchesError)
@@ -58,12 +70,12 @@ export async function getVisionMapAnalysis(
     const mapSize = 15000
     const cellSize = mapSize / gridSize
 
-    const matchIds = matches.map((m) => m.match_id)
+    const deathMatchIds = matches.map((m) => m.match_id)
     const { data: deathEvents, error: deathError } = await supabase
       .from('dota_player_death_events')
       .select('match_id, pos_x, pos_y, time_seconds, phase')
       .eq('account_id', playerId)
-      .in('match_id', matchIds)
+      .in('match_id', deathMatchIds)
 
     const heatmapGrid = new Map<string, number>()
 

@@ -20,6 +20,7 @@ import { ProfileProgressTimeline } from '@/components/dota/profile/ProfileProgre
 import { ProfileFocusAreas } from '@/components/dota/profile/ProfileFocusAreas'
 import { ProfileSummary } from '@/components/dota/profile/ProfileSummary'
 import type { PlayerProfileAggregate } from '@/lib/dota/profile/types'
+import { AnalysisLabel } from '@/components/dota/AnalysisLabel'
 
 export default function ProfilePage(): React.JSX.Element {
   return (
@@ -108,6 +109,7 @@ function ProfileContent(): React.JSX.Element {
         <h1 className="text-2xl font-semibold text-neutral-100">
           Profilazione FZTH
         </h1>
+        <AnalysisLabel type="global" />
         <p className="mt-1 text-sm text-neutral-400">
           Cruscotto di stato e progresso del giocatore basato su dati Tier-1
         </p>

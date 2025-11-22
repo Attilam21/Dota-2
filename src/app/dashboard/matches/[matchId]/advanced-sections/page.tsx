@@ -27,6 +27,7 @@ import type {
   FightsDamageAnalysis,
   VisionMapAnalysis,
 } from '@/lib/dota/advancedAnalysis/types'
+import { AnalysisLabel } from '@/components/dota/AnalysisLabel'
 
 export default function MatchAdvancedSectionsPage() {
   const params = useParams()
@@ -153,6 +154,7 @@ export default function MatchAdvancedSectionsPage() {
           <h1 className="text-3xl font-bold text-white">
             Analisi Avanzata Match
           </h1>
+          <AnalysisLabel type="match" matchId={Number(matchId)} />
           <p className="mt-2 text-sm text-neutral-400">
             Analisi dettagliata per il match #{matchId}
           </p>

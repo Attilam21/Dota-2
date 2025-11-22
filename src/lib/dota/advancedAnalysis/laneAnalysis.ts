@@ -9,22 +9,34 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@/utils/supabase'
 import type { LaneAnalysis } from './types'
+import { getLastMatches } from '@/lib/dota/matches/getLastMatches'
 
 export async function getLaneAnalysis(
   playerId: number,
 ): Promise<LaneAnalysis | null> {
   const supabase = createServerClient(cookies())
 
+  // Sanity check: GLOBAL MODE
+  console.log(
+    '[LANE-ANALYSIS] GLOBAL MODE - Analisi basata su ultime 20 partite',
+  )
+
   try {
-    // Get recent matches with lane data (limit to 20 for DEMO mode consistency)
+    // Get last 20 matches using centralized function
+    const matchIds = await getLastMatches(playerId, 20)
+    if (matchIds.length === 0) {
+      return null
+    }
+
+    // Get matches with lane data
     const { data: matches, error: matchesError } = await supabase
       .from('matches_digest')
       .select(
         'match_id, start_time, last_hits, denies, gold_per_min, xp_per_min, result, lane, role_position',
       )
       .eq('player_account_id', playerId)
+      .in('match_id', matchIds)
       .order('start_time', { ascending: false })
-      .limit(20) // DEMO mode: 20 matches
 
     if (matchesError) {
       console.error('[LANE-ANALYSIS] Error fetching matches:', matchesError)

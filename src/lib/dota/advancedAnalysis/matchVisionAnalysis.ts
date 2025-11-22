@@ -15,6 +15,11 @@ export async function getMatchVisionAnalysis(
 ): Promise<VisionMapAnalysis | null> {
   const supabase = createServerClient(cookies())
 
+  // Sanity check: MATCH MODE
+  console.log(
+    `[MATCH-VISION-ANALYSIS] MATCH MODE - Analisi solo per match ${matchId}`,
+  )
+
   try {
     // Get SINGLE match data (filtered by matchId)
     const { data: match, error: matchesError } = await supabase

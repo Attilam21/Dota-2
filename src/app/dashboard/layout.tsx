@@ -41,10 +41,7 @@ export default async function DashboardLayout({
               </div>
             }
           >
-            <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
-              <DashboardHeader />
-              <UserModeSwitcher activePlayer={activePlayer} />
-            </div>
+            <DashboardHeader />
           </Suspense>
           <main className="flex-1 p-6">{children}</main>
         </div>

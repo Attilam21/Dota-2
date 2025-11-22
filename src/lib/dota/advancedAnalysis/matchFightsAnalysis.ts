@@ -15,6 +15,11 @@ export async function getMatchFightsAnalysis(
 ): Promise<FightsDamageAnalysis | null> {
   const supabase = createServerClient(cookies())
 
+  // Sanity check: MATCH MODE
+  console.log(
+    `[MATCH-FIGHTS-ANALYSIS] MATCH MODE - Analisi solo per match ${matchId}`,
+  )
+
   try {
     // Get SINGLE match analysis data (filtered by matchId)
     const { data: matchAnalysis, error: analysisError } = await supabase

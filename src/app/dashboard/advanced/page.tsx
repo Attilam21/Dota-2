@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useActivePlayer } from '@/hooks/useActivePlayer'
+import { AnalysisLabel } from '@/components/dota/AnalysisLabel'
 
 export default function AdvancedAnalysisPage() {
   const { activePlayer, loading } = useActivePlayer()
@@ -49,6 +50,7 @@ export default function AdvancedAnalysisPage() {
     <div className="space-y-6 p-6">
       <div>
         <h1 className="text-2xl font-semibold text-white">Analisi Avanzate</h1>
+        <AnalysisLabel type="global" />
         <p className="mt-2 text-sm text-neutral-400">
           Analisi approfondite delle performance di gioco con metriche
           dettagliate e visualizzazioni avanzate.

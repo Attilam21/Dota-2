@@ -18,6 +18,7 @@ import FightProfileCards from '@/components/dota/performance/FightProfileCards'
 import PerformanceStyleTrend from '@/components/dota/performance/PerformanceStyleTrend'
 import PerformancePhaseKPI from '@/components/dota/performance/PerformancePhaseKPI'
 import PerformanceInsights from '@/components/dota/performance/PerformanceInsights'
+import { AnalysisLabel } from '@/components/dota/AnalysisLabel'
 
 export default function PerformancePage(): React.JSX.Element {
   return (
@@ -117,6 +118,7 @@ function PerformanceContent(): React.JSX.Element {
     <div className="space-y-4 text-white">
       <div className="mb-4">
         <h1 className="text-2xl font-semibold">Performance & Stile di Gioco</h1>
+        <AnalysisLabel type="global" />
         <p className="text-sm text-neutral-400">
           Analisi approfondita delle tue prestazioni e del tuo stile di gioco
         </p>

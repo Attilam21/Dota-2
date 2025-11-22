@@ -25,6 +25,7 @@ import { CombatBlock } from '@/components/dota/matchAnalysis/CombatBlock'
 import { VisionBlock } from '@/components/dota/matchAnalysis/VisionBlock'
 import { ObjectivesBlock } from '@/components/dota/matchAnalysis/ObjectivesBlock'
 import { ActionsBlock } from '@/components/dota/matchAnalysis/ActionsBlock'
+import { AnalysisLabel } from '@/components/dota/AnalysisLabel'
 
 export default function MatchDetailPage() {
   const params = useParams()
@@ -114,6 +115,9 @@ export default function MatchDetailPage() {
       {/* Main content */}
       {!loading && !error && analysis && (
         <section className="mx-auto max-w-6xl space-y-6">
+          {/* Label */}
+          <AnalysisLabel type="match" matchId={Number(matchId)} />
+
           {/* Toolbar with Advanced Analysis Button */}
           <div className="flex items-center justify-between">
             <div className="flex-1" />

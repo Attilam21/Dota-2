@@ -15,6 +15,11 @@ export async function getMatchEconomyAnalysis(
 ): Promise<FarmEconomyAnalysis | null> {
   const supabase = createServerClient(cookies())
 
+  // Sanity check: MATCH MODE
+  console.log(
+    `[MATCH-ECONOMY-ANALYSIS] MATCH MODE - Analisi solo per match ${matchId}`,
+  )
+
   try {
     // Get SINGLE match data (filtered by matchId)
     const { data: match, error: matchError } = await supabase
