@@ -86,12 +86,38 @@ function CoachingContent(): React.JSX.Element {
     )
   }
 
-  if (error || !data) {
+  // Show error only if it's a real error, not just empty data
+  if (error && !error.includes('table') && !error.includes('not found')) {
     return (
       <div className="space-y-6 p-6">
         <div className="rounded-lg border border-red-800 bg-red-900/20 p-4 text-red-400">
           <div className="font-semibold">Errore nel caricamento</div>
-          <div className="text-sm">{error || 'Dati non disponibili'}</div>
+          <div className="text-sm">{error}</div>
+        </div>
+      </div>
+    )
+  }
+
+  // If no data but no error (or table not found), show empty state gracefully
+  if (!data) {
+    return (
+      <div className="space-y-6 p-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-neutral-100">
+            Coaching & Task
+          </h1>
+          <p className="mt-1 text-sm text-neutral-400">
+            Gestione e monitoraggio dei task di coaching FZTH
+          </p>
+        </div>
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-6 backdrop-blur-sm">
+          <div className="text-center text-neutral-400">
+            <p className="mb-2">Nessun task disponibile al momento.</p>
+            <p className="text-sm">
+              I task verranno generati automaticamente quando saranno
+              disponibili i dati di profiliazione.
+            </p>
+          </div>
         </div>
       </div>
     )

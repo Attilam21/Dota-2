@@ -48,6 +48,16 @@ export async function getPlayerTasks(
   const { data, error } = await query.order('created_at', { ascending: false })
 
   if (error) {
+    // Handle table not found gracefully - return empty array instead of throwing
+    if (
+      error.message?.includes('table') &&
+      error.message?.includes('not found')
+    ) {
+      console.warn(
+        '[COACHING-REPO] Table fzth_player_tasks not found, returning empty array',
+      )
+      return []
+    }
     console.error('[COACHING-REPO] Error fetching tasks:', error)
     throw new Error(`Failed to fetch tasks: ${error.message}`)
   }
@@ -127,6 +137,16 @@ export async function createTasksFromProfiling(
     )
 
   if (templatesError) {
+    // Handle table not found gracefully
+    if (
+      templatesError.message?.includes('table') &&
+      templatesError.message?.includes('not found')
+    ) {
+      console.warn(
+        '[COACHING-REPO] Table fzth_coaching_tasks not found, cannot create tasks',
+      )
+      return []
+    }
     console.error('[COACHING-REPO] Error fetching templates:', templatesError)
     throw new Error(`Failed to fetch templates: ${templatesError.message}`)
   }
@@ -180,6 +200,16 @@ export async function createTasksFromProfiling(
       .single()
 
     if (insertError) {
+      // Handle table not found gracefully
+      if (
+        insertError.message?.includes('table') &&
+        insertError.message?.includes('not found')
+      ) {
+        console.warn(
+          '[COACHING-REPO] Table fzth_player_tasks not found, cannot create tasks',
+        )
+        return []
+      }
       console.error(
         `[COACHING-REPO] Error creating task for pillar ${pillar.pillarId}:`,
         insertError,
@@ -236,6 +266,16 @@ export async function markTaskCompleted(
     .eq('id', taskId)
 
   if (error) {
+    // Handle table not found gracefully
+    if (
+      error.message?.includes('table') &&
+      error.message?.includes('not found')
+    ) {
+      console.warn(
+        '[COACHING-REPO] Table fzth_player_tasks not found, cannot complete task',
+      )
+      return // Silently return instead of throwing
+    }
     console.error('[COACHING-REPO] Error completing task:', error)
     throw new Error(`Failed to complete task: ${error.message}`)
   }

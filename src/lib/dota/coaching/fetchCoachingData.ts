@@ -32,6 +32,33 @@ export async function getCoachingDashboardData(
     .eq('is_active', true)
 
   if (templatesError) {
+    // Handle table not found gracefully
+    if (
+      templatesError.message?.includes('table') &&
+      templatesError.message?.includes('not found')
+    ) {
+      console.warn(
+        '[COACHING] Table fzth_coaching_tasks not found, returning empty dashboard',
+      )
+      // Return empty dashboard data
+      return {
+        playerAccountId,
+        activeTasksCount: 0,
+        completedTasksCountLast30d: 0,
+        tasksByPillar: [],
+        impact: {
+          periodLabel: 'Ultimi 30 giorni',
+          matchesConsidered: 0,
+          tasksCompleted: 0,
+          avgFzthScoreBefore: null,
+          avgFzthScoreAfter: null,
+          winrateBefore: null,
+          winrateAfter: null,
+          summaryText:
+            'Le tabelle di coaching non sono ancora state create. Contatta il supporto per attivare questa funzionalità.',
+        },
+      }
+    }
     console.error('[COACHING] Error fetching templates:', templatesError)
   }
 
@@ -53,7 +80,18 @@ export async function getCoachingDashboardData(
     .eq('player_account_id', playerAccountId)
 
   if (playerTasksError) {
-    console.error('[COACHING] Error fetching player tasks:', playerTasksError)
+    // Handle table not found gracefully
+    if (
+      playerTasksError.message?.includes('table') &&
+      playerTasksError.message?.includes('not found')
+    ) {
+      console.warn(
+        '[COACHING] Table fzth_player_tasks not found, returning empty tasks',
+      )
+      // Continue with empty playerTasksData
+    } else {
+      console.error('[COACHING] Error fetching player tasks:', playerTasksError)
+    }
   }
 
   // 3. Join player tasks with templates

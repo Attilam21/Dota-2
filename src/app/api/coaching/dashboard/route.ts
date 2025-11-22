@@ -42,6 +42,12 @@ export async function GET(req: Request) {
     // 1. Get existing coaching dashboard data
     let data = await getCoachingDashboardData(playerId)
 
+    // If tables don't exist, return empty dashboard gracefully
+    if (data.tasksByPillar.length === 0 && data.activeTasksCount === 0) {
+      // Check if this is because tables don't exist or just no data
+      // We'll return the empty dashboard which is already handled gracefully
+    }
+
     // 2. If auto-create is enabled and no active tasks, create from profiling
     if (autoCreateTasks && data.activeTasksCount === 0) {
       try {
@@ -208,6 +214,28 @@ export async function GET(req: Request) {
     return NextResponse.json(data)
   } catch (e: any) {
     console.error('[API/COACHING/DASHBOARD] Error:', e?.message ?? e)
+
+    // If error is about table not found, return empty dashboard instead of error
+    if (e?.message?.includes('table') && e?.message?.includes('not found')) {
+      return NextResponse.json({
+        playerAccountId: playerId,
+        activeTasksCount: 0,
+        completedTasksCountLast30d: 0,
+        tasksByPillar: [],
+        impact: {
+          periodLabel: 'Ultimi 30 giorni',
+          matchesConsidered: 0,
+          tasksCompleted: 0,
+          avgFzthScoreBefore: null,
+          avgFzthScoreAfter: null,
+          winrateBefore: null,
+          winrateAfter: null,
+          summaryText:
+            'Le tabelle di coaching non sono ancora state create. Contatta il supporto per attivare questa funzionalità.',
+        },
+      })
+    }
+
     return NextResponse.json(
       { error: e?.message ?? 'Failed to fetch coaching dashboard data' },
       { status: 500 },
