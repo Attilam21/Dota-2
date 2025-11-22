@@ -15,6 +15,17 @@ interface PerformanceProfileCardsProps {
 export default function PerformanceProfileCards({
   indices,
 }: PerformanceProfileCardsProps): React.JSX.Element {
+  // HARDENED: Handle null/undefined indices gracefully
+  if (!indices) {
+    return (
+      <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+        <div className="text-sm text-neutral-500">
+          Dati insufficienti per calcolare gli indici di performance.
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
       {/* Card 1: Aggressività */}

@@ -17,7 +17,8 @@ interface PerformanceStyleTrendProps {
 export default function PerformanceStyleTrend({
   trend,
 }: PerformanceStyleTrendProps): React.JSX.Element {
-  if (trend.length === 0) {
+  // HARDENED: Handle null/undefined/empty trend gracefully
+  if (!trend || !Array.isArray(trend) || trend.length === 0) {
     return (
       <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
         <h2 className="mb-3 text-lg font-semibold text-neutral-200">

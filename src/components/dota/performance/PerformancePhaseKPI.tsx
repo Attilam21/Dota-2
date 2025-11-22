@@ -13,6 +13,20 @@ interface PerformancePhaseKPIProps {
 export default function PerformancePhaseKPI({
   phaseKPI,
 }: PerformancePhaseKPIProps): React.JSX.Element {
+  // HARDENED: Handle null/undefined phaseKPI gracefully
+  if (!phaseKPI) {
+    return (
+      <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+        <h2 className="mb-4 text-lg font-semibold text-neutral-200">
+          KPI per Fase di Gioco
+        </h2>
+        <div className="text-sm text-neutral-500">
+          Dati insufficienti per calcolare i KPI per fase.
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
       <h2 className="mb-4 text-lg font-semibold text-neutral-200">
@@ -24,11 +38,12 @@ export default function PerformancePhaseKPI({
           <h3 className="mb-2 text-sm font-semibold text-neutral-200">
             Early (0-10 min)
           </h3>
-          {phaseKPI.early.avgKills !== null ? (
+          {phaseKPI?.early?.avgKills !== null &&
+          phaseKPI?.early?.avgKills !== undefined ? (
             <>
               <div className="mb-1 text-xs text-neutral-400">Avg Kills</div>
               <div className="text-lg font-semibold text-white">
-                {phaseKPI.early.avgKills !== null
+                {typeof phaseKPI.early.avgKills === 'number'
                   ? phaseKPI.early.avgKills.toFixed(1)
                   : '—'}
               </div>
@@ -55,11 +70,12 @@ export default function PerformancePhaseKPI({
           <h3 className="mb-2 text-sm font-semibold text-neutral-200">
             Mid (10-30 min)
           </h3>
-          {phaseKPI.mid.avgKills !== null ? (
+          {phaseKPI?.mid?.avgKills !== null &&
+          phaseKPI?.mid?.avgKills !== undefined ? (
             <>
               <div className="mb-1 text-xs text-neutral-400">Avg Kills</div>
               <div className="text-lg font-semibold text-white">
-                {phaseKPI.mid.avgKills !== null
+                {typeof phaseKPI.mid.avgKills === 'number'
                   ? phaseKPI.mid.avgKills.toFixed(1)
                   : '—'}
               </div>
@@ -86,11 +102,12 @@ export default function PerformancePhaseKPI({
           <h3 className="mb-2 text-sm font-semibold text-neutral-200">
             Late (30+ min)
           </h3>
-          {phaseKPI.late.avgKills !== null ? (
+          {phaseKPI?.late?.avgKills !== null &&
+          phaseKPI?.late?.avgKills !== undefined ? (
             <>
               <div className="mb-1 text-xs text-neutral-400">Avg Kills</div>
               <div className="text-lg font-semibold text-white">
-                {phaseKPI.late.avgKills !== null
+                {typeof phaseKPI.late.avgKills === 'number'
                   ? phaseKPI.late.avgKills.toFixed(1)
                   : '—'}
               </div>

@@ -11,7 +11,8 @@ interface PerformanceInsightsProps {
 export default function PerformanceInsights({
   insights,
 }: PerformanceInsightsProps): React.JSX.Element {
-  if (insights.length === 0) {
+  // HARDENED: Handle null/undefined/empty insights gracefully
+  if (!insights || !Array.isArray(insights) || insights.length === 0) {
     return (
       <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
         <h2 className="mb-3 text-lg font-semibold text-neutral-200">

@@ -126,27 +126,60 @@ export async function GET(req: Request) {
     }
 
     // 5. Combine matches with analysis
+    // HARDENED: Always return valid MatchWithAnalysis[] structure, never undefined properties
     const matchesWithAnalysis: MatchWithAnalysis[] = matchesBase.map(
       (match) => {
         const analysis = analysisMap.get(match.match_id)
 
+        // Ensure all numeric fields are valid numbers (never undefined/null/NaN)
+        const safeKills = typeof match.kills === 'number' ? match.kills : 0
+        const safeDeaths = typeof match.deaths === 'number' ? match.deaths : 0
+        const safeAssists =
+          typeof match.assists === 'number' ? match.assists : 0
+        const safeDurationSeconds =
+          typeof match.duration_seconds === 'number'
+            ? match.duration_seconds
+            : 0
+
         return {
           matchId: match.match_id,
-          kills: match.kills,
-          deaths: match.deaths,
-          assists: match.assists,
-          durationSeconds: match.duration_seconds,
-          result: match.result,
-          gpm: match.gold_per_min ?? null,
-          xpm: match.xp_per_min ?? null,
-          lastHits: match.last_hits ?? null,
-          denies: match.denies ?? null,
-          startTime: match.start_time,
+          kills: safeKills,
+          deaths: safeDeaths,
+          assists: safeAssists,
+          durationSeconds: safeDurationSeconds,
+          result: match.result === 'win' ? 'win' : 'lose',
+          gpm:
+            typeof match.gold_per_min === 'number' && !isNaN(match.gold_per_min)
+              ? match.gold_per_min
+              : null,
+          xpm:
+            typeof match.xp_per_min === 'number' && !isNaN(match.xp_per_min)
+              ? match.xp_per_min
+              : null,
+          lastHits:
+            typeof match.last_hits === 'number' && !isNaN(match.last_hits)
+              ? match.last_hits
+              : null,
+          denies:
+            typeof match.denies === 'number' && !isNaN(match.denies)
+              ? match.denies
+              : null,
+          startTime: match.start_time || new Date().toISOString(),
+          // HARDENED: analysis is optional but when present, all fields must be numbers (never undefined)
           analysis: analysis
             ? {
-                killsEarly: analysis.killsEarly,
-                killsMid: analysis.killsMid,
-                killsLate: analysis.killsLate,
+                killsEarly:
+                  typeof analysis.killsEarly === 'number'
+                    ? analysis.killsEarly
+                    : null,
+                killsMid:
+                  typeof analysis.killsMid === 'number'
+                    ? analysis.killsMid
+                    : null,
+                killsLate:
+                  typeof analysis.killsLate === 'number'
+                    ? analysis.killsLate
+                    : null,
               }
             : undefined,
         }

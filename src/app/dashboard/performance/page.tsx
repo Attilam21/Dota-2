@@ -69,8 +69,14 @@ function PerformanceContent(): React.JSX.Element {
           const matchesWithAnalysis: MatchWithAnalysis[] =
             await profileRes.json()
 
-          // Calculate performance profile
-          const profile = calculatePlayerPerformanceProfile(matchesWithAnalysis)
+          // HARDENED: Ensure matchesWithAnalysis is always an array (never undefined/null)
+          const safeMatches =
+            Array.isArray(matchesWithAnalysis) && matchesWithAnalysis.length > 0
+              ? matchesWithAnalysis
+              : []
+
+          // Calculate performance profile - always returns valid structure
+          const profile = calculatePlayerPerformanceProfile(safeMatches)
           setPerformanceProfile(profile)
         }
       } catch (e: any) {

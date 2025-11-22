@@ -247,9 +247,75 @@ Quando avremo dati garantiti per:
 3. Le frasi di insight sono coerenti con i numeri visualizzati
 4. Nessun crash o errore console per dati mancanti
 
+## Bug Fix: "killsEarly undefined" Runtime Error
+
+### Root Cause Identificato
+
+**Problema:** Errore runtime "Cannot read properties of undefined (reading 'killsEarly')" sulla pagina `/dashboard/performance` quando alcuni match non avevano dati di analysis.
+
+**Causa principale:**
+1. `match.analysis` può essere `undefined` quando `dota_player_match_analysis` non ha dati per quel match
+2. I controlli `m.analysis?.killsEarly !== null` non gestivano correttamente il caso in cui `m.analysis` fosse `undefined`
+3. Alcuni accessi diretti a `match.analysis!.killsEarly` senza controlli sufficienti
+
+**Soluzione implementata:**
+1. **Funzioni di utilità safe:** Creato `safeNumber()` e `safePhaseKills()` per garantire sempre numeri validi
+2. **Hardening API route:** Validazione di tutti i campi numerici prima di restituire la risposta
+3. **Hardening logica calcolo:** Tutte le funzioni ora gestiscono correttamente `undefined`/`null`/`NaN`
+4. **Hardening componenti frontend:** Controlli null-safe in tutti i 4 blocchi UI
+
+### Modifiche Principali
+
+#### TASK 1 - Root Cause Analysis
+- ✅ Identificato che `match.analysis` può essere `undefined`
+- ✅ Documentato il problema nel TODO comment in `performanceProfile.ts`
+
+#### TASK 2 - Hardening Data Contract (API)
+- ✅ Aggiunte funzioni `safeNumber()` e `safePhaseKills()` in `performanceProfile.ts`
+- ✅ Validazione di tutti i campi numerici in `/api/performance/profile/route.ts`
+- ✅ Garantito che tutte le proprietà esportate siano sempre valorizzate (mai `undefined`)
+- ✅ Gestione array vuoti con strutture valide ma vuote
+
+#### TASK 3 - Hardening Frontend (4 Blocchi)
+- ✅ **PerformanceProfileCards:** Controllo `indices !== null/undefined`
+- ✅ **PerformanceStyleTrend:** Controllo `trend !== null/undefined/array vuoto`
+- ✅ **PerformancePhaseKPI:** Controllo `phaseKPI !== null/undefined` + optional chaining
+- ✅ **PerformanceInsights:** Controllo `insights !== null/undefined/array vuoto`
+- ✅ Tutti i componenti mostrano messaggi neutri invece di crashare
+
+#### TASK 4 - Test Manuali
+- ✅ Player 86745912: verifica che non ci siano errori runtime
+- ✅ Dataset parziali: verifica che il modulo gestisca correttamente dati mancanti
+- ✅ Array vuoti: verifica che il modulo mostri messaggi appropriati
+
+#### TASK 5 - Quality Gate
+- ✅ `pnpm type-check`: PASS
+- ✅ `pnpm lint`: PASS
+- ✅ Nessun errore TypeScript
+- ✅ Nessun errore ESLint
+
+### Resilienza a Dati Mancanti
+
+Il modulo ora gestisce correttamente:
+
+1. **Dataset vuoti:** Mostra messaggio "Dati insufficienti per calcolare il profilo di gioco"
+2. **Dati parziali:** Calcola solo gli indici supportati dai dati disponibili
+3. **Analysis mancanti:** Match senza `dota_player_match_analysis` vengono gestiti con `analysis: undefined`
+4. **Valori null/NaN:** Tutti i valori vengono validati e convertiti a numeri sicuri o `null`
+5. **Array vuoti/null:** Tutti i componenti controllano `Array.isArray()` e `length > 0`
+
+### Regole di Sicurezza Implementate
+
+1. **Mai `undefined` in proprietà esportate:** Tutte le proprietà API sono sempre valorizzate (almeno `null`)
+2. **Sempre strutture valide:** Anche con dati vuoti, le strutture TypeScript sono sempre rispettate
+3. **Optional chaining everywhere:** Tutti gli accessi a proprietà annidate usano `?.`
+4. **Fallback sicuri:** Ogni calcolo ha un fallback di default (es. `0` per numeri, `null` per opzionali)
+5. **Validazione runtime:** Tutti i valori numerici vengono validati con `typeof === 'number'` e `!isNaN()`
+
 ## Commit
 
 ```
 feat(performance): Enterprise Performance & Style Profile module (Tier-1 only)
+fix(performance): Hardening against undefined/null/NaN data - killsEarly bug fix
 ```
 

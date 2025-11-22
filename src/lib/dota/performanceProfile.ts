@@ -7,6 +7,11 @@
  *
  * All indices are normalized 0-100 relative to the player's own matches,
  * NOT absolute values.
+ *
+ * TODO [BUG-FIX]: Root cause of "killsEarly undefined" error:
+ * - Problem: match.analysis can be undefined when analysis data is missing
+ * - Solution: Use safe utility functions to always return numbers, never undefined
+ * - All calculations must handle missing/null/undefined gracefully
  */
 
 import type {
@@ -21,6 +26,23 @@ import type {
 const MAX_STD_KDA = 2.0
 const MAX_STD_GPM = 200
 const MAX_STD_XPM = 200
+
+/**
+ * Utility function: safely convert value to number (fallback to 0)
+ */
+function safeNumber(value: unknown, fallback: number = 0): number {
+  if (typeof value === 'number' && !isNaN(value) && isFinite(value)) {
+    return value
+  }
+  return fallback
+}
+
+/**
+ * Utility function: safely get phase kills (returns 0 if null/undefined)
+ */
+function safePhaseKills(value: number | null | undefined): number {
+  return safeNumber(value, 0)
+}
 
 /**
  * Normalizza un valore su scala 0-1 rispetto a min/max in un array
@@ -176,25 +198,30 @@ function calculateFarmEfficiencyIndex(matches: MatchWithAnalysis[]): number {
 function calculateMacroGameplayIndex(matches: MatchWithAnalysis[]): number {
   if (matches.length === 0) return 0
 
-  // Filtra match con analysis data (kills per fase)
-  const matchesWithAnalysis = matches.filter(
-    (m) =>
-      m.analysis?.killsEarly !== null &&
-      m.analysis?.killsMid !== null &&
-      m.analysis?.killsLate !== null,
-  )
+  // Filtra match con analysis data (kills per fase) - use safe check
+  const matchesWithAnalysis = matches.filter((m) => {
+    if (!m.analysis) return false
+    return (
+      m.analysis.killsEarly !== null &&
+      m.analysis.killsEarly !== undefined &&
+      m.analysis.killsMid !== null &&
+      m.analysis.killsMid !== undefined &&
+      m.analysis.killsLate !== null &&
+      m.analysis.killsLate !== undefined
+    )
+  })
 
   if (matchesWithAnalysis.length === 0) return 0
 
-  // Calcola metriche per ogni match
+  // Calcola metriche per ogni match - use safe functions
   const midFocuses: number[] = []
   const lateFocuses: number[] = []
   const gpms: number[] = []
 
   matchesWithAnalysis.forEach((match) => {
-    const killsEarly = match.analysis!.killsEarly ?? 0
-    const killsMid = match.analysis!.killsMid ?? 0
-    const killsLate = match.analysis!.killsLate ?? 0
+    const killsEarly = safePhaseKills(match.analysis?.killsEarly)
+    const killsMid = safePhaseKills(match.analysis?.killsMid)
+    const killsLate = safePhaseKills(match.analysis?.killsLate)
     const totalKills = killsEarly + killsMid + killsLate
 
     if (totalKills > 0) {
@@ -266,16 +293,24 @@ function calculateConsistencyIndex(matches: MatchWithAnalysis[]): number {
 
 /**
  * Calcola KPI per fase (Early/Mid/Late)
+ * HARDENED: Always returns valid PhaseKPI structure, never undefined/null properties
  */
 function calculatePhaseKPI(matches: MatchWithAnalysis[]): PhaseKPI {
-  const matchesWithAnalysis = matches.filter(
-    (m) =>
-      m.analysis?.killsEarly !== null &&
-      m.analysis?.killsMid !== null &&
-      m.analysis?.killsLate !== null,
-  )
+  // Filtra match con analysis data - use safe check for undefined analysis
+  const matchesWithAnalysis = matches.filter((m) => {
+    if (!m.analysis) return false
+    return (
+      m.analysis.killsEarly !== null &&
+      m.analysis.killsEarly !== undefined &&
+      m.analysis.killsMid !== null &&
+      m.analysis.killsMid !== undefined &&
+      m.analysis.killsLate !== null &&
+      m.analysis.killsLate !== undefined
+    )
+  })
 
   if (matchesWithAnalysis.length === 0) {
+    // Return empty structure with null values (never undefined)
     return {
       early: { avgKills: null, avgDeaths: null },
       mid: { avgKills: null, avgDeaths: null },
@@ -283,20 +318,20 @@ function calculatePhaseKPI(matches: MatchWithAnalysis[]): PhaseKPI {
     }
   }
 
-  // Calcola medie per fase
+  // Calcola medie per fase - use safe functions
   const earlyKills =
     matchesWithAnalysis
-      .map((m) => m.analysis!.killsEarly ?? 0)
+      .map((m) => safePhaseKills(m.analysis?.killsEarly))
       .reduce((a, b) => a + b, 0) / matchesWithAnalysis.length
 
   const midKills =
     matchesWithAnalysis
-      .map((m) => m.analysis!.killsMid ?? 0)
+      .map((m) => safePhaseKills(m.analysis?.killsMid))
       .reduce((a, b) => a + b, 0) / matchesWithAnalysis.length
 
   const lateKills =
     matchesWithAnalysis
-      .map((m) => m.analysis!.killsLate ?? 0)
+      .map((m) => safePhaseKills(m.analysis?.killsLate))
       .reduce((a, b) => a + b, 0) / matchesWithAnalysis.length
 
   return {
@@ -317,8 +352,11 @@ function calculatePhaseKPI(matches: MatchWithAnalysis[]): PhaseKPI {
 
 /**
  * Calcola trend di stile (per grafico)
+ * HARDENED: Always returns valid StyleTrendPoint[], never undefined/null properties
  */
 function calculateStyleTrend(matches: MatchWithAnalysis[]): StyleTrendPoint[] {
+  if (matches.length === 0) return []
+
   return matches.map((match, idx) => {
     const durationMinutes = match.durationSeconds / 60
 
@@ -363,60 +401,62 @@ function calculateStyleTrend(matches: MatchWithAnalysis[]): StyleTrendPoint[] {
           })()
         : null
 
-    // Macro gameplay per questo match
-    const macroGameplay =
-      match.analysis?.killsEarly !== null &&
-      match.analysis?.killsMid !== null &&
-      match.analysis?.killsLate !== null
-        ? (() => {
-            const killsEarly = match.analysis!.killsEarly ?? 0
-            const killsMid = match.analysis!.killsMid ?? 0
-            const killsLate = match.analysis!.killsLate ?? 0
-            const totalKills = killsEarly + killsMid + killsLate
+    // Macro gameplay per questo match - use safe functions
+    const macroGameplay = (() => {
+      if (!match.analysis) return null
 
-            if (totalKills === 0) return null
+      const killsEarly = safePhaseKills(match.analysis.killsEarly)
+      const killsMid = safePhaseKills(match.analysis.killsMid)
+      const killsLate = safePhaseKills(match.analysis.killsLate)
+      const totalKills = killsEarly + killsMid + killsLate
 
-            const midFocus = killsMid / totalKills
-            const lateFocus = killsLate / totalKills
+      if (totalKills === 0) return null
 
-            const matchesWithAnalysis = matches.filter(
-              (m) =>
-                m.analysis?.killsEarly !== null &&
-                m.analysis?.killsMid !== null &&
-                m.analysis?.killsLate !== null,
+      const midFocus = killsMid / totalKills
+      const lateFocus = killsLate / totalKills
+
+      const matchesWithAnalysis = matches.filter((m) => {
+        if (!m.analysis) return false
+        return (
+          m.analysis.killsEarly !== null &&
+          m.analysis.killsEarly !== undefined &&
+          m.analysis.killsMid !== null &&
+          m.analysis.killsMid !== undefined &&
+          m.analysis.killsLate !== null &&
+          m.analysis.killsLate !== undefined
+        )
+      })
+
+      if (matchesWithAnalysis.length === 0) return null
+
+      const allMidFocuses = matchesWithAnalysis.map((m) => {
+        const kE = safePhaseKills(m.analysis?.killsEarly)
+        const kM = safePhaseKills(m.analysis?.killsMid)
+        const kL = safePhaseKills(m.analysis?.killsLate)
+        const tot = kE + kM + kL
+        return tot > 0 ? kM / tot : 0
+      })
+
+      const allLateFocuses = matchesWithAnalysis.map((m) => {
+        const kE = safePhaseKills(m.analysis?.killsEarly)
+        const kM = safePhaseKills(m.analysis?.killsMid)
+        const kL = safePhaseKills(m.analysis?.killsLate)
+        const tot = kE + kM + kL
+        return tot > 0 ? kL / tot : 0
+      })
+
+      const normMid = normalizeValue(midFocus, allMidFocuses)
+      const normLate = normalizeValue(lateFocus, allLateFocuses)
+      const normGPM =
+        match.gpm !== null && matches.some((m) => m.gpm !== null)
+          ? normalizeValue(
+              match.gpm,
+              matches.filter((m) => m.gpm !== null).map((m) => m.gpm!),
             )
+          : 0.5
 
-            const allMidFocuses = matchesWithAnalysis.map((m) => {
-              const kE = m.analysis!.killsEarly ?? 0
-              const kM = m.analysis!.killsMid ?? 0
-              const kL = m.analysis!.killsLate ?? 0
-              const tot = kE + kM + kL
-              return tot > 0 ? kM / tot : 0
-            })
-
-            const allLateFocuses = matchesWithAnalysis.map((m) => {
-              const kE = m.analysis!.killsEarly ?? 0
-              const kM = m.analysis!.killsMid ?? 0
-              const kL = m.analysis!.killsLate ?? 0
-              const tot = kE + kM + kL
-              return tot > 0 ? kL / tot : 0
-            })
-
-            const normMid = normalizeValue(midFocus, allMidFocuses)
-            const normLate = normalizeValue(lateFocus, allLateFocuses)
-            const normGPM =
-              match.gpm !== null && matches.some((m) => m.gpm !== null)
-                ? normalizeValue(
-                    match.gpm,
-                    matches.filter((m) => m.gpm !== null).map((m) => m.gpm!),
-                  )
-                : 0.5
-
-            return Math.round(
-              100 * (0.4 * normMid + 0.4 * normLate + 0.2 * normGPM),
-            )
-          })()
-        : null
+      return Math.round(100 * (0.4 * normMid + 0.4 * normLate + 0.2 * normGPM))
+    })()
 
     return {
       matchId: match.matchId,
@@ -480,11 +520,13 @@ function generateInsights(
 
 /**
  * Calcola il profilo completo di performance del player
+ * HARDENED: Always returns valid PlayerPerformanceProfile structure, never undefined/null properties
  */
 export function calculatePlayerPerformanceProfile(
   matches: MatchWithAnalysis[],
 ): PlayerPerformanceProfile {
-  if (matches.length === 0) {
+  // Handle empty array - return empty but valid structure
+  if (!matches || matches.length === 0) {
     return {
       sampleSize: 0,
       indices: {
@@ -508,7 +550,7 @@ export function calculatePlayerPerformanceProfile(
   // Limita a 20 partite (più recenti)
   const recentMatches = matches.slice(0, 20)
 
-  // Calcola indici
+  // Calcola indici - always returns numbers (never undefined/null)
   const indices: PerformanceIndex = {
     aggressiveness: calculateAggressivenessIndex(recentMatches),
     farmEfficiency: calculateFarmEfficiencyIndex(recentMatches),
@@ -516,13 +558,13 @@ export function calculatePlayerPerformanceProfile(
     consistency: calculateConsistencyIndex(recentMatches),
   }
 
-  // Calcola KPI per fase
+  // Calcola KPI per fase - always returns valid PhaseKPI
   const phaseKPI = calculatePhaseKPI(recentMatches)
 
-  // Calcola trend di stile
+  // Calcola trend di stile - always returns valid StyleTrendPoint[]
   const styleTrend = calculateStyleTrend(recentMatches)
 
-  // Genera insight
+  // Genera insight - always returns string[]
   const insights = generateInsights(indices, phaseKPI)
 
   return {
