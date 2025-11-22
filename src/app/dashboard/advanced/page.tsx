@@ -2,14 +2,14 @@
 
 import Link from 'next/link'
 import { useActivePlayer } from '@/hooks/useActivePlayer'
-import { AnalysisLabel } from '@/components/dota/AnalysisLabel'
+import { InfoBanner } from '@/components/dashboard/InfoBanner'
 
 export default function AdvancedAnalysisPage() {
   const { activePlayer, loading } = useActivePlayer()
 
   if (loading) {
     return (
-      <div className="p-6">
+      <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 lg:px-6">
         <div className="text-neutral-400">Caricamento...</div>
       </div>
     )
@@ -47,10 +47,14 @@ export default function AdvancedAnalysisPage() {
   ]
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 lg:px-6">
       <div>
         <h1 className="text-2xl font-semibold text-white">Analisi Avanzate</h1>
-        <AnalysisLabel type="global" />
+        <InfoBanner
+          variant="history"
+          title="Analisi basate sul tuo storico recente (fino a 20 partite)."
+          description="Se hai meno di 20 partite analizziamo tutte quelle disponibili per il profilo corrente."
+        />
         <p className="mt-2 text-sm text-neutral-400">
           Analisi approfondite delle performance di gioco con metriche
           dettagliate e visualizzazioni avanzate.
@@ -62,7 +66,7 @@ export default function AdvancedAnalysisPage() {
           <Link
             key={section.href}
             href={section.href}
-            className="group rounded-lg border border-neutral-800 bg-neutral-900/50 p-6 transition-all hover:border-neutral-700 hover:bg-neutral-900"
+            className="group rounded-xl border border-slate-800/80 bg-slate-900/60 p-6 shadow-sm transition-all hover:border-slate-700 hover:bg-slate-900/80"
           >
             <div className="mb-3 text-2xl">{section.icon}</div>
             <h2 className="mb-2 text-lg font-semibold text-white group-hover:text-blue-400">
@@ -74,7 +78,7 @@ export default function AdvancedAnalysisPage() {
       </div>
 
       {!activePlayer && (
-        <div className="rounded-lg border border-yellow-800 bg-yellow-900/20 p-4">
+        <div className="rounded-xl border border-yellow-800/60 bg-yellow-900/20 p-4">
           <p className="text-sm text-yellow-200">
             ⚠️ Nessun giocatore attivo. Usa la modalità DEMO per visualizzare le
             analisi.

@@ -84,7 +84,7 @@ export default function LaneAndEarlyPage() {
   }))
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 lg:px-6">
       <div>
         <h1 className="text-2xl font-semibold text-white">Lane & Early Game</h1>
         <p className="mt-2 text-sm text-neutral-400">
@@ -93,37 +93,36 @@ export default function LaneAndEarlyPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">Lane Winrate</div>
-          <div className="mt-1 text-2xl font-semibold text-white">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">Lane Winrate</div>
+          <div className="text-2xl font-semibold text-white">
             {data.laneWinrate.toFixed(1)}%
           </div>
         </div>
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">CS medio a 10 min</div>
-          <div className="mt-1 text-2xl font-semibold text-white">
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">CS medio a 10 min</div>
+          <div className="text-2xl font-semibold text-white">
             {data.avgCsAt10.toFixed(1)}
           </div>
         </div>
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">XP medio a 10 min</div>
-          <div className="mt-1 text-2xl font-semibold text-white">
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">XP medio a 10 min</div>
+          <div className="text-2xl font-semibold text-white">
             {data.avgXpAt10.toFixed(0)}
           </div>
         </div>
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">
             First Blood Involvement
           </div>
-          <div className="mt-1 text-2xl font-semibold text-white">
-            {data.firstBloodInvolvement.toFixed(1)}%
-          </div>
+          <div className="text-2xl font-semibold text-white">N/A</div>
+          <div className="text-[10px] text-neutral-500">Non disponibile</div>
         </div>
       </div>
 
       {/* CS Timeline Chart */}
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+      <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm md:p-5">
         <h2 className="mb-4 text-lg font-semibold text-white">
           CS Timeline (ultimi match)
         </h2>
@@ -132,32 +131,40 @@ export default function LaneAndEarlyPage() {
           dati per minuto)
         </p>
         {csChartData.length > 0 ? (
-          <LineChart
-            data={csChartData}
-            width={700}
-            height={180}
-            color="#60a5fa"
-            label="CS totale"
-          />
+          <div className="h-64">
+            <LineChart
+              data={csChartData}
+              width={800}
+              height={256}
+              color="#60a5fa"
+              label="CS totale"
+            />
+          </div>
         ) : (
-          <div className="text-sm text-neutral-500">Dati non disponibili</div>
+          <div className="text-sm text-neutral-400">
+            Dati non disponibili per questa metrica nel dataset di test.
+          </div>
         )}
       </div>
 
       {/* Lane Results Chart */}
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+      <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm md:p-5">
         <h2 className="mb-4 text-lg font-semibold text-white">
           Risultati Lane per Posizione
         </h2>
         {laneResultsChart.length > 0 ? (
-          <BarChart
-            data={laneResultsChart}
-            width={700}
-            height={180}
-            showValues={true}
-          />
+          <div className="h-64">
+            <BarChart
+              data={laneResultsChart}
+              width={800}
+              height={256}
+              showValues={true}
+            />
+          </div>
         ) : (
-          <div className="text-sm text-neutral-500">Dati non disponibili</div>
+          <div className="text-sm text-neutral-400">
+            Dati non disponibili per questa metrica nel dataset di test.
+          </div>
         )}
       </div>
 

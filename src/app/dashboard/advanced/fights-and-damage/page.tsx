@@ -77,7 +77,7 @@ export default function FightsAndDamagePage() {
   }))
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 lg:px-6">
       <div>
         <h1 className="text-2xl font-semibold text-white">Fights & Damage</h1>
         <p className="mt-2 text-sm text-neutral-400">
@@ -87,71 +87,67 @@ export default function FightsAndDamagePage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">Kill Participation</div>
-          <div className="mt-1 text-2xl font-semibold text-white">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">Kill Participation</div>
+          <div className="text-2xl font-semibold text-white">
             {data.killParticipation.toFixed(1)}%
           </div>
         </div>
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">Damage Share</div>
-          <div className="mt-1 text-2xl font-semibold text-white">N/A</div>
-          <div className="mt-1 text-[10px] text-neutral-500">
-            Non disponibile in Tier-1
-          </div>
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">Damage Share</div>
+          <div className="text-2xl font-semibold text-white">N/A</div>
+          <div className="text-[10px] text-neutral-500">Non disponibile</div>
         </div>
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">Tower Damage (medio)</div>
-          <div className="mt-1 text-2xl font-semibold text-white">N/A</div>
-          <div className="mt-1 text-[10px] text-neutral-500">
-            Non disponibile in Tier-1
-          </div>
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">Tower Damage (medio)</div>
+          <div className="text-2xl font-semibold text-white">N/A</div>
+          <div className="text-[10px] text-neutral-500">Non disponibile</div>
         </div>
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">Teamfight Partecipati</div>
-          <div className="mt-1 text-2xl font-semibold text-white">
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">Teamfight Partecipati</div>
+          <div className="text-2xl font-semibold text-white">
             {data.avgTeamfightsParticipated.toFixed(1)}/match
           </div>
         </div>
       </div>
 
       {/* Teamfight Impact Chart */}
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+      <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm md:p-5">
         <h2 className="mb-4 text-lg font-semibold text-white">
           Partecipazione ai Teamfight per Fase
         </h2>
         {teamfightImpactChart.length > 0 ? (
-          <BarChart
-            data={teamfightImpactChart}
-            width={700}
-            height={180}
-            showValues={true}
-          />
+          <div className="h-64">
+            <BarChart
+              data={teamfightImpactChart}
+              width={800}
+              height={256}
+              showValues={true}
+            />
+          </div>
         ) : (
-          <div className="text-sm text-neutral-500">Dati non disponibili</div>
+          <div className="text-sm text-neutral-400">
+            Dati non disponibili per questa metrica nel dataset di test.
+          </div>
         )}
       </div>
 
       {/* Damage Profile */}
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+      <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm md:p-5">
         <h2 className="mb-4 text-lg font-semibold text-white">
           Profilo Damage
         </h2>
         <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <div className="text-xs text-neutral-500">Damage Done</div>
-            <div className="mt-1 text-xl font-semibold text-white">N/A</div>
-            <div className="mt-1 text-[10px] text-neutral-500">
-              Non disponibile in Tier-1
-            </div>
+          <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/40 p-4">
+            <div className="text-xs text-neutral-400">Damage Done</div>
+            <div className="text-xl font-semibold text-white">N/A</div>
+            <div className="text-[10px] text-neutral-500">Non disponibile</div>
           </div>
-          <div>
-            <div className="text-xs text-neutral-500">Damage Taken</div>
-            <div className="mt-1 text-xl font-semibold text-white">N/A</div>
-            <div className="mt-1 text-[10px] text-neutral-500">
-              Non disponibile in Tier-1
-            </div>
+          <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/40 p-4">
+            <div className="text-xs text-neutral-400">Damage Taken</div>
+            <div className="text-xl font-semibold text-white">N/A</div>
+            <div className="text-[10px] text-neutral-500">Non disponibile</div>
           </div>
         </div>
       </div>

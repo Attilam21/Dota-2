@@ -78,7 +78,7 @@ export default function FarmAndEconomyPage() {
   }))
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 lg:px-6">
       <div>
         <h1 className="text-2xl font-semibold text-white">Farm & Economy</h1>
         <p className="mt-2 text-sm text-neutral-400">
@@ -88,38 +88,36 @@ export default function FarmAndEconomyPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">GPM Medio</div>
-          <div className="mt-1 text-2xl font-semibold text-white">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">GPM Medio</div>
+          <div className="text-2xl font-semibold text-white">
             {data.avgGpm.toFixed(0)}
           </div>
         </div>
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">XPM Medio</div>
-          <div className="mt-1 text-2xl font-semibold text-white">
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">XPM Medio</div>
+          <div className="text-2xl font-semibold text-white">
             {data.avgXpm.toFixed(0)}
           </div>
         </div>
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">
             Dead Gold (medio/match)
           </div>
-          <div className="mt-1 text-2xl font-semibold text-white">
+          <div className="text-2xl font-semibold text-white">
             {data.deadGold.toFixed(0)}
           </div>
         </div>
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">Item Timing (3 core)</div>
-          <div className="mt-1 text-2xl font-semibold text-white">N/A</div>
-          <div className="mt-1 text-[10px] text-neutral-500">
-            Non disponibile in Tier-1
-          </div>
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">Item Timing (3 core)</div>
+          <div className="text-2xl font-semibold text-white">N/A</div>
+          <div className="text-[10px] text-neutral-500">Non disponibile</div>
         </div>
       </div>
 
       {/* GPM Timeline Chart */}
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+      <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm md:p-5">
         <h2 className="mb-4 text-lg font-semibold text-white">
           Profilo GPM per minuto (approssimato)
         </h2>
@@ -128,31 +126,39 @@ export default function FarmAndEconomyPage() {
           fornisce dati per minuto)
         </p>
         {gpmTimelineData.length > 0 ? (
-          <MultiLineChart
-            data={gpmTimelineData}
-            width={700}
-            height={180}
-            lines={[{ key: 'gpm', color: '#f59e0b', label: 'GPM' }]}
-          />
+          <div className="h-64">
+            <MultiLineChart
+              data={gpmTimelineData}
+              width={800}
+              height={256}
+              lines={[{ key: 'gpm', color: '#f59e0b', label: 'GPM' }]}
+            />
+          </div>
         ) : (
-          <div className="text-sm text-neutral-500">Dati non disponibili</div>
+          <div className="text-sm text-neutral-400">
+            Dati non disponibili per questa metrica nel dataset di test.
+          </div>
         )}
       </div>
 
       {/* GPM Comparison Chart */}
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+      <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm md:p-5">
         <h2 className="mb-4 text-lg font-semibold text-white">
           Confronto GPM: Ultimi 10 match vs Media generale
         </h2>
         {comparisonChart.length > 0 ? (
-          <BarChart
-            data={comparisonChart}
-            width={700}
-            height={180}
-            showValues={true}
-          />
+          <div className="h-64">
+            <BarChart
+              data={comparisonChart}
+              width={800}
+              height={256}
+              showValues={true}
+            />
+          </div>
         ) : (
-          <div className="text-sm text-neutral-500">Dati non disponibili</div>
+          <div className="text-sm text-neutral-400">
+            Dati non disponibili per questa metrica nel dataset di test.
+          </div>
         )}
       </div>
 

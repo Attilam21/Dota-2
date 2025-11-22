@@ -76,7 +76,7 @@ export default function VisionAndMapPage() {
   const maxCount = Math.max(1, ...data.wardsHeatmap.map((h) => h.count))
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 lg:px-6">
       <div>
         <h1 className="text-2xl font-semibold text-white">
           Vision & Map Control
@@ -88,41 +88,37 @@ export default function VisionAndMapPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">
             Wards Piazzate (medio/match)
           </div>
-          <div className="mt-1 text-2xl font-semibold text-white">N/A</div>
-          <div className="mt-1 text-[10px] text-neutral-500">
-            Non disponibile in Tier-1
-          </div>
+          <div className="text-2xl font-semibold text-white">N/A</div>
+          <div className="text-[10px] text-neutral-500">Non disponibile</div>
         </div>
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">
             Wards Rimosse (medio/match)
           </div>
-          <div className="mt-1 text-2xl font-semibold text-white">N/A</div>
-          <div className="mt-1 text-[10px] text-neutral-500">
-            Non disponibile in Tier-1
-          </div>
+          <div className="text-2xl font-semibold text-white">N/A</div>
+          <div className="text-[10px] text-neutral-500">Non disponibile</div>
         </div>
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">Wards Early</div>
-          <div className="mt-1 text-2xl font-semibold text-white">
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">Wards Early</div>
+          <div className="text-2xl font-semibold text-white">
             {data.wardsByPhase.early}
           </div>
         </div>
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
-          <div className="text-xs text-neutral-500">Wards Late</div>
-          <div className="mt-1 text-2xl font-semibold text-white">
+        <div className="space-y-1 rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm">
+          <div className="text-xs text-neutral-400">Wards Late</div>
+          <div className="text-2xl font-semibold text-white">
             {data.wardsByPhase.late}
           </div>
         </div>
       </div>
 
       {/* Wards Timeline Chart */}
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+      <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm md:p-5">
         <h2 className="mb-4 text-lg font-semibold text-white">
           Wards Piazzate nel Tempo
         </h2>
@@ -131,13 +127,12 @@ export default function VisionAndMapPage() {
           dota_vision)
         </p>
         <div className="text-sm text-neutral-400">
-          Grafico non disponibile - dati wards richiedono parsing avanzato dei
-          match
+          Dati non disponibili per questa metrica nel dataset di test.
         </div>
       </div>
 
       {/* Heatmap */}
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+      <div className="min-h-[260px] rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm md:p-5">
         <h2 className="mb-4 text-lg font-semibold text-white">
           Heatmap Posizioni Morti (Grid 10x10)
         </h2>
