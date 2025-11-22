@@ -7,8 +7,6 @@ import { getPlayerIdFromSearchParams } from '@/lib/playerId'
 import { getHeroIconUrl, getHeroName } from '@/lib/dotaHeroes'
 import BarChart from '@/components/charts/BarChart'
 import ExplanationCard from '@/components/charts/ExplanationCard'
-import BuildMismatch from '@/components/dota/heroes/BuildMismatch'
-import HeroMetaReference from '@/components/dota/heroes/HeroMetaReference'
 import type { HeroPoolKPI } from '@/services/dota/kpiService'
 
 // [REMOVED - TIER 2] HeroPoolMatrix
@@ -61,7 +59,6 @@ function HeroesContent(): React.JSX.Element {
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [heroPoolKPI, setHeroPoolKPI] = useState<HeroPoolKPI | null>(null)
-  const [kpiLoading, setKpiLoading] = useState<boolean>(false)
 
   useEffect(() => {
     let active = true
@@ -102,7 +99,6 @@ function HeroesContent(): React.JSX.Element {
     async function loadKPI() {
       if (!playerId) return
       try {
-        setKpiLoading(true)
         const res = await fetch(
           `/api/kpi/hero-pool?playerId=${playerId}&limit=100`,
           { cache: 'no-store' },
@@ -113,8 +109,6 @@ function HeroesContent(): React.JSX.Element {
         }
       } catch (e) {
         console.error('Error loading hero pool KPI:', e)
-      } finally {
-        if (active) setKpiLoading(false)
       }
     }
     loadKPI()
@@ -267,302 +261,9 @@ function HeroesContent(): React.JSX.Element {
             />
           </div>
 
-          {/* Top 5 per winrate e più giocati */}
-          {heroPoolKPI &&
-            (heroPoolKPI.top5ByWinrate.length > 0 ||
-              heroPoolKPI.top5ByMatches.length > 0) && (
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                {/* Top 5 per winrate */}
-                <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-                  <h2 className="mb-3 text-sm font-semibold text-neutral-200">
-                    Top 5 eroi per winrate (min. 3 partite)
-                  </h2>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-neutral-900/90 text-neutral-300">
-                        <tr>
-                          <th className="px-3 py-2 text-left font-medium">
-                            Eroe
-                          </th>
-                          <th className="px-3 py-2 text-left font-medium">
-                            Winrate
-                          </th>
-                          <th className="px-3 py-2 text-left font-medium">
-                            Partite
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {heroPoolKPI.top5ByWinrate.map((h) => {
-                          const name = getHeroName(h.heroId)
-                          const icon = getHeroIconUrl(h.heroId)
-                          return (
-                            <tr
-                              key={h.heroId}
-                              className="border-t border-neutral-800 bg-neutral-900/50"
-                            >
-                              <td className="px-3 py-2">
-                                <div className="flex items-center gap-2">
-                                  {icon ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
-                                      src={icon}
-                                      alt={name}
-                                      width={20}
-                                      height={20}
-                                      className="h-5 w-5 rounded"
-                                      loading="lazy"
-                                      onError={(e) => {
-                                        ;(
-                                          e.currentTarget as HTMLImageElement
-                                        ).style.display = 'none'
-                                      }}
-                                    />
-                                  ) : (
-                                    <div className="flex h-5 w-5 items-center justify-center rounded bg-neutral-700 text-[10px]">
-                                      {name.charAt(0)}
-                                    </div>
-                                  )}
-                                  <span>{name}</span>
-                                </div>
-                              </td>
-                              <td className="px-3 py-2">
-                                <span className="text-green-400">
-                                  {h.winRate}%
-                                </span>
-                              </td>
-                              <td className="px-3 py-2">{h.matches}</td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <ExplanationCard
-                    title="I tuoi eroi più forti"
-                    description="Questi sono gli eroi con cui hai le migliori prestazioni. Considera di selezionarli quando possibile per massimizzare le tue possibilità di vittoria."
-                    timeRange="Tutte le partite disponibili"
-                  />
-                </div>
-
-                {/* Top 5 più giocati */}
-                <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-                  <h2 className="mb-3 text-sm font-semibold text-neutral-200">
-                    Top 5 eroi più giocati
-                  </h2>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm">
-                      <thead className="bg-neutral-900/90 text-neutral-300">
-                        <tr>
-                          <th className="px-3 py-2 text-left font-medium">
-                            Eroe
-                          </th>
-                          <th className="px-3 py-2 text-left font-medium">
-                            Partite
-                          </th>
-                          <th className="px-3 py-2 text-left font-medium">
-                            Winrate
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {heroPoolKPI.top5ByMatches.map((h) => {
-                          const name = getHeroName(h.heroId)
-                          const icon = getHeroIconUrl(h.heroId)
-                          return (
-                            <tr
-                              key={h.heroId}
-                              className="border-t border-neutral-800 bg-neutral-900/50"
-                            >
-                              <td className="px-3 py-2">
-                                <div className="flex items-center gap-2">
-                                  {icon ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
-                                      src={icon}
-                                      alt={name}
-                                      width={20}
-                                      height={20}
-                                      className="h-5 w-5 rounded"
-                                      loading="lazy"
-                                      onError={(e) => {
-                                        ;(
-                                          e.currentTarget as HTMLImageElement
-                                        ).style.display = 'none'
-                                      }}
-                                    />
-                                  ) : (
-                                    <div className="flex h-5 w-5 items-center justify-center rounded bg-neutral-700 text-[10px]">
-                                      {name.charAt(0)}
-                                    </div>
-                                  )}
-                                  <span>{name}</span>
-                                </div>
-                              </td>
-                              <td className="px-3 py-2">{h.matches}</td>
-                              <td className="px-3 py-2">
-                                <span
-                                  className={
-                                    h.winRate >= 50
-                                      ? 'text-green-400'
-                                      : 'text-red-400'
-                                  }
-                                >
-                                  {h.winRate}%
-                                </span>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  <ExplanationCard
-                    title="I tuoi eroi preferiti"
-                    description="Questi sono gli eroi che giochi più spesso. Se il winrate è buono, continua a usarli. Se è basso, considera di ampliare il tuo pool o migliorare con questi eroi."
-                    timeRange="Tutte le partite disponibili"
-                  />
-                </div>
-              </div>
-            )}
-
-          {/* [REMOVED - TIER 2] Hero Pool Matrix
-              Rimossa perché mostra "Frequency matrix" / quadranti non direttamente derivati da KPI Tier-1.
-              Mantenuti solo i grafici e tabelle base (Top 5 per winrate, Top 5 più giocati) che usano dati reali.
-          */}
-
-          {/* Grafico comparativo winrate e KDA */}
-          {heroPoolKPI && heroPoolKPI.top5ByMatches.length > 0 && (
-            <div className="rounded-lg border border-neutral-800 p-4">
-              <h2 className="mb-3 text-sm text-neutral-300">
-                Confronto winrate e KDA dei 5 eroi principali
-              </h2>
-              <BarChart
-                data={heroPoolKPI.top5ByMatches.map((h) => {
-                  const hero = heroPoolKPI.heroes.find(
-                    (he) => he.heroId === h.heroId,
-                  )
-                  return {
-                    label: getHeroName(h.heroId),
-                    value: h.winRate,
-                    color: h.winRate >= 50 ? '#22c55e' : '#ef4444',
-                  }
-                })}
-              />
-              <ExplanationCard
-                title="Come leggere questo grafico"
-                description="Il grafico mostra il winrate dei tuoi 5 eroi più giocati. Eroi verdi hanno winrate positivo, rossi negativo. Usa queste informazioni per decidere quali eroi selezionare nel prossimo match."
-                timeRange="Tutte le partite disponibili"
-                interpretation="Se molti eroi sono rossi, considera di ampliare il tuo pool o migliorare con gli eroi attuali."
-              />
-            </div>
-          )}
-
-          {/* Indicatori per eroe - tabella estesa */}
-          {heroPoolKPI && heroPoolKPI.heroes.length > 0 && (
-            <div className="rounded-lg border border-neutral-800 p-4">
-              <h2 className="mb-3 text-sm text-neutral-300">
-                Indicatori Dettagliati per Eroe
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="bg-neutral-900/60 text-neutral-300">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-medium">Eroe</th>
-                      <th className="px-3 py-2 text-left font-medium">
-                        Partite
-                      </th>
-                      <th className="px-3 py-2 text-left font-medium">
-                        Winrate
-                      </th>
-                      <th className="px-3 py-2 text-left font-medium">KDA</th>
-                      <th className="px-3 py-2 text-left font-medium">GPM</th>
-                      <th className="px-3 py-2 text-left font-medium">XPM</th>
-                      <th className="px-3 py-2 text-left font-medium">
-                        Ruolo/Lane
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {heroPoolKPI.heroes
-                      .sort((a, b) => b.matches - a.matches)
-                      .map((h) => {
-                        const icon = getHeroIconUrl(h.heroId)
-                        const name = getHeroName(h.heroId)
-                        return (
-                          <tr
-                            key={h.heroId}
-                            className="border-t border-neutral-800 hover:bg-neutral-900/40"
-                          >
-                            <td className="px-3 py-2">
-                              <div className="flex items-center gap-2">
-                                {icon ? (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={icon}
-                                    alt={name}
-                                    width={20}
-                                    height={20}
-                                    className="h-5 w-5 rounded"
-                                    loading="lazy"
-                                    onError={(e) => {
-                                      ;(
-                                        e.currentTarget as HTMLImageElement
-                                      ).style.display = 'none'
-                                    }}
-                                  />
-                                ) : (
-                                  <div className="flex h-5 w-5 items-center justify-center rounded bg-neutral-700 text-[10px]">
-                                    {name.charAt(0)}
-                                  </div>
-                                )}
-                                <span>{name}</span>
-                              </div>
-                            </td>
-                            <td className="px-3 py-2">{h.matches}</td>
-                            <td className="px-3 py-2">
-                              <span
-                                className={
-                                  h.winRate >= 60
-                                    ? 'text-green-400'
-                                    : h.winRate < 45
-                                      ? 'text-red-400'
-                                      : 'text-neutral-300'
-                                }
-                              >
-                                {h.winRate}%
-                              </span>
-                            </td>
-                            <td className="px-3 py-2">
-                              {h.kdaAvg != null ? h.kdaAvg.toFixed(2) : '—'}
-                            </td>
-                            <td className="px-3 py-2">
-                              {h.avgGpm != null && h.avgGpm > 0
-                                ? Math.round(h.avgGpm)
-                                : '—'}
-                            </td>
-                            <td className="px-3 py-2">
-                              {h.avgXpm != null && h.avgXpm > 0
-                                ? Math.round(h.avgXpm)
-                                : '—'}
-                            </td>
-                            <td className="px-3 py-2">
-                              <span className="text-xs text-neutral-400">
-                                {h.primaryRole || '—'} / {h.primaryLane || '—'}
-                              </span>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Tabella per-eroe */}
-          <div className="rounded-lg border border-neutral-800 p-4">
-            <h2 className="mb-3 text-sm text-neutral-300">
+          {/* Tabella principale - Performance per eroe */}
+          <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+            <h2 className="mb-3 text-lg font-semibold text-neutral-200">
               Performance per eroe
             </h2>
             <div className="overflow-x-auto">
@@ -670,52 +371,35 @@ function HeroesContent(): React.JSX.Element {
             </div>
           </div>
 
-          {/* 🔷 HERO POOL ADD-ON - NUOVI BLOCCHI ADDITIVI */}
-
-          {/* A) Build Mismatch Detection */}
+          {/* Grafico di sintesi - Winrate dei 5 eroi principali */}
           {heroPoolKPI && heroPoolKPI.top5ByMatches.length > 0 && (
             <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-              <h2 className="mb-4 text-lg font-semibold text-neutral-200">
-                Build Mismatch Detection
+              <h2 className="mb-3 text-lg font-semibold text-neutral-200">
+                Sintesi visiva – Winrate dei 5 eroi principali
               </h2>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {heroPoolKPI.top5ByMatches.slice(0, 3).map((h) => {
-                  const heroName = getHeroName(h.heroId)
-                  return (
-                    <BuildMismatch
-                      key={h.heroId}
-                      playerBuild={['Item 1', 'Item 2', 'Item 3']} // placeholder
-                      metaBuild={['Meta Item 1', 'Meta Item 2', 'Meta Item 3']} // placeholder
-                      divergence={15} // placeholder - da calcolare
-                    />
-                  )
+              <BarChart
+                data={heroPoolKPI.top5ByMatches.map((h) => {
+                  return {
+                    label: getHeroName(h.heroId),
+                    value: h.winRate,
+                    color: h.winRate >= 50 ? '#22c55e' : '#ef4444',
+                  }
                 })}
-              </div>
+              />
+              <ExplanationCard
+                title="Come leggere questo grafico"
+                description="Il grafico mostra il winrate dei tuoi 5 eroi più giocati. Eroi verdi hanno winrate positivo (≥50%), rossi negativo (<50%). Usa queste informazioni per decidere quali eroi selezionare nel prossimo match."
+                timeRange="Tutte le partite disponibili"
+              />
             </div>
           )}
 
-          {/* B) Hero Meta Reference */}
-          {heroPoolKPI && heroPoolKPI.top5ByWinrate.length > 0 && (
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-              <h2 className="mb-4 text-lg font-semibold text-neutral-200">
-                Hero Meta Reference
-              </h2>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {heroPoolKPI.top5ByWinrate.slice(0, 3).map((h) => {
-                  const heroName = getHeroName(h.heroId)
-                  return (
-                    <HeroMetaReference
-                      key={h.heroId}
-                      hero={heroName}
-                      metaWinrate={52.5} // placeholder - da API meta se disponibile
-                      metaPickrate={8.2} // placeholder
-                      metaBuild={['Meta Item 1', 'Meta Item 2']} // placeholder
-                    />
-                  )
-                })}
-              </div>
-            </div>
-          )}
+          {/* [REMOVED - ENTERPRISE MODULES NOT YET READY]
+              Build Mismatch Detection e Hero Meta Reference sono stati rimossi
+              perché attualmente utilizzano dati placeholder/mock.
+              Questi moduli richiederanno integrazione con dati meta esterni
+              e saranno reintrodotti quando i dati reali saranno disponibili.
+          */}
         </>
       )}
     </div>
