@@ -9,9 +9,12 @@ import type { PlayerOverviewKPI } from '@/services/dota/kpiService'
 import type {
   MatchWithAnalysis,
   PlayerPerformanceProfile,
+  FightProfileScores,
 } from '@/types/playerPerformance'
 import { calculatePlayerPerformanceProfile } from '@/lib/dota/performanceProfile'
+import { fromMatchesToFightProfile } from '@/lib/dota/performance/fightProfile'
 import PerformanceProfileCards from '@/components/dota/performance/PerformanceProfileCards'
+import FightProfileCards from '@/components/dota/performance/FightProfileCards'
 import PerformanceStyleTrend from '@/components/dota/performance/PerformanceStyleTrend'
 import PerformancePhaseKPI from '@/components/dota/performance/PerformancePhaseKPI'
 import PerformanceInsights from '@/components/dota/performance/PerformanceInsights'
@@ -36,6 +39,10 @@ function PerformanceContent(): React.JSX.Element {
   const [overviewKPI, setOverviewKPI] = useState<PlayerOverviewKPI | null>(null)
   const [performanceProfile, setPerformanceProfile] =
     useState<PlayerPerformanceProfile | null>(null)
+  const [fightProfile, setFightProfile] = useState<FightProfileScores | null>(
+    null,
+  )
+  const [matchesData, setMatchesData] = useState<MatchWithAnalysis[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const [intervalFilter, setIntervalFilter] = useState<'20' | '10'>('20')
@@ -75,9 +82,16 @@ function PerformanceContent(): React.JSX.Element {
               ? matchesWithAnalysis
               : []
 
+          // Store matches for Fight Profile calculation
+          setMatchesData(safeMatches)
+
           // Calculate performance profile - always returns valid structure
           const profile = calculatePlayerPerformanceProfile(safeMatches)
           setPerformanceProfile(profile)
+
+          // Calculate fight profile from matches
+          const fight = fromMatchesToFightProfile(safeMatches)
+          setFightProfile(fight)
         }
       } catch (e: any) {
         if (active) setError(e?.message ?? 'Errore sconosciuto')
@@ -124,6 +138,9 @@ function PerformanceContent(): React.JSX.Element {
           {performanceProfile && (
             <PerformanceProfileCards indices={performanceProfile.indices} />
           )}
+
+          {/* Fight Profile Cards (3 card) */}
+          {fightProfile && <FightProfileCards fightProfile={fightProfile} />}
 
           {/* Grafico Performance Aggregata (esistente, Tier-1) */}
           {overviewKPI &&

@@ -91,6 +91,25 @@ export interface MatchWithAnalysis {
 }
 
 /**
+ * Fight Profile Scores
+ * Calcolati da kills, deaths, assists, duration_seconds (solo dati base)
+ */
+export interface FightProfileScores {
+  /** Aggressività in fight (0-100) */
+  aggressivenessScore: number | null
+  /** Impatto nei fight (0-100) */
+  impactScore: number | null
+  /** Sopravvivenza (0-100) */
+  survivalScore: number | null
+  /** Label descrittivo aggressività */
+  aggressivenessLabel: string | null
+  /** Label descrittivo impatto */
+  impactLabel: string | null
+  /** Label descrittivo sopravvivenza */
+  survivalLabel: string | null
+}
+
+/**
  * Complete player performance profile
  */
 export interface PlayerPerformanceProfile {
