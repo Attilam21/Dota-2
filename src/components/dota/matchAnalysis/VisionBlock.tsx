@@ -14,7 +14,7 @@ interface VisionBlockProps {
 export function VisionBlock({ data }: VisionBlockProps): React.JSX.Element {
   if (data.status === 'unavailable') {
     return (
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+      <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm backdrop-blur-sm md:p-5">
         <h2 className="mb-2 text-lg font-semibold text-neutral-200">Vision</h2>
         <div className="text-sm text-neutral-500">
           Dati vision non disponibili. Richiedono dati ward placement che non
@@ -25,7 +25,7 @@ export function VisionBlock({ data }: VisionBlockProps): React.JSX.Element {
   }
 
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+    <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm backdrop-blur-sm md:p-5">
       <h2 className="mb-4 text-lg font-semibold text-neutral-200">Vision</h2>
 
       {/* KPI Cards */}

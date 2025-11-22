@@ -16,7 +16,7 @@ export function ObjectivesBlock({
 }: ObjectivesBlockProps): React.JSX.Element {
   if (data.status === 'unavailable') {
     return (
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+      <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm backdrop-blur-sm md:p-5">
         <h2 className="mb-2 text-lg font-semibold text-neutral-200">
           Obiettivi
         </h2>
@@ -28,7 +28,7 @@ export function ObjectivesBlock({
   }
 
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+    <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm backdrop-blur-sm md:p-5">
       <h2 className="mb-4 text-lg font-semibold text-neutral-200">Obiettivi</h2>
 
       {/* KPI Cards */}

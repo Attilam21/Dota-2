@@ -23,7 +23,7 @@ export function MatchHeaderBlock({
   ).padStart(2, '0')}`
 
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-6 backdrop-blur-sm">
+    <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm backdrop-blur-sm md:p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex-1">
           <div className="mb-3 flex items-center gap-3">

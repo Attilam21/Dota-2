@@ -14,7 +14,7 @@ interface ActionsBlockProps {
 export function ActionsBlock({ data }: ActionsBlockProps): React.JSX.Element {
   if (data.status === 'unavailable') {
     return (
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+      <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm backdrop-blur-sm md:p-5">
         <h2 className="mb-2 text-lg font-semibold text-neutral-200">Actions</h2>
         <div className="text-sm text-neutral-500">
           Dati APM non disponibili. Richiedono tracking spell casts e item usage
@@ -25,7 +25,7 @@ export function ActionsBlock({ data }: ActionsBlockProps): React.JSX.Element {
   }
 
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+    <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm backdrop-blur-sm md:p-5">
       <h2 className="mb-4 text-lg font-semibold text-neutral-200">Actions</h2>
 
       {/* APM Card */}

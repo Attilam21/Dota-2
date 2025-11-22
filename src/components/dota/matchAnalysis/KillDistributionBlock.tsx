@@ -34,14 +34,14 @@ export function KillDistributionBlock({
   ]
 
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
+    <div className="rounded-xl border border-slate-800/80 bg-slate-900/60 p-4 shadow-sm backdrop-blur-sm md:p-5">
       <h2 className="mb-4 text-lg font-semibold text-neutral-200">
         Kill Distribution per Fase
       </h2>
 
       {/* Bar Chart */}
-      <div className="mb-4 h-[200px]">
-        <BarChart data={chartData} width={560} height={200} showValues={true} />
+      <div className="mb-4 h-[200px] w-full">
+        <BarChart data={chartData} width={800} height={200} showValues={true} />
       </div>
 
       {/* Phase Cards */}
