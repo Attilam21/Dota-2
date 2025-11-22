@@ -96,14 +96,16 @@ export default function FightsAndDamagePage() {
         </div>
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
           <div className="text-xs text-neutral-500">Damage Share</div>
-          <div className="mt-1 text-2xl font-semibold text-white">
-            {data.damageShare.toFixed(1)}%
+          <div className="mt-1 text-2xl font-semibold text-white">N/A</div>
+          <div className="mt-1 text-[10px] text-neutral-500">
+            Non disponibile in Tier-1
           </div>
         </div>
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
           <div className="text-xs text-neutral-500">Tower Damage (medio)</div>
-          <div className="mt-1 text-2xl font-semibold text-white">
-            {data.avgTowerDamage.toFixed(0)}
+          <div className="mt-1 text-2xl font-semibold text-white">N/A</div>
+          <div className="mt-1 text-[10px] text-neutral-500">
+            Non disponibile in Tier-1
           </div>
         </div>
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
@@ -122,8 +124,8 @@ export default function FightsAndDamagePage() {
         {teamfightImpactChart.length > 0 ? (
           <BarChart
             data={teamfightImpactChart}
-            width={800}
-            height={200}
+            width={700}
+            height={180}
             showValues={true}
           />
         ) : (
@@ -139,14 +141,16 @@ export default function FightsAndDamagePage() {
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <div className="text-xs text-neutral-500">Damage Done</div>
-            <div className="mt-1 text-xl font-semibold text-white">
-              {data.damageProfile.damageDone.toLocaleString()}
+            <div className="mt-1 text-xl font-semibold text-white">N/A</div>
+            <div className="mt-1 text-[10px] text-neutral-500">
+              Non disponibile in Tier-1
             </div>
           </div>
           <div>
             <div className="text-xs text-neutral-500">Damage Taken</div>
-            <div className="mt-1 text-xl font-semibold text-white">
-              {data.damageProfile.damageTaken.toLocaleString()}
+            <div className="mt-1 text-xl font-semibold text-white">N/A</div>
+            <div className="mt-1 text-[10px] text-neutral-500">
+              Non disponibile in Tier-1
             </div>
           </div>
         </div>

@@ -118,7 +118,7 @@ export default function MatchDetailPage() {
           <div className="flex items-center justify-between">
             <div className="flex-1" />
             <Link
-              href={`/dashboard/matches/${matchId}/advanced${
+              href={`/dashboard/matches/${matchId}/advanced-sections${
                 playerId ? `?playerId=${playerId}` : ''
               }`}
               className="rounded-md border border-blue-600/50 bg-blue-950/30 px-4 py-2 text-sm font-semibold text-blue-300 transition-all hover:border-blue-500 hover:bg-blue-950/50 hover:text-blue-200"

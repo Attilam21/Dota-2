@@ -111,10 +111,9 @@ export default function FarmAndEconomyPage() {
         </div>
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
           <div className="text-xs text-neutral-500">Item Timing (3 core)</div>
-          <div className="mt-1 text-2xl font-semibold text-white">
-            {data.avgItemTiming
-              ? `${data.avgItemTiming.toFixed(0)} min`
-              : 'N/A'}
+          <div className="mt-1 text-2xl font-semibold text-white">N/A</div>
+          <div className="mt-1 text-[10px] text-neutral-500">
+            Non disponibile in Tier-1
           </div>
         </div>
       </div>
@@ -122,13 +121,17 @@ export default function FarmAndEconomyPage() {
       {/* GPM Timeline Chart */}
       <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
         <h2 className="mb-4 text-lg font-semibold text-white">
-          Profilo GPM per minuto (media)
+          Profilo GPM per minuto (approssimato)
         </h2>
+        <p className="mb-4 text-xs text-neutral-500">
+          Nota: Profilo sintetico basato su GPM medio (OpenDota Tier-1 non
+          fornisce dati per minuto)
+        </p>
         {gpmTimelineData.length > 0 ? (
           <MultiLineChart
             data={gpmTimelineData}
-            width={800}
-            height={200}
+            width={700}
+            height={180}
             lines={[{ key: 'gpm', color: '#f59e0b', label: 'GPM' }]}
           />
         ) : (
@@ -144,8 +147,8 @@ export default function FarmAndEconomyPage() {
         {comparisonChart.length > 0 ? (
           <BarChart
             data={comparisonChart}
-            width={800}
-            height={200}
+            width={700}
+            height={180}
             showValues={true}
           />
         ) : (

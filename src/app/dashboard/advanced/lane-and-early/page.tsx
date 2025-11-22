@@ -125,15 +125,19 @@ export default function LaneAndEarlyPage() {
       {/* CS Timeline Chart */}
       <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
         <h2 className="mb-4 text-lg font-semibold text-white">
-          CS a 10 minuti (ultimi match)
+          CS Timeline (ultimi match)
         </h2>
+        <p className="mb-4 text-xs text-neutral-500">
+          Nota: CS totale come proxy per CS@10 (OpenDota Tier-1 non fornisce
+          dati per minuto)
+        </p>
         {csChartData.length > 0 ? (
           <LineChart
             data={csChartData}
-            width={800}
-            height={200}
+            width={700}
+            height={180}
             color="#60a5fa"
-            label="CS a 10 minuti"
+            label="CS totale"
           />
         ) : (
           <div className="text-sm text-neutral-500">Dati non disponibili</div>
@@ -148,8 +152,8 @@ export default function LaneAndEarlyPage() {
         {laneResultsChart.length > 0 ? (
           <BarChart
             data={laneResultsChart}
-            width={800}
-            height={200}
+            width={700}
+            height={180}
             showValues={true}
           />
         ) : (

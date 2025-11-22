@@ -1,41 +1,38 @@
 /**
- * Vision & Map Control Analysis
- * Uses: dota_player_death_events (for position heatmap)
+ * Single Match Vision & Map Control Analysis
+ * Uses: dota_player_death_events (single match)
  *
- * NOTE: Wards data requires dota_vision table which doesn't exist in Tier-1 OpenDota.
- * We return 0 for wards metrics with appropriate handling in UI.
- * Heatmap is calculated from death positions as proxy for map activity.
+ * NOTE: This is for SINGLE MATCH analysis, NOT aggregated profile analysis.
  */
 
 import { cookies } from 'next/headers'
 import { createServerClient } from '@/utils/supabase'
 import type { VisionMapAnalysis } from './types'
 
-export async function getVisionMapAnalysis(
+export async function getMatchVisionAnalysis(
+  matchId: number,
   playerId: number,
 ): Promise<VisionMapAnalysis | null> {
   const supabase = createServerClient(cookies())
 
   try {
-    // Get recent matches (limit to 20 for DEMO mode)
-    const { data: matches, error: matchesError } = await supabase
+    // Get SINGLE match data (filtered by matchId)
+    const { data: match, error: matchesError } = await supabase
       .from('matches_digest')
       .select('match_id, start_time, duration_seconds')
       .eq('player_account_id', playerId)
-      .order('start_time', { ascending: false })
-      .limit(20) // DEMO mode: 20 matches
+      .eq('match_id', matchId)
+      .single()
 
-    if (matchesError) {
-      console.error('[VISION-ANALYSIS] Error fetching matches:', matchesError)
+    if (matchesError || !match) {
+      console.error(
+        '[MATCH-VISION-ANALYSIS] Error fetching match:',
+        matchesError,
+      )
       return null
     }
 
-    if (!matches || matches.length === 0) {
-      return null
-    }
-
-    // Wards data: not available in Tier-1 OpenDota data (requires dota_vision table)
-    // Return 0 with note that it's not available
+    // Wards data: not available in Tier-1
     const avgWardsPlaced = 0
     const avgWardsRemoved = 0
 
@@ -46,24 +43,24 @@ export async function getVisionMapAnalysis(
       late: 0,
     }
 
-    // Wards timeline: placeholder (all zeros)
-    const wardsTimeline = matches.map((m) => ({
-      date: new Date(m.start_time).toLocaleDateString('it-IT'),
-      wardsPlaced: 0,
-    }))
+    // Wards timeline: single match point
+    const wardsTimeline = [
+      {
+        date: new Date(match.start_time).toLocaleDateString('it-IT'),
+        wardsPlaced: 0, // Not available
+      },
+    ]
 
-    // Heatmap from death positions (if available)
-    // Create 10x10 grid (Dota map is roughly 15000x15000 units)
+    // Heatmap from death positions for THIS match
     const gridSize = 10
     const mapSize = 15000
     const cellSize = mapSize / gridSize
 
-    const matchIds = matches.map((m) => m.match_id)
     const { data: deathEvents, error: deathError } = await supabase
       .from('dota_player_death_events')
       .select('match_id, pos_x, pos_y, time_seconds, phase')
       .eq('account_id', playerId)
-      .in('match_id', matchIds)
+      .eq('match_id', matchId) // SINGLE MATCH FILTER
 
     const heatmapGrid = new Map<string, number>()
 
@@ -71,8 +68,6 @@ export async function getVisionMapAnalysis(
       deathEvents.forEach((event) => {
         if (event.pos_x != null && event.pos_y != null) {
           // Normalize to 0-15000 range (Dota map coordinates)
-          // OpenDota coordinates are typically in range -8000 to 8000, centered at 0
-          // We shift to 0-15000 range
           const x = Math.max(
             0,
             Math.min(mapSize - 1, Number(event.pos_x) + mapSize / 2),
@@ -112,11 +107,11 @@ export async function getVisionMapAnalysis(
       avgWardsPlaced,
       avgWardsRemoved,
       wardsByPhase,
-      wardsTimeline: wardsTimeline.slice(0, 20),
+      wardsTimeline,
       wardsHeatmap,
     }
   } catch (error) {
-    console.error('[VISION-ANALYSIS] Error:', error)
+    console.error('[MATCH-VISION-ANALYSIS] Error:', error)
     return null
   }
 }

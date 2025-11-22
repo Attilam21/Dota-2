@@ -93,16 +93,18 @@ export default function VisionAndMapPage() {
           <div className="text-xs text-neutral-500">
             Wards Piazzate (medio/match)
           </div>
-          <div className="mt-1 text-2xl font-semibold text-white">
-            {data.avgWardsPlaced.toFixed(1)}
+          <div className="mt-1 text-2xl font-semibold text-white">N/A</div>
+          <div className="mt-1 text-[10px] text-neutral-500">
+            Non disponibile in Tier-1
           </div>
         </div>
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
           <div className="text-xs text-neutral-500">
             Wards Rimosse (medio/match)
           </div>
-          <div className="mt-1 text-2xl font-semibold text-white">
-            {data.avgWardsRemoved.toFixed(1)}
+          <div className="mt-1 text-2xl font-semibold text-white">N/A</div>
+          <div className="mt-1 text-[10px] text-neutral-500">
+            Non disponibile in Tier-1
           </div>
         </div>
         <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
@@ -124,24 +126,25 @@ export default function VisionAndMapPage() {
         <h2 className="mb-4 text-lg font-semibold text-white">
           Wards Piazzate nel Tempo
         </h2>
-        {wardsTimelineData.length > 0 ? (
-          <LineChart
-            data={wardsTimelineData}
-            width={800}
-            height={200}
-            color="#22c55e"
-            label="Wards piazzate"
-          />
-        ) : (
-          <div className="text-sm text-neutral-500">Dati non disponibili</div>
-        )}
+        <p className="mb-4 text-xs text-neutral-500">
+          Nota: Dati wards non disponibili in OpenDota Tier-1 (richiede tabella
+          dota_vision)
+        </p>
+        <div className="text-sm text-neutral-400">
+          Grafico non disponibile - dati wards richiedono parsing avanzato dei
+          match
+        </div>
       </div>
 
       {/* Heatmap */}
       <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
         <h2 className="mb-4 text-lg font-semibold text-white">
-          Heatmap Posizioni (Grid 10x10)
+          Heatmap Posizioni Morti (Grid 10x10)
         </h2>
+        <p className="mb-4 text-xs text-neutral-500">
+          Nota: Heatmap calcolata dalle posizioni delle morti (proxy per
+          attività mappa)
+        </p>
         <div className="flex flex-col gap-1">
           {Array.from({ length: gridSize }, (_, y) => (
             <div key={y} className="flex gap-1">
