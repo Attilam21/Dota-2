@@ -111,6 +111,19 @@ export default function MatchDetailPage() {
       {/* Main content */}
       {!loading && !error && analysis && (
         <section className="mx-auto max-w-6xl space-y-6">
+          {/* Toolbar with Advanced Analysis Button */}
+          <div className="flex items-center justify-between">
+            <div className="flex-1" />
+            <Link
+              href={`/dashboard/matches/${matchId}/advanced${
+                playerId ? `?playerId=${playerId}` : ''
+              }`}
+              className="rounded-md border border-blue-600/50 bg-blue-950/30 px-4 py-2 text-sm font-semibold text-blue-300 transition-all hover:border-blue-500 hover:bg-blue-950/50 hover:text-blue-200"
+            >
+              Analisi avanzata FZTH →
+            </Link>
+          </div>
+
           {/* Block 1: Match Header */}
           <MatchHeaderBlock data={analysis.header} />
 
@@ -151,27 +164,6 @@ export default function MatchDetailPage() {
           {analysis.actions.status === 'available' && (
             <ActionsBlock data={analysis.actions} />
           )}
-
-          {/* Link to complete analysis */}
-          <div className="rounded-lg border border-neutral-800 bg-neutral-900/80 p-4 backdrop-blur-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-semibold text-neutral-200">
-                  Analisi Completa FZTH
-                </h3>
-                <p className="mt-1 text-xs text-neutral-400">
-                  Per un&apos;analisi ancora più approfondita, visita la pagina
-                  di analisi completa.
-                </p>
-              </div>
-              <Link
-                href={`/dota/matches/${matchId}/players/${playerId}`}
-                className="rounded-md border border-blue-600/50 bg-blue-950/30 px-4 py-2 text-sm font-medium text-blue-300 transition-all hover:border-blue-500 hover:bg-blue-950/50 hover:text-blue-200"
-              >
-                Analisi completa →
-              </Link>
-            </div>
-          </div>
         </section>
       )}
 

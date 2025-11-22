@@ -158,6 +158,20 @@ export default function AdvancedMatchAnalysisPage() {
         <div className="rounded-lg border border-red-800 bg-red-900/20 p-4 text-red-400">
           <div className="font-semibold">Errore nel caricamento</div>
           <div className="text-sm">{error || 'Dati non disponibili'}</div>
+          <div className="mt-4">
+            <button
+              onClick={() =>
+                router.push(
+                  `/dashboard/matches/${matchId}${
+                    playerId ? `?playerId=${playerId}` : ''
+                  }`,
+                )
+              }
+              className="text-sm text-neutral-300 hover:text-white"
+            >
+              ← Torna al dettaglio partita
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -179,7 +193,7 @@ export default function AdvancedMatchAnalysisPage() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 rounded-lg border border-neutral-800 bg-neutral-900/80 p-6 backdrop-blur-sm">
         <div className="flex-1">
-          <div className="mb-3 flex items-center gap-3">
+          <div className="mb-2 flex items-center gap-3">
             <span
               className={`rounded-full px-3 py-1 text-xs font-semibold ${
                 result === 'win'
@@ -190,10 +204,13 @@ export default function AdvancedMatchAnalysisPage() {
               {result === 'win' ? 'Victory' : 'Defeat'}
             </span>
             <h1 className="text-2xl font-semibold text-neutral-100">
-              Match #{analysis.match.matchId}
+              Analisi Match Dota 2 (TIER 1 ONLY)
             </h1>
           </div>
           <div className="mb-3 flex items-center gap-3">
+            <span className="text-sm text-neutral-400">
+              Match #{analysis.match.matchId}
+            </span>
             {heroIcon && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -234,12 +251,12 @@ export default function AdvancedMatchAnalysisPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link
-            href={`/match/${matchId}/full-analysis${
+            href={`/dashboard/matches/${matchId}${
               playerId ? `?playerId=${playerId}` : ''
             }`}
             className="rounded-md border border-blue-600/50 bg-blue-950/30 px-4 py-2 text-sm font-semibold text-blue-300 transition-all hover:border-blue-500 hover:bg-blue-950/50 hover:text-blue-200"
           >
-            Analisi Completa FZTH →
+            Torna al match →
           </Link>
         </div>
       </div>
