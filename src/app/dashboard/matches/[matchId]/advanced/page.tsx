@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
+import { useActivePlayer } from '@/hooks/useActivePlayer'
 import Link from 'next/link'
 import { getHeroName, getHeroIconUrl } from '@/lib/dotaHeroes'
 import { getRolePositionLabel } from '@/types/dotaAnalysis'
@@ -65,7 +66,9 @@ export default function AdvancedMatchAnalysisPage() {
   const router = useRouter()
 
   const matchId = params?.matchId as string
-  const playerId = search.get('playerId') || ''
+  const { activePlayer } = useActivePlayer()
+  const playerId =
+    activePlayer?.dotaAccountId?.toString() || search.get('playerId') || ''
 
   const [analysis, setAnalysis] = useState<AdvancedAnalysisResponse | null>(
     null,

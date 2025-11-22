@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import React, { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { getPlayerIdFromSearchParams } from '@/lib/playerId'
+import { useActivePlayer } from '@/hooks/useActivePlayer'
 import { getHeroIconUrl, getHeroName } from '@/lib/dotaHeroes'
 import {
   buildHeroSnapshot,
@@ -68,8 +68,8 @@ function formatValueOrNA(value: any): string | JSX.Element {
 }
 
 function DashboardOverview(): React.JSX.Element {
-  const searchParams = useSearchParams()
-  const playerId = getPlayerIdFromSearchParams(searchParams)
+  const { activePlayer, loading: playerLoading } = useActivePlayer()
+  const playerId = activePlayer?.dotaAccountId ?? 0
   const [rows, setRows] = useState<MatchRow[] | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
@@ -85,6 +85,7 @@ function DashboardOverview(): React.JSX.Element {
 
   // Unica chiamata API per caricare le partite recenti
   useEffect(() => {
+    if (playerLoading || !playerId) return
     let active = true
     async function load() {
       try {
@@ -116,7 +117,7 @@ function DashboardOverview(): React.JSX.Element {
     return () => {
       active = false
     }
-  }, [playerId])
+  }, [playerId, playerLoading])
 
   // Carica KPI avanzati per trend e insights
   useEffect(() => {

@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useActivePlayer } from '@/hooks/useActivePlayer'
 import type { MatchAnalysis } from '@/types/matchAnalysis'
 import SkeletonLoader, {
   SkeletonGrid,
@@ -31,7 +32,9 @@ export default function MatchDetailPage() {
   const router = useRouter()
 
   const matchId = params?.matchId as string
-  const playerId = search.get('playerId') || ''
+  const { activePlayer } = useActivePlayer()
+  const playerId =
+    activePlayer?.dotaAccountId?.toString() || search.get('playerId') || ''
 
   const [analysis, setAnalysis] = useState<MatchAnalysis | null>(null)
   const [error, setError] = useState<string | null>(null)

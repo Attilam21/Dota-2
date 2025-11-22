@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { getPlayerIdFromSearchParams } from '@/lib/playerId'
+import { useActivePlayer } from '@/hooks/useActivePlayer'
 import MultiLineChart from '@/components/charts/MultiLineChart'
 import ExplanationCard from '@/components/charts/ExplanationCard'
 import type { PlayerOverviewKPI } from '@/services/dota/kpiService'
@@ -34,8 +34,8 @@ export default function PerformancePage(): React.JSX.Element {
 }
 
 function PerformanceContent(): React.JSX.Element {
-  const searchParams = useSearchParams()
-  const playerId = getPlayerIdFromSearchParams(searchParams)
+  const { activePlayer, loading: playerLoading } = useActivePlayer()
+  const playerId = activePlayer?.dotaAccountId ?? 0
   const [overviewKPI, setOverviewKPI] = useState<PlayerOverviewKPI | null>(null)
   const [performanceProfile, setPerformanceProfile] =
     useState<PlayerPerformanceProfile | null>(null)
@@ -48,12 +48,12 @@ function PerformanceContent(): React.JSX.Element {
   const [intervalFilter, setIntervalFilter] = useState<'20' | '10'>('20')
 
   useEffect(() => {
+    if (playerLoading || !playerId) {
+      if (!playerLoading && !playerId) setLoading(false)
+      return
+    }
     let active = true
     async function load() {
-      if (!playerId) {
-        setLoading(false)
-        return
-      }
       try {
         setLoading(true)
 
@@ -103,7 +103,7 @@ function PerformanceContent(): React.JSX.Element {
     return () => {
       active = false
     }
-  }, [playerId])
+  }, [playerId, playerLoading])
 
   if (!playerId) {
     return (

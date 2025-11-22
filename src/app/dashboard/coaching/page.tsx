@@ -8,7 +8,7 @@
 
 import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { getPlayerIdFromSearchParams } from '@/lib/playerId'
+import { useActivePlayer } from '@/hooks/useActivePlayer'
 import SkeletonLoader, {
   SkeletonGrid,
   SkeletonCard,
@@ -31,21 +31,20 @@ export default function CoachingPage(): React.JSX.Element {
 }
 
 function CoachingContent(): React.JSX.Element {
-  const searchParams = useSearchParams()
-  const playerId = getPlayerIdFromSearchParams(searchParams)
+  const { activePlayer, loading: playerLoading } = useActivePlayer()
+  const playerId = activePlayer?.dotaAccountId ?? 0
 
   const [data, setData] = useState<CoachingDashboardData | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (playerLoading || !playerId) {
+      if (!playerLoading && !playerId) setLoading(false)
+      return
+    }
     let active = true
     async function load() {
-      if (!playerId) {
-        setLoading(false)
-        return
-      }
-
       try {
         setLoading(true)
         setError(null)
@@ -74,7 +73,7 @@ function CoachingContent(): React.JSX.Element {
     return () => {
       active = false
     }
-  }, [playerId])
+  }, [playerId, playerLoading])
 
   if (loading) {
     return (

@@ -6,7 +6,7 @@
 import Link from 'next/link'
 import React, { Suspense, useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { getPlayerIdFromSearchParams } from '@/lib/playerId'
+import { useActivePlayer } from '@/hooks/useActivePlayer'
 import { getHeroIconUrl, getHeroName } from '@/lib/dotaHeroes'
 
 const TEST_PLAYER_ID = 86745912
@@ -41,8 +41,8 @@ export default function MatchesPage(): React.JSX.Element {
 }
 
 function MatchesPageContent(): React.JSX.Element {
-  const searchParams = useSearchParams()
-  const playerId = getPlayerIdFromSearchParams(searchParams)
+  const { activePlayer, loading: playerLoading } = useActivePlayer()
+  const playerId = activePlayer?.dotaAccountId ?? 0
   const [data, setData] = useState<MatchRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState<boolean>(true)
@@ -50,6 +50,10 @@ function MatchesPageContent(): React.JSX.Element {
   const [filterDuration, setFilterDuration] = useState<string>('all') // 'all', 'short', 'medium', 'long'
 
   useEffect(() => {
+    if (playerLoading || !playerId) {
+      if (!playerLoading && !playerId) setLoading(false)
+      return
+    }
     let active = true
     async function load() {
       try {
@@ -75,7 +79,7 @@ function MatchesPageContent(): React.JSX.Element {
     return () => {
       active = false
     }
-  }, [playerId])
+  }, [playerId, playerLoading])
 
   return (
     <div className="space-y-4 text-white">
