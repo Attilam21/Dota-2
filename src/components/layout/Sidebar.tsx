@@ -24,7 +24,7 @@ const navSections = [
   },
   {
     title: 'Avanzato',
-    items: [{ label: 'Esplora dati', href: '/dashboard/explorer' }],
+    items: [{ label: 'Analisi avanzate', href: '/dashboard/advanced' }],
   },
   {
     title: 'Sistema',
