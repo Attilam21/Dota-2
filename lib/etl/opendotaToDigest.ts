@@ -1,4 +1,5 @@
 import { RawMatch, RawPlayer, MatchDigest, PlayerDigest } from "@/lib/types/opendota";
+import { sanitizePlayerDigest } from "@/lib/utils/sanitizePlayerDigest";
 
 // Helper: convert epoch timestamp to ISO string
 function epochToISO(epoch: number | undefined): string | null {
@@ -138,7 +139,7 @@ export function buildDigestFromRaw(raw: RawMatch): { match: MatchDigest; players
     const isRadiant = player.player_slot < 128;
     const teamKills = isRadiant ? radiantKills : direKills;
 
-    return {
+    const playerDigest: PlayerDigest = {
       match_id: raw.match_id,
       player_slot: player.player_slot,
       account_id: player.account_id ?? null,
@@ -164,6 +165,9 @@ export function buildDigestFromRaw(raw: RawMatch): { match: MatchDigest; players
       items: buildItemsObject(player),
       position_metrics: null, // Can be extended with position data if available
     };
+
+    // Sanitize to remove any potential extra fields
+    return sanitizePlayerDigest(playerDigest);
   });
 
   return { match, players };

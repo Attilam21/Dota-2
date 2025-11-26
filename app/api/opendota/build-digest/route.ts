@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildDigestFromRaw } from "@/lib/etl/opendotaToDigest";
 import { RawMatch } from "@/lib/types/opendota";
+import { sanitizePlayerDigest } from "@/lib/utils/sanitizePlayerDigest";
 
 // Forzatura runtime Node.js
 export const runtime = "nodejs";
@@ -143,18 +144,27 @@ export async function POST(request: NextRequest) {
       // Continue anyway, upsert will handle conflicts
     }
 
+    // Sanitize payload: ensure only valid PlayerDigest properties are sent
+    // This is a double-check in case any extra fields slipped through the ETL
+    const sanitizedPlayers = digest.players.map((player) => sanitizePlayerDigest(player));
+
+    // Log payload keys before upsert (without full JSON)
+    const sampleKeys = sanitizedPlayers[0] ? Object.keys(sanitizedPlayers[0]) : [];
+    console.log(`[build-digest] BEFORE UPSERT - match_id ${matchId}, players_count: ${sanitizedPlayers.length}, sample_keys: [${sampleKeys.join(", ")}]`);
+
     const { error: playersUpsertError } = await supabaseAdmin
       .from("players_digest")
-      .upsert(digest.players, { onConflict: "match_id,player_slot" });
+      .upsert(sanitizedPlayers, { onConflict: "match_id,player_slot" });
 
     if (playersUpsertError) {
-      const samplePlayer = digest.players[0];
-      console.error(`[build-digest] Player digests upsert error for match_id ${matchId}:`, {
+      const samplePlayer = sanitizedPlayers[0];
+      console.error(`[build-digest] AFTER UPSERT - ERROR for match_id ${matchId}:`, {
         code: playersUpsertError.code,
         message: playersUpsertError.message,
         details: playersUpsertError.details,
         sample_account_id: samplePlayer?.account_id,
         sample_hero_id: samplePlayer?.hero_id,
+        payload_keys: samplePlayer ? Object.keys(samplePlayer) : [],
       });
       return NextResponse.json(
         {
@@ -167,7 +177,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[build-digest] Player digests upsert completed for match_id ${matchId}, players_count: ${digest.players.length}`);
+    console.log(`[build-digest] AFTER UPSERT - SUCCESS for match_id ${matchId}, players_count: ${sanitizedPlayers.length}`);
 
     const duration = Date.now() - startTime;
     console.log(`[build-digest] Successfully built digest for match_id ${matchId} in ${duration}ms`);
