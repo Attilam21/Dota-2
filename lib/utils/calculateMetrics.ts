@@ -133,10 +133,18 @@ export async function updateUserStatistics(userId: string, supabase: SupabaseCli
     .eq('user_id', userId)
     .in('match_id', matchIds);
 
-  const avgAggressiveness = metrics?.reduce((sum: number, m: { aggressiveness_score: number | null }) => sum + (m.aggressiveness_score || 0), 0) / (metrics?.length || 1) || 0;
-  const avgFarmEfficiency = metrics?.reduce((sum: number, m: { farm_efficiency_score: number | null }) => sum + (m.farm_efficiency_score || 0), 0) / (metrics?.length || 1) || 0;
-  const avgMacro = metrics?.reduce((sum: number, m: { macro_score: number | null }) => sum + (m.macro_score || 0), 0) / (metrics?.length || 1) || 0;
-  const avgSurvivability = metrics?.reduce((sum: number, m: { survivability_score: number | null }) => sum + (m.survivability_score || 0), 0) / (metrics?.length || 1) || 0;
+  const avgAggressiveness = metrics && metrics.length > 0
+    ? metrics.reduce((sum: number, m: { aggressiveness_score: number | null }) => sum + (m.aggressiveness_score || 0), 0) / metrics.length
+    : 0;
+  const avgFarmEfficiency = metrics && metrics.length > 0
+    ? metrics.reduce((sum: number, m: { farm_efficiency_score: number | null }) => sum + (m.farm_efficiency_score || 0), 0) / metrics.length
+    : 0;
+  const avgMacro = metrics && metrics.length > 0
+    ? metrics.reduce((sum: number, m: { macro_score: number | null }) => sum + (m.macro_score || 0), 0) / metrics.length
+    : 0;
+  const avgSurvivability = metrics && metrics.length > 0
+    ? metrics.reduce((sum: number, m: { survivability_score: number | null }) => sum + (m.survivability_score || 0), 0) / metrics.length
+    : 0;
 
   // Fetch task attivi
   const { data: activeTasks } = await supabase
