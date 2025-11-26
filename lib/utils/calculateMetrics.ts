@@ -1,6 +1,5 @@
 import { PlayerDigest, MatchDigest } from '@/lib/types/opendota';
-
-const MIN_DURATION = 15 * 60; // 15 minuti
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 interface MatchMetrics {
   aggressiveness_score: number;
@@ -23,8 +22,7 @@ interface MatchMetrics {
  */
 export function calculatePlayerMetrics(
   player: PlayerDigest,
-  match: MatchDigest,
-  teamKills: number
+  match: MatchDigest
 ): MatchMetrics {
   // Aggressiveness: basato su kill participation e damage
   const killParticipation = player.kill_participation || 0;
@@ -84,7 +82,7 @@ export function calculatePlayerMetrics(
 /**
  * Aggiorna le statistiche aggregate dell'utente
  */
-export async function updateUserStatistics(userId: string, supabase: any) {
+export async function updateUserStatistics(userId: string, supabase: SupabaseClient) {
   // Fetch ultime 20 partite incluse
   const { data: matches } = await supabase
     .from('matches_digest')
@@ -98,7 +96,7 @@ export async function updateUserStatistics(userId: string, supabase: any) {
     return;
   }
 
-  const matchIds = matches.map(m => m.match_id);
+  const matchIds = matches.map((m: { match_id: number }) => m.match_id);
 
   // Fetch players per questi match
   const { data: players } = await supabase
@@ -112,21 +110,21 @@ export async function updateUserStatistics(userId: string, supabase: any) {
   }
 
   // Calcola statistiche aggregate
-  const wins = matches.filter(m => {
-    const player = players.find(p => p.match_id === m.match_id);
+  const wins = matches.filter((m: { match_id: number; radiant_win: boolean }) => {
+    const player = players.find((p: { match_id: number; player_slot: number }) => p.match_id === m.match_id);
     if (!player) return false;
     return m.radiant_win === (player.player_slot < 128);
   }).length;
 
   const winrate = (wins / matches.length) * 100;
 
-  const avgKda = players.reduce((sum, p) => {
+  const avgKda = players.reduce((sum: number, p: { kda: number | null }) => {
     const kda = p.kda || 0;
     return sum + kda;
   }, 0) / players.length;
 
-  const avgGpm = players.reduce((sum, p) => sum + (p.gold_per_min || 0), 0) / players.length;
-  const avgXpm = players.reduce((sum, p) => sum + (p.xp_per_min || 0), 0) / players.length;
+  const avgGpm = players.reduce((sum: number, p: { gold_per_min: number | null }) => sum + (p.gold_per_min || 0), 0) / players.length;
+  const avgXpm = players.reduce((sum: number, p: { xp_per_min: number | null }) => sum + (p.xp_per_min || 0), 0) / players.length;
 
   // Fetch metriche avanzate
   const { data: metrics } = await supabase
@@ -135,10 +133,10 @@ export async function updateUserStatistics(userId: string, supabase: any) {
     .eq('user_id', userId)
     .in('match_id', matchIds);
 
-  const avgAggressiveness = metrics?.reduce((sum, m) => sum + (m.aggressiveness_score || 0), 0) / (metrics?.length || 1) || 0;
-  const avgFarmEfficiency = metrics?.reduce((sum, m) => sum + (m.farm_efficiency_score || 0), 0) / (metrics?.length || 1) || 0;
-  const avgMacro = metrics?.reduce((sum, m) => sum + (m.macro_score || 0), 0) / (metrics?.length || 1) || 0;
-  const avgSurvivability = metrics?.reduce((sum, m) => sum + (m.survivability_score || 0), 0) / (metrics?.length || 1) || 0;
+  const avgAggressiveness = metrics?.reduce((sum: number, m: { aggressiveness_score: number | null }) => sum + (m.aggressiveness_score || 0), 0) / (metrics?.length || 1) || 0;
+  const avgFarmEfficiency = metrics?.reduce((sum: number, m: { farm_efficiency_score: number | null }) => sum + (m.farm_efficiency_score || 0), 0) / (metrics?.length || 1) || 0;
+  const avgMacro = metrics?.reduce((sum: number, m: { macro_score: number | null }) => sum + (m.macro_score || 0), 0) / (metrics?.length || 1) || 0;
+  const avgSurvivability = metrics?.reduce((sum: number, m: { survivability_score: number | null }) => sum + (m.survivability_score || 0), 0) / (metrics?.length || 1) || 0;
 
   // Fetch task attivi
   const { data: activeTasks } = await supabase

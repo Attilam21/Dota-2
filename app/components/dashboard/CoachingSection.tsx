@@ -73,7 +73,7 @@ export async function CoachingSection({ userId }: CoachingSectionProps) {
       ) : (
         <div className="text-center py-8 text-gray-400">
           <p>Nessun task attivo al momento.</p>
-          <p className="text-sm mt-2">Clicca su "Richiedi nuova analisi AI" per generare task personalizzati.</p>
+          <p className="text-sm mt-2">Clicca su &quot;Richiedi nuova analisi AI&quot; per generare task personalizzati.</p>
         </div>
       )}
     </div>

@@ -52,7 +52,7 @@ export function ImportMatchesForm() {
           const response = await fetch(`/api/opendota/import-match?match_id=${matchId}&user_id=${user.id}`);
           if (!response.ok) throw new Error(`Errore import match ${matchId}`);
 
-          const data = await response.json();
+          await response.json();
           
           // Build digest con user_id
           const digestResponse = await fetch('/api/opendota/build-digest', {
@@ -66,7 +66,7 @@ export function ImportMatchesForm() {
           const digestData = await digestResponse.json();
 
           // Trova il player dell'utente (se presente)
-          const player = digestData.players?.find((p: any) => 
+          const player = digestData.players?.find((p: { account_id: number | null; player_slot: number }) => 
             p.account_id && p.account_id.toString() === user.user_metadata?.steam_id?.toString()
           ) || digestData.players?.[0];
 
