@@ -3,6 +3,25 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function GET(request: NextRequest) {
   try {
+    // Verifica variabili ambiente server-side
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const opendotaApiKey = process.env.OPENDOTA_API_KEY;
+
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      return NextResponse.json(
+        { error: "Supabase configuration missing" },
+        { status: 500 }
+      );
+    }
+
+    if (!opendotaApiKey) {
+      return NextResponse.json(
+        { error: "OPENDOTA_API_KEY environment variable is not set" },
+        { status: 500 }
+      );
+    }
+
     // 1. Lettura e validazione del parametro match_id
     const searchParams = request.nextUrl.searchParams;
     const matchIdParam = searchParams.get("match_id");
@@ -22,16 +41,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 2. Verifica OPENDOTA_API_KEY
-    const opendotaApiKey = process.env.OPENDOTA_API_KEY;
-    if (!opendotaApiKey) {
-      return NextResponse.json(
-        { error: "OPENDOTA_API_KEY environment variable is not set" },
-        { status: 500 }
-      );
-    }
-
-    // 3. Chiamata a OpenDota
+    // 2. Chiamata a OpenDota
     const opendotaUrl = `https://api.opendota.com/api/matches/${matchId}?api_key=${opendotaApiKey}`;
     
     const opendotaResponse = await fetch(opendotaUrl);
@@ -48,7 +58,7 @@ export async function GET(request: NextRequest) {
 
     const matchData = await opendotaResponse.json();
 
-    // 4. Upsert su Supabase
+    // 3. Upsert su Supabase
     const { error: supabaseError } = await supabaseAdmin
       .from("raw_matches")
       .upsert(
@@ -71,7 +81,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 5. Risposta di successo
+    // 4. Risposta di successo
     return NextResponse.json({
       status: "ok",
       match_id: matchId,
@@ -86,4 +96,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
