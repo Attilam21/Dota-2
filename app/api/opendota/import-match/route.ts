@@ -229,12 +229,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // --- Lettura user_id opzionale dal query param ---
+    const userId = request.nextUrl.searchParams.get("user_id");
+
     // --- Upsert su Supabase ---
     const upsertPayload = {
       match_id: matchId,
       data: matchData,
       source: "opendota",
       ingested_at: new Date().toISOString(),
+      ...(userId && { user_id: userId }),
     };
 
     const { error: supabaseError } = await supabaseAdmin

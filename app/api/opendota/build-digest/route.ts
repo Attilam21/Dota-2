@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    let body: { match_id?: number };
+    let body: { match_id?: number; user_id?: string };
     try {
       body = await request.json();
     } catch {
@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     const rawMatchId = body.match_id;
+    const userId = body.user_id;
     if (
       typeof rawMatchId !== "number" ||
       !Number.isInteger(rawMatchId) ||
@@ -111,10 +112,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upsert match digest
+    // Upsert match digest (con user_id se fornito)
+    const matchData = {
+      ...digest.match,
+      ...(userId && { user_id: userId }),
+    };
     const { error: matchUpsertError } = await supabaseAdmin
       .from("matches_digest")
-      .upsert(digest.match, { onConflict: "match_id" });
+      .upsert(matchData, { onConflict: "match_id" });
 
     if (matchUpsertError) {
       console.error(`[build-digest] Match digest upsert error for match_id ${matchId}:`, {
@@ -146,7 +151,11 @@ export async function POST(request: NextRequest) {
 
     // Sanitize payload: ensure only valid PlayerDigest properties are sent
     // This is a double-check in case any extra fields slipped through the ETL
-    const sanitizedPlayers = digest.players.map((player) => sanitizePlayerDigest(player));
+    // Aggiungi user_id se fornito
+    const sanitizedPlayers = digest.players.map((player) => {
+      const sanitized = sanitizePlayerDigest(player);
+      return userId ? { ...sanitized, user_id: userId } : sanitized;
+    });
 
     // Log payload keys before upsert (without full JSON)
     const sampleKeys = sanitizedPlayers[0] ? Object.keys(sanitizedPlayers[0]) : [];
