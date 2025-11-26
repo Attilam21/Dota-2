@@ -19,6 +19,8 @@ export function LoginForm() {
     setLoading(true);
 
     try {
+      console.log('[LoginForm] Attempting login for:', email);
+      
       const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -29,6 +31,7 @@ export function LoginForm() {
           message: signInError.message,
           status: signInError.status,
           name: signInError.name,
+          fullError: signInError,
         });
 
         // Messaggi di errore specifici basati sul tipo di errore
@@ -51,29 +54,57 @@ export function LoginForm() {
       }
 
       if (data.user) {
+        console.log('[LoginForm] Login successful, user ID:', data.user.id);
+        console.log('[LoginForm] User data:', {
+          id: data.user.id,
+          email: data.user.email,
+          email_confirmed_at: data.user.email_confirmed_at,
+        });
+        
         // Controlla onboarding status
         const { data: profile, error: profileError } = await supabase
           .from('user_profile')
-          .select('onboarding_status')
+          .select('onboarding_status, nickname')
           .eq('id', data.user.id)
           .single();
 
         if (profileError) {
-          console.error('[LoginForm] Profile fetch error:', profileError);
+          console.error('[LoginForm] Profile fetch error:', {
+            error: profileError,
+            user_id: data.user.id,
+            message: profileError.message,
+            code: profileError.code,
+            details: profileError.details,
+            hint: profileError.hint,
+          });
+          
           // Se il profilo non esiste, potrebbe essere un utente vecchio senza profilo
           // Crea il profilo se non esiste
-          const { error: createError } = await supabase
+          console.log('[LoginForm] Attempting to create profile for user:', data.user.id);
+          const { error: createError, data: createData } = await supabase
             .from('user_profile')
             .insert({
               id: data.user.id,
               onboarding_status: 'profile_pending',
-            });
+            })
+            .select();
 
           if (createError) {
-            console.error('[LoginForm] Profile creation error:', createError);
+            console.error('[LoginForm] Profile creation error:', {
+              error: createError,
+              user_id: data.user.id,
+              message: createError.message,
+              code: createError.code,
+              details: createError.details,
+              hint: createError.hint,
+            });
             setError('Errore nel caricamento del profilo. Riprova.');
             return;
           }
+          
+          console.log('[LoginForm] Profile created successfully:', createData);
+        } else {
+          console.log('[LoginForm] Profile found:', profile);
         }
 
         const onboardingStatus = profile?.onboarding_status || 'profile_pending';
