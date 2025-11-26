@@ -224,8 +224,8 @@ export async function POST(request: NextRequest) {
       has_teamfights: rawMatch.teamfights !== undefined,
     });
 
-    // Type assertion after validation
-    const validatedRawMatch = rawMatch as RawMatch;
+    // Type assertion after validation (cast through unknown for safety)
+    const validatedRawMatch = rawMatch as unknown as RawMatch;
 
     // Build digest using ETL function
     let digest;
