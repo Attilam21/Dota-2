@@ -1,5 +1,6 @@
 -- ============================================
--- SCHEMA COMPLETO DOTA-2 DASHBOARD
+-- SCHEMA FINALE DOTA-2 DASHBOARD
+-- Versione pulita e completa per produzione
 -- ============================================
 
 -- ============================================
@@ -26,34 +27,41 @@ CREATE TABLE IF NOT EXISTS user_profile (
 );
 
 -- ============================================
--- 2. MATCHES (già esistente, aggiungiamo colonne)
+-- 2. MATCHES DIGEST (Aggiunta colonne user_id e coaching flags)
 -- ============================================
 
 -- Aggiungi colonne a matches_digest se non esistono
 DO $$ 
 BEGIN
+  -- user_id per associare match all'utente
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                  WHERE table_name = 'matches_digest' AND column_name = 'user_id') THEN
     ALTER TABLE matches_digest ADD COLUMN user_id UUID REFERENCES user_profile(id) ON DELETE CASCADE;
   END IF;
   
+  -- Flag per coaching eligibility
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                  WHERE table_name = 'matches_digest' AND column_name = 'is_eligible_for_coaching') THEN
     ALTER TABLE matches_digest ADD COLUMN is_eligible_for_coaching BOOLEAN DEFAULT false;
   END IF;
   
+  -- Flag per inclusion in coaching
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                  WHERE table_name = 'matches_digest' AND column_name = 'included_in_coaching') THEN
     ALTER TABLE matches_digest ADD COLUMN included_in_coaching BOOLEAN DEFAULT false;
   END IF;
   
+  -- Data match per ordinamento
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
                  WHERE table_name = 'matches_digest' AND column_name = 'match_date') THEN
     ALTER TABLE matches_digest ADD COLUMN match_date TIMESTAMPTZ;
   END IF;
 END $$;
 
--- Aggiungi colonne a players_digest se non esistono
+-- ============================================
+-- 3. PLAYERS DIGEST (Aggiunta colonna user_id)
+-- ============================================
+
 DO $$ 
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
@@ -63,7 +71,7 @@ BEGIN
 END $$;
 
 -- ============================================
--- 3. PLAYER MATCH METRICS (Metriche avanzate)
+-- 4. PLAYER MATCH METRICS (Metriche avanzate per match)
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS player_match_metrics (
@@ -77,7 +85,6 @@ CREATE TABLE IF NOT EXISTS player_match_metrics (
   deaths INTEGER,
   assists INTEGER,
   kda NUMERIC(5,2),
-  win_rate NUMERIC(5,2),
   
   -- Metriche Avanzate (0-100)
   aggressiveness_score NUMERIC(5,2) DEFAULT 0,
@@ -109,7 +116,7 @@ CREATE TABLE IF NOT EXISTS player_match_metrics (
 );
 
 -- ============================================
--- 4. COACHING TASKS
+-- 5. COACHING TASKS
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS coaching_tasks (
@@ -136,7 +143,7 @@ CREATE TABLE IF NOT EXISTS coaching_tasks (
 );
 
 -- ============================================
--- 5. COACHING TASK PROGRESS (Tracking)
+-- 6. COACHING TASK PROGRESS (Tracking)
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS coaching_task_progress (
@@ -150,7 +157,7 @@ CREATE TABLE IF NOT EXISTS coaching_task_progress (
 );
 
 -- ============================================
--- 6. USER STATISTICS (Aggregate KPI)
+-- 7. USER STATISTICS (Aggregate KPI)
 -- ============================================
 
 CREATE TABLE IF NOT EXISTS user_statistics (
@@ -182,20 +189,21 @@ CREATE TABLE IF NOT EXISTS user_statistics (
 );
 
 -- ============================================
--- 7. INDICI PER PERFORMANCE
+-- 8. INDICI PER PERFORMANCE
 -- ============================================
 
 CREATE INDEX IF NOT EXISTS idx_user_profile_id ON user_profile(id);
-CREATE INDEX IF NOT EXISTS idx_matches_digest_user_id ON matches_digest(user_id);
+CREATE INDEX IF NOT EXISTS idx_matches_digest_user_id ON matches_digest(user_id) WHERE user_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_matches_digest_included ON matches_digest(user_id, included_in_coaching) WHERE included_in_coaching = true;
-CREATE INDEX IF NOT EXISTS idx_matches_digest_date ON matches_digest(user_id, match_date DESC);
-CREATE INDEX IF NOT EXISTS idx_players_digest_user_id ON players_digest(user_id);
+CREATE INDEX IF NOT EXISTS idx_matches_digest_date ON matches_digest(user_id, match_date DESC) WHERE match_date IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_players_digest_user_id ON players_digest(user_id) WHERE user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_players_digest_match_id ON players_digest(match_id);
 CREATE INDEX IF NOT EXISTS idx_player_match_metrics_user_match ON player_match_metrics(user_id, match_id);
 CREATE INDEX IF NOT EXISTS idx_coaching_tasks_user_status ON coaching_tasks(user_id, status);
 CREATE INDEX IF NOT EXISTS idx_coaching_task_progress_task ON coaching_task_progress(task_id);
 
 -- ============================================
--- 8. FUNZIONI HELPER
+-- 9. FUNZIONI HELPER
 -- ============================================
 
 -- Funzione per aggiornare updated_at automaticamente
@@ -208,23 +216,43 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger per updated_at
+DROP TRIGGER IF EXISTS update_user_profile_updated_at ON user_profile;
 CREATE TRIGGER update_user_profile_updated_at
   BEFORE UPDATE ON user_profile
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_user_statistics_updated_at ON user_statistics;
 CREATE TRIGGER update_user_statistics_updated_at
   BEFORE UPDATE ON user_statistics
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_coaching_tasks_updated_at ON coaching_tasks;
 CREATE TRIGGER update_coaching_tasks_updated_at
   BEFORE UPDATE ON coaching_tasks
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
+-- Funzione per popolare match_date da start_time
+CREATE OR REPLACE FUNCTION set_match_date_from_start_time()
+RETURNS TRIGGER AS $$
+BEGIN
+  IF NEW.start_time IS NOT NULL AND NEW.match_date IS NULL THEN
+    NEW.match_date = to_timestamp(NEW.start_time);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS set_match_date_trigger ON matches_digest;
+CREATE TRIGGER set_match_date_trigger
+  BEFORE INSERT OR UPDATE ON matches_digest
+  FOR EACH ROW
+  EXECUTE FUNCTION set_match_date_from_start_time();
+
 -- ============================================
--- 9. ROW LEVEL SECURITY (RLS)
+-- 10. ROW LEVEL SECURITY (RLS)
 -- ============================================
 
 -- Abilita RLS
@@ -236,6 +264,18 @@ ALTER TABLE coaching_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE coaching_task_progress ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_statistics ENABLE ROW LEVEL SECURITY;
 
+-- Rimuovi policy esistenti se presenti (per evitare duplicati)
+DROP POLICY IF EXISTS "Users can view own profile" ON user_profile;
+DROP POLICY IF EXISTS "Users can update own profile" ON user_profile;
+DROP POLICY IF EXISTS "Users can insert own profile" ON user_profile;
+DROP POLICY IF EXISTS "Users can view own matches" ON matches_digest;
+DROP POLICY IF EXISTS "Users can view own players" ON players_digest;
+DROP POLICY IF EXISTS "Users can view own metrics" ON player_match_metrics;
+DROP POLICY IF EXISTS "Users can view own tasks" ON coaching_tasks;
+DROP POLICY IF EXISTS "Users can update own tasks" ON coaching_tasks;
+DROP POLICY IF EXISTS "Users can insert own tasks" ON coaching_tasks;
+DROP POLICY IF EXISTS "Users can view own statistics" ON user_statistics;
+
 -- Policy: Utenti possono vedere solo i propri dati
 CREATE POLICY "Users can view own profile"
   ON user_profile FOR SELECT
@@ -245,13 +285,17 @@ CREATE POLICY "Users can update own profile"
   ON user_profile FOR UPDATE
   USING (auth.uid() = id);
 
+CREATE POLICY "Users can insert own profile"
+  ON user_profile FOR INSERT
+  WITH CHECK (auth.uid() = id);
+
 CREATE POLICY "Users can view own matches"
   ON matches_digest FOR SELECT
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id OR user_id IS NULL);
 
 CREATE POLICY "Users can view own players"
   ON players_digest FOR SELECT
-  USING (auth.uid() = user_id);
+  USING (auth.uid() = user_id OR user_id IS NULL);
 
 CREATE POLICY "Users can view own metrics"
   ON player_match_metrics FOR SELECT
@@ -265,18 +309,21 @@ CREATE POLICY "Users can update own tasks"
   ON coaching_tasks FOR UPDATE
   USING (auth.uid() = user_id);
 
+CREATE POLICY "Users can insert own tasks"
+  ON coaching_tasks FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
 CREATE POLICY "Users can view own statistics"
   ON user_statistics FOR SELECT
   USING (auth.uid() = user_id);
 
 -- ============================================
--- 10. MATERIALIZED VIEWS (per performance)
+-- 11. MATERIALIZED VIEWS (per performance)
 -- ============================================
 
--- View per statistiche eroi aggregate (già esistente, manteniamo)
--- Aggiungiamo view per trend utente
-
-CREATE MATERIALIZED VIEW IF NOT EXISTS user_match_trend AS
+-- View per trend utente (metriche nel tempo)
+DROP MATERIALIZED VIEW IF EXISTS user_match_trend;
+CREATE MATERIALIZED VIEW user_match_trend AS
 SELECT 
   pm.user_id,
   md.match_date,
@@ -284,12 +331,34 @@ SELECT
   pm.farm_efficiency_score,
   pm.macro_score,
   pm.survivability_score,
-  md.radiant_win = (pd.player_slot < 128) as won
+  CASE WHEN md.radiant_win = (pd.player_slot < 128) THEN true ELSE false END as won
 FROM player_match_metrics pm
 JOIN matches_digest md ON pm.match_id = md.match_id
 JOIN players_digest pd ON pm.match_id = pd.match_id AND pm.player_slot = pd.player_slot
 WHERE md.included_in_coaching = true
+  AND md.match_date IS NOT NULL
 ORDER BY pm.user_id, md.match_date DESC;
 
 CREATE INDEX IF NOT EXISTS idx_user_match_trend_user_date ON user_match_trend(user_id, match_date DESC);
+
+-- ============================================
+-- 12. FUNZIONE PER CREARE USER_PROFILE ALLA REGISTRAZIONE
+-- ============================================
+
+-- Funzione trigger per creare automaticamente user_profile quando si crea un utente in auth.users
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.user_profile (id, onboarding_status)
+  VALUES (NEW.id, 'profile_pending')
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION handle_new_user();
 

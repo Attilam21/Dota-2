@@ -29,16 +29,30 @@ export function RegisterForm() {
       if (signUpError) throw signUpError;
 
       if (authData.user) {
-        // Crea profilo utente
+        // Il trigger handle_new_user() crea automaticamente user_profile
+        // Aggiorniamo solo il nickname se necessario
         const { error: profileError } = await supabase
           .from('user_profile')
-          .insert({
+          .upsert({
             id: authData.user.id,
             nickname,
             onboarding_status: 'profile_pending',
-          });
+          }, { onConflict: 'id' });
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          // Se fallisce, potrebbe essere che il trigger non sia ancora eseguito
+          // Aspettiamo un attimo e riproviamo
+          await new Promise(resolve => setTimeout(resolve, 500));
+          const { error: retryError } = await supabase
+            .from('user_profile')
+            .upsert({
+              id: authData.user.id,
+              nickname,
+              onboarding_status: 'profile_pending',
+            }, { onConflict: 'id' });
+          
+          if (retryError) throw retryError;
+        }
 
         // Redirect a onboarding
         router.push('/onboarding/profile');
