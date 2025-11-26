@@ -167,6 +167,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(`[build-digest] Player digests upsert completed for match_id ${matchId}, players_count: ${digest.players.length}`);
+
     const duration = Date.now() - startTime;
     console.log(`[build-digest] Successfully built digest for match_id ${matchId} in ${duration}ms`);
 
