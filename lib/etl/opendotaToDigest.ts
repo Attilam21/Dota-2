@@ -48,10 +48,15 @@ function calculateVisionScore(
 }
 
 // Helper: build objectives summary
+type ObjectiveSummary = {
+  count: number;
+  types: Record<string, number>;
+};
+
 function buildObjectivesSummary(objectives: Array<Record<string, unknown>> | undefined): Record<string, unknown> | null {
   if (!objectives || objectives.length === 0) return null;
   
-  const summary: Record<string, unknown> = {
+  const summary: ObjectiveSummary = {
     count: objectives.length,
     types: {},
   };
@@ -59,7 +64,7 @@ function buildObjectivesSummary(objectives: Array<Record<string, unknown>> | und
   objectives.forEach((obj) => {
     const type = obj.type as string;
     if (type) {
-      summary.types[type] = (summary.types[type] as number || 0) + 1;
+      summary.types[type] = (summary.types[type] ?? 0) + 1;
     }
   });
   
