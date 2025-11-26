@@ -29,25 +29,52 @@ export function RegisterForm() {
       if (signUpError) throw signUpError;
 
       if (authData.user) {
-        // Usa endpoint API che bypassa RLS usando service role
-        // Questo risolve il problema della sessione non ancora disponibile
-        const response = await fetch('/api/user/create-profile', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            userId: authData.user.id,
+        // Il trigger handle_new_user() crea automaticamente user_profile
+        // Aspettiamo che il trigger esegua, poi aggiorniamo solo il nickname
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // Aggiorna solo il nickname (il profilo esiste già grazie al trigger)
+        const { error: updateError } = await supabase
+          .from('user_profile')
+          .update({
             nickname,
-          }),
-        });
+            onboarding_status: 'profile_pending',
+          })
+          .eq('id', authData.user.id);
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-          throw new Error(errorData.error || 'Errore durante la creazione del profilo');
+        if (updateError) {
+          console.error('[RegisterForm] Profile update error:', updateError);
+          // Se fallisce, potrebbe essere che il trigger non sia ancora eseguito
+          // Aspettiamo ancora e riproviamo
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          const { error: retryError } = await supabase
+            .from('user_profile')
+            .update({
+              nickname,
+              onboarding_status: 'profile_pending',
+            })
+            .eq('id', authData.user.id);
+          
+          if (retryError) {
+            console.error('[RegisterForm] Retry update error:', retryError);
+            // Se fallisce ancora, usa l'endpoint API come fallback
+            const response = await fetch('/api/user/create-profile', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId: authData.user.id,
+                nickname,
+              }),
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+              throw new Error(errorData.error || 'Errore durante la creazione del profilo');
+            }
+          }
         }
-
-        console.log('[RegisterForm] Profile created successfully via API');
 
         // Redirect a onboarding
         router.push('/onboarding/profile');
