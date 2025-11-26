@@ -10,10 +10,8 @@ export const preferredRegion = "fra1";
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
-  let matchId: number | null = null;
 
   try {
-    // Parse request body
     let body: { match_id?: number };
     try {
       body = await request.json();
@@ -29,20 +27,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate match_id
-    matchId = body.match_id;
-    if (!matchId || typeof matchId !== "number" || matchId <= 0 || !Number.isInteger(matchId)) {
-      console.error(`[build-digest] Invalid match_id: ${matchId}`);
+    const rawMatchId = body.match_id;
+    if (
+      typeof rawMatchId !== "number" ||
+      !Number.isInteger(rawMatchId) ||
+      rawMatchId <= 0
+    ) {
       return NextResponse.json(
-        {
-          status: "error",
-          error: "invalid_match_id",
-          details: "match_id must be a positive integer",
-        },
+        { error: "Invalid match_id. Must be a positive integer." },
         { status: 400 }
       );
     }
 
+    const matchId: number = rawMatchId;
     console.log(`[build-digest] Processing match_id: ${matchId}`);
 
     // Fetch raw match from raw_matches table
@@ -172,12 +169,11 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
-    console.error(`[build-digest] Unexpected error${matchId ? ` for match_id ${matchId}` : ""}:`, errorMessage);
+    console.error(`[build-digest] Unexpected error:`, errorMessage);
     return NextResponse.json(
       {
         status: "error",
         error: "internal_server_error",
-        match_id: matchId || null,
         details: errorMessage,
       },
       { status: 500 }
