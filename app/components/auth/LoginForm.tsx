@@ -32,15 +32,18 @@ export function LoginForm() {
         });
 
         // Messaggi di errore specifici basati sul tipo di errore
-        if (signInError.message.includes('Email not confirmed') || 
-            signInError.message.includes('email_not_confirmed') ||
-            signInError.status === 400) {
-          setError('Email non confermata. Controlla la tua email per il link di conferma o registrati di nuovo.');
-        } else if (signInError.message.includes('Invalid login credentials') ||
-                   signInError.message.includes('invalid_credentials')) {
+        // Controlla prima "Invalid login credentials" perché è più specifico
+        if (signInError.message.includes('Invalid login credentials') ||
+            signInError.message.includes('invalid_credentials')) {
           setError('Email o password errate. Riprova.');
+        } else if (signInError.message.includes('Email not confirmed') || 
+                   signInError.message.includes('email_not_confirmed')) {
+          setError('Email non confermata. Controlla la tua email per il link di conferma o registrati di nuovo.');
         } else if (signInError.message.includes('User not found')) {
           setError('Utente non trovato. Verifica l\'email o registrati.');
+        } else if (signInError.status === 400) {
+          // Se è 400 ma non abbiamo un messaggio specifico, mostra il messaggio generico
+          setError(signInError.message || 'Email o password errate. Riprova.');
         } else {
           setError(signInError.message || 'Errore durante il login. Riprova.');
         }
