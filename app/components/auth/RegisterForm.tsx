@@ -30,28 +30,34 @@ export function RegisterForm() {
 
       if (authData.user) {
         // Il trigger handle_new_user() crea automaticamente user_profile
-        // Aggiorniamo solo il nickname se necessario
+        // Aspettiamo un attimo per assicurarci che il trigger sia eseguito
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Aggiorniamo solo il nickname (il record esiste già grazie al trigger)
         const { error: profileError } = await supabase
           .from('user_profile')
-          .upsert({
-            id: authData.user.id,
+          .update({
             nickname,
             onboarding_status: 'profile_pending',
-          }, { onConflict: 'id' });
+          })
+          .eq('id', authData.user.id);
 
         if (profileError) {
-          // Se fallisce, potrebbe essere che il trigger non sia ancora eseguito
-          // Aspettiamo un attimo e riproviamo
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const { error: retryError } = await supabase
+          console.error('[RegisterForm] Profile update error:', profileError);
+          // Se fallisce l'update, potrebbe essere che il record non esista ancora
+          // Proviamo con INSERT (ma dovrebbe essere raro)
+          const { error: insertError } = await supabase
             .from('user_profile')
-            .upsert({
+            .insert({
               id: authData.user.id,
               nickname,
               onboarding_status: 'profile_pending',
-            }, { onConflict: 'id' });
+            });
           
-          if (retryError) throw retryError;
+          if (insertError) {
+            console.error('[RegisterForm] Profile insert error:', insertError);
+            throw insertError;
+          }
         }
 
         // Redirect a onboarding
