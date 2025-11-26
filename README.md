@@ -10,6 +10,10 @@ This project uses a **cloud-only development workflow**:
 - **Preview**: Application preview is available only through Vercel production URL or preview URLs
 - **Local Development Server**: The `npm run dev` command should **NOT** be used on this machine, except for future exceptions explicitly requested
 
+## API OpenDota – Ingestion
+
+The endpoint `/api/opendota/import-match` allows importing match data from OpenDota into Supabase. It accepts a `match_id` query parameter and fetches the match data from OpenDota API, then stores it in the `public.raw_matches` table. The route requires the following environment variables: `OPENDOTA_API_KEY` for OpenDota authentication, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for Supabase connection. The imported match data is stored with `source: 'opendota'` and includes the full JSON response from OpenDota in the `data` column.
+
 ## Getting Started
 
 First, run the development server:
