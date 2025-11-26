@@ -33,7 +33,7 @@ function buildItemsObject(player: RawPlayer): Record<string, unknown> {
   if (player.item_4 !== undefined) items.item_4 = player.item_4;
   if (player.item_5 !== undefined) items.item_5 = player.item_5;
   if (player.item_neutral !== undefined) items.item_neutral = player.item_neutral;
-  return Object.keys(items).length > 0 ? items : null;
+  return Object.keys(items).length > 0 ? items : {};
 }
 
 // Helper: calculate vision score
