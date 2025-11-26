@@ -1,5 +1,15 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Workflow
+
+This project uses a **cloud-only development workflow**:
+
+- **Development**: Code modifications are made using Cursor IDE
+- **Version Control**: Changes are committed and pushed to `main` (or feature branches)
+- **Build & Deploy**: Vercel automatically builds and deploys the application
+- **Preview**: Application preview is available only through Vercel production URL or preview URLs
+- **Local Development Server**: The `npm run dev` command should **NOT** be used on this machine, except for future exceptions explicitly requested
+
 ## Getting Started
 
 First, run the development server:
