@@ -1,49 +1,39 @@
 import { PlayerDigest } from "@/lib/types/opendota";
 
-// Whitelist of valid PlayerDigest properties aligned with Supabase schema
-const VALID_PLAYER_DIGEST_KEYS = [
-  "match_id",
-  "player_slot",
-  "account_id",
-  "hero_id",
-  "kills",
-  "deaths",
-  "assists",
-  "gold_per_min",
-  "xp_per_min",
-  "gold_spent",
-  "last_hits",
-  "denies",
-  "net_worth",
-  "hero_damage",
-  "tower_damage",
-  "damage_taken",
-  "teamfight_participation",
-  "kda",
-  "kill_participation",
-  "lane",
-  "lane_role",
-  "vision_score",
-  "items",
-  "position_metrics",
-] as const;
-
 /**
  * Sanitizes a PlayerDigest object by keeping only valid properties.
  * Removes any extra fields that might come from OpenDota JSON.
+ * Constructs a new object with only the whitelisted properties.
  * 
  * @param player - Potentially dirty PlayerDigest object
  * @returns Clean PlayerDigest object with only whitelisted properties
  */
 export function sanitizePlayerDigest(player: PlayerDigest): PlayerDigest {
-  const sanitized: Record<string, unknown> = {};
-  
-  for (const key of VALID_PLAYER_DIGEST_KEYS) {
-    if (key in player) {
-      sanitized[key] = player[key as keyof PlayerDigest];
-    }
-  }
-  
-  return sanitized as PlayerDigest;
+  return {
+    match_id: player.match_id,
+    player_slot: player.player_slot,
+    account_id: player.account_id ?? null,
+    hero_id: player.hero_id,
+    kills: player.kills ?? null,
+    deaths: player.deaths ?? null,
+    assists: player.assists ?? null,
+    gold_per_min: player.gold_per_min ?? null,
+    xp_per_min: player.xp_per_min ?? null,
+    gold_spent: player.gold_spent ?? null,
+    last_hits: player.last_hits ?? null,
+    denies: player.denies ?? null,
+    net_worth: player.net_worth ?? null,
+    hero_damage: player.hero_damage ?? null,
+    tower_damage: player.tower_damage ?? null,
+    damage_taken: player.damage_taken ?? null,
+    teamfight_participation: player.teamfight_participation ?? null,
+    kda: player.kda ?? null,
+    kill_participation: player.kill_participation ?? null,
+    lane: player.lane ?? null,
+    lane_role: player.lane_role ?? null,
+    vision_score: player.vision_score ?? null,
+    items: player.items ?? null,
+    position_metrics: player.position_metrics ?? null,
+  };
 }
 
