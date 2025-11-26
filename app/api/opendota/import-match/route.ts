@@ -1,31 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
+// Forzatura runtime Node.js (Vercel non deve usare Edge Runtime)
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const preferredRegion = "fra1"; // minimizza latenza in EU
+
 export async function GET(request: NextRequest) {
   try {
-    // Verifica variabili ambiente server-side
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const opendotaApiKey = process.env.OPENDOTA_API_KEY;
-
-    if (!supabaseUrl || !supabaseServiceRoleKey) {
-      return NextResponse.json(
-        { error: "Supabase configuration missing" },
-        { status: 500 }
-      );
-    }
-
-    if (!opendotaApiKey) {
-      return NextResponse.json(
-        { error: "OPENDOTA_API_KEY environment variable is not set" },
-        { status: 500 }
-      );
-    }
-
-    // 1. Lettura e validazione del parametro match_id
-    const searchParams = request.nextUrl.searchParams;
-    const matchIdParam = searchParams.get("match_id");
-
+    // --- Lettura e validazione del parametro match_id ---
+    const matchIdParam = request.nextUrl.searchParams.get("match_id");
     if (!matchIdParam) {
       return NextResponse.json(
         { error: "missing_or_invalid_match_id" },
@@ -41,16 +25,37 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 2. Chiamata a OpenDota
-    const opendotaUrl = `https://api.opendota.com/api/matches/${matchId}?api_key=${opendotaApiKey}`;
-    
-    const opendotaResponse = await fetch(opendotaUrl);
+    // --- Recupero variabile API Key OpenDota ---
+    const apiKey = process.env.OPENDOTA_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "env_OPENDOTA_API_KEY_missing" },
+        { status: 500 }
+      );
+    }
+
+    // --- Chiamata OpenDota (robusta e compatibile con Vercel) ---
+    const url = `https://api.opendota.com/api/matches/${matchId}?api_key=${apiKey}`;
+
+    const opendotaResponse = await fetch(url, {
+      method: "GET",
+      headers: {
+        "User-Agent": "FZTH-Dota2-Analytics/1.0",
+        "Cache-Control": "no-store",
+        Connection: "keep-alive",
+        Accept: "application/json",
+      },
+    });
 
     if (!opendotaResponse.ok) {
+      const status = opendotaResponse.status;
+      const details = await opendotaResponse.text().catch(() => null);
+
       return NextResponse.json(
         {
           error: "opendota_request_failed",
-          status: opendotaResponse.status,
+          status,
+          details,
         },
         { status: 502 }
       );
@@ -58,7 +63,7 @@ export async function GET(request: NextRequest) {
 
     const matchData = await opendotaResponse.json();
 
-    // 3. Upsert su Supabase
+    // --- Upsert su Supabase ---
     const { error: supabaseError } = await supabaseAdmin
       .from("raw_matches")
       .upsert(
@@ -68,30 +73,26 @@ export async function GET(request: NextRequest) {
           source: "opendota",
           ingested_at: new Date().toISOString(),
         },
-        {
-          onConflict: "match_id",
-        }
+        { onConflict: "match_id" }
       );
 
     if (supabaseError) {
-      console.error("Supabase upsert error:", supabaseError);
       return NextResponse.json(
-        { error: "supabase_upsert_failed" },
+        { error: "supabase_upsert_failed", details: supabaseError },
         { status: 500 }
       );
     }
 
-    // 4. Risposta di successo
+    // --- Risposta finale ---
     return NextResponse.json({
       status: "ok",
       match_id: matchId,
       provider: "opendota",
       stored: true,
     });
-  } catch (error) {
-    console.error("Unexpected error in import-match:", error);
+  } catch (err) {
     return NextResponse.json(
-      { error: "internal_server_error" },
+      { error: "internal_server_error", details: `${err}` },
       { status: 500 }
     );
   }
