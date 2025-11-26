@@ -29,36 +29,25 @@ export function RegisterForm() {
       if (signUpError) throw signUpError;
 
       if (authData.user) {
-        // Il trigger handle_new_user() crea automaticamente user_profile
-        // Aspettiamo un attimo per assicurarci che il trigger sia eseguito
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Aggiorniamo solo il nickname (il record esiste già grazie al trigger)
-        const { error: profileError } = await supabase
-          .from('user_profile')
-          .update({
+        // Usa endpoint API che bypassa RLS usando service role
+        // Questo risolve il problema della sessione non ancora disponibile
+        const response = await fetch('/api/user/create-profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId: authData.user.id,
             nickname,
-            onboarding_status: 'profile_pending',
-          })
-          .eq('id', authData.user.id);
+          }),
+        });
 
-        if (profileError) {
-          console.error('[RegisterForm] Profile update error:', profileError);
-          // Se fallisce l'update, potrebbe essere che il record non esista ancora
-          // Proviamo con INSERT (ma dovrebbe essere raro)
-          const { error: insertError } = await supabase
-            .from('user_profile')
-            .insert({
-              id: authData.user.id,
-              nickname,
-              onboarding_status: 'profile_pending',
-            });
-          
-          if (insertError) {
-            console.error('[RegisterForm] Profile insert error:', insertError);
-            throw insertError;
-          }
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+          throw new Error(errorData.error || 'Errore durante la creazione del profilo');
         }
+
+        console.log('[RegisterForm] Profile created successfully via API');
 
         // Redirect a onboarding
         router.push('/onboarding/profile');
