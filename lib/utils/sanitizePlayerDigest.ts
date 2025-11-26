@@ -36,11 +36,11 @@ const VALID_PLAYER_DIGEST_KEYS = [
  * @returns Clean PlayerDigest object with only whitelisted properties
  */
 export function sanitizePlayerDigest(player: PlayerDigest): PlayerDigest {
-  const sanitized: Partial<PlayerDigest> = {};
+  const sanitized: Record<string, unknown> = {};
   
   for (const key of VALID_PLAYER_DIGEST_KEYS) {
     if (key in player) {
-      sanitized[key] = player[key];
+      sanitized[key] = player[key as keyof PlayerDigest];
     }
   }
   
