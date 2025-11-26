@@ -36,6 +36,13 @@ export function RegisterForm() {
       if (signUpError) throw signUpError;
 
       if (authData.user) {
+        // Verifica se email confirmation è richiesta
+        if (!authData.session) {
+          // Email confirmation richiesta - mostra messaggio
+          setError('Controlla la tua email per confermare l\'account prima di fare login.');
+          return;
+        }
+
         // Il trigger handle_new_user() ha già creato user_profile con nickname
         // Nessun UPDATE necessario - tutto è già completo!
         // Redirect immediato a onboarding

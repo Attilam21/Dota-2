@@ -24,26 +24,68 @@ export function LoginForm() {
         password,
       });
 
-      if (signInError) throw signInError;
+      if (signInError) {
+        console.error('[LoginForm] Sign in error:', {
+          message: signInError.message,
+          status: signInError.status,
+          name: signInError.name,
+        });
+
+        // Messaggi di errore specifici basati sul tipo di errore
+        if (signInError.message.includes('Email not confirmed') || 
+            signInError.message.includes('email_not_confirmed') ||
+            signInError.status === 400) {
+          setError('Email non confermata. Controlla la tua email per il link di conferma o registrati di nuovo.');
+        } else if (signInError.message.includes('Invalid login credentials') ||
+                   signInError.message.includes('invalid_credentials')) {
+          setError('Email o password errate. Riprova.');
+        } else if (signInError.message.includes('User not found')) {
+          setError('Utente non trovato. Verifica l\'email o registrati.');
+        } else {
+          setError(signInError.message || 'Errore durante il login. Riprova.');
+        }
+        return;
+      }
 
       if (data.user) {
         // Controlla onboarding status
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from('user_profile')
           .select('onboarding_status')
           .eq('id', data.user.id)
           .single();
 
-        if (profile?.onboarding_status === 'complete') {
+        if (profileError) {
+          console.error('[LoginForm] Profile fetch error:', profileError);
+          // Se il profilo non esiste, potrebbe essere un utente vecchio senza profilo
+          // Crea il profilo se non esiste
+          const { error: createError } = await supabase
+            .from('user_profile')
+            .insert({
+              id: data.user.id,
+              onboarding_status: 'profile_pending',
+            });
+
+          if (createError) {
+            console.error('[LoginForm] Profile creation error:', createError);
+            setError('Errore nel caricamento del profilo. Riprova.');
+            return;
+          }
+        }
+
+        const onboardingStatus = profile?.onboarding_status || 'profile_pending';
+
+        if (onboardingStatus === 'complete') {
           router.push('/dashboard/panoramica');
-        } else if (profile?.onboarding_status) {
-          const route = profile.onboarding_status.replace('_', '/');
+        } else if (onboardingStatus) {
+          const route = onboardingStatus.replace('_', '/');
           router.push(`/onboarding/${route}`);
         } else {
           router.push('/onboarding/profile');
         }
       }
     } catch (err) {
+      console.error('[LoginForm] Unexpected error:', err);
       setError(err instanceof Error ? err.message : 'Errore durante il login');
     } finally {
       setLoading(false);
