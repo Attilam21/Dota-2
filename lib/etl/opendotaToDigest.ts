@@ -1,4 +1,4 @@
-import { RawMatch, MatchDigest, PlayerDigest } from "@/lib/types/opendota";
+import { RawMatch, RawPlayer, MatchDigest, PlayerDigest } from "@/lib/types/opendota";
 
 // Helper: convert epoch timestamp to ISO string
 function epochToISO(epoch: number | undefined): string | null {
