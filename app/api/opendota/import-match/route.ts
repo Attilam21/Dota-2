@@ -25,19 +25,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // --- Recupero variabile API Key OpenDota ---
-    const apiKey = process.env.OPENDOTA_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "env_OPENDOTA_API_KEY_missing" },
-        { status: 500 }
-      );
-    }
+    // --- Chiamata OpenDota con strategia dual-fetch ---
+    const baseUrl = `https://api.opendota.com/api/matches/${matchId}`;
 
-    // --- Chiamata OpenDota (robusta e compatibile con Vercel) ---
-    const url = `https://api.opendota.com/api/matches/${matchId}?api_key=${apiKey}`;
-
-    const opendotaResponse = await fetch(url, {
+    // Primo tentativo: dataset pubblico (senza chiave)
+    let opendotaResponse = await fetch(baseUrl, {
       method: "GET",
       headers: {
         "User-Agent": "FZTH-Dota2-Analytics/1.0",
@@ -47,18 +39,33 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // Se fallisce, prova con la chiave
     if (!opendotaResponse.ok) {
-      const status = opendotaResponse.status;
-      const details = await opendotaResponse.text().catch(() => null);
+      const opendotaApiKey = process.env.OPENDOTA_API_KEY;
 
-      return NextResponse.json(
-        {
-          error: "opendota_request_failed",
-          status,
-          details,
+      const keyedUrl = `${baseUrl}?api_key=${opendotaApiKey}`;
+      const secondAttempt = await fetch(keyedUrl, {
+        method: "GET",
+        headers: {
+          "User-Agent": "FZTH-Dota2-Analytics/1.0",
+          "Cache-Control": "no-store",
+          Connection: "keep-alive",
+          Accept: "application/json",
         },
-        { status: 502 }
-      );
+      });
+
+      if (!secondAttempt.ok) {
+        return NextResponse.json(
+          {
+            error: "opendota_request_failed",
+            status: secondAttempt.status,
+            details: await secondAttempt.text().catch(() => null),
+          },
+          { status: 502 }
+        );
+      }
+
+      opendotaResponse = secondAttempt;
     }
 
     const matchData = await opendotaResponse.json();
