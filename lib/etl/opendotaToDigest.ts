@@ -110,12 +110,26 @@ function buildEconomySummary(players: RawPlayer[]): Record<string, unknown> | nu
 
 // Main ETL function
 export function buildDigestFromRaw(raw: RawMatch): { match: MatchDigest; players: PlayerDigest[] } {
-  // Build MatchDigest
+  // Validate required fields (defensive check)
+  if (typeof raw.match_id !== "number" || raw.match_id <= 0) {
+    throw new Error(`Invalid match_id: ${raw.match_id}`);
+  }
+  if (typeof raw.duration !== "number" || raw.duration < 0) {
+    throw new Error(`Invalid duration: ${raw.duration}`);
+  }
+  if (typeof raw.radiant_win !== "boolean") {
+    throw new Error(`Invalid radiant_win: ${raw.radiant_win}`);
+  }
+  if (!Array.isArray(raw.players) || raw.players.length === 0) {
+    throw new Error(`Invalid players array: ${raw.players}`);
+  }
+
+  // Build MatchDigest with safe defaults
   const match: MatchDigest = {
     match_id: raw.match_id,
-    duration: raw.duration,
+    duration: raw.duration ?? 0,
     start_time: epochToISO(raw.start_time),
-    radiant_win: raw.radiant_win,
+    radiant_win: raw.radiant_win ?? false,
     radiant_score: raw.radiant_score ?? null,
     dire_score: raw.dire_score ?? null,
     game_mode: raw.game_mode ?? null,
@@ -134,8 +148,16 @@ export function buildDigestFromRaw(raw: RawMatch): { match: MatchDigest; players
     .filter((p) => p.player_slot >= 128)
     .reduce((sum, p) => sum + (p.kills || 0), 0);
 
-  // Build PlayerDigest array
-  const players: PlayerDigest[] = raw.players.map((player) => {
+  // Build PlayerDigest array with validation
+  const players: PlayerDigest[] = raw.players.map((player, index) => {
+    // Validate required player fields
+    if (typeof player.player_slot !== "number") {
+      throw new Error(`Player at index ${index} has invalid player_slot: ${player.player_slot}`);
+    }
+    if (typeof player.hero_id !== "number") {
+      throw new Error(`Player at index ${index} has invalid hero_id: ${player.hero_id}`);
+    }
+
     const isRadiant = player.player_slot < 128;
     const teamKills = isRadiant ? radiantKills : direKills;
 

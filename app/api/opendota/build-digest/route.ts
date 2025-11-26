@@ -79,25 +79,158 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Type assertion with validation
-    const rawMatch = rawData as RawMatch;
-    if (!rawMatch.match_id || !rawMatch.players || !Array.isArray(rawMatch.players)) {
-      console.error(`[build-digest] Raw match data missing required fields for match_id ${matchId}`);
+    // Enhanced runtime validation
+    const rawMatch = rawData as Record<string, unknown>;
+    
+    // Validate required match fields
+    if (typeof rawMatch.match_id !== "number" || rawMatch.match_id <= 0) {
+      console.error(`[build-digest] Invalid or missing match_id for match_id ${matchId}`, {
+        match_id: rawMatch.match_id,
+        type: typeof rawMatch.match_id,
+      });
       return NextResponse.json(
         {
           status: "error",
           error: "invalid_raw_match_structure",
           match_id: matchId,
-          details: "Raw match data is missing required fields (match_id, players)",
+          details: "Raw match data is missing or has invalid match_id",
         },
         { status: 500 }
       );
     }
 
+    if (typeof rawMatch.duration !== "number" || rawMatch.duration < 0) {
+      console.error(`[build-digest] Invalid or missing duration for match_id ${matchId}`, {
+        duration: rawMatch.duration,
+        type: typeof rawMatch.duration,
+      });
+      return NextResponse.json(
+        {
+          status: "error",
+          error: "invalid_raw_match_structure",
+          match_id: matchId,
+          details: "Raw match data is missing or has invalid duration",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (typeof rawMatch.radiant_win !== "boolean") {
+      console.error(`[build-digest] Invalid or missing radiant_win for match_id ${matchId}`, {
+        radiant_win: rawMatch.radiant_win,
+        type: typeof rawMatch.radiant_win,
+      });
+      return NextResponse.json(
+        {
+          status: "error",
+          error: "invalid_raw_match_structure",
+          match_id: matchId,
+          details: "Raw match data is missing or has invalid radiant_win",
+        },
+        { status: 500 }
+      );
+    }
+
+    // Validate players array
+    if (!Array.isArray(rawMatch.players)) {
+      console.error(`[build-digest] Invalid or missing players array for match_id ${matchId}`, {
+        players: rawMatch.players,
+        type: typeof rawMatch.players,
+      });
+      return NextResponse.json(
+        {
+          status: "error",
+          error: "invalid_raw_match_structure",
+          match_id: matchId,
+          details: "Raw match data is missing or has invalid players array",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (rawMatch.players.length === 0) {
+      console.error(`[build-digest] Empty players array for match_id ${matchId}`);
+      return NextResponse.json(
+        {
+          status: "error",
+          error: "invalid_raw_match_structure",
+          match_id: matchId,
+          details: "Raw match data has empty players array",
+        },
+        { status: 500 }
+      );
+    }
+
+    // Validate each player has required fields
+    for (let i = 0; i < rawMatch.players.length; i++) {
+      const player = rawMatch.players[i] as Record<string, unknown>;
+      if (!player || typeof player !== "object") {
+        console.error(`[build-digest] Invalid player at index ${i} for match_id ${matchId}`, {
+          player,
+          type: typeof player,
+        });
+        return NextResponse.json(
+          {
+            status: "error",
+            error: "invalid_raw_match_structure",
+            match_id: matchId,
+            details: `Player at index ${i} is not a valid object`,
+          },
+          { status: 500 }
+        );
+      }
+
+      if (typeof player.player_slot !== "number") {
+        console.error(`[build-digest] Invalid player_slot at index ${i} for match_id ${matchId}`, {
+          player_slot: player.player_slot,
+          type: typeof player.player_slot,
+        });
+        return NextResponse.json(
+          {
+            status: "error",
+            error: "invalid_raw_match_structure",
+            match_id: matchId,
+            details: `Player at index ${i} is missing or has invalid player_slot`,
+          },
+          { status: 500 }
+        );
+      }
+
+      if (typeof player.hero_id !== "number") {
+        console.error(`[build-digest] Invalid hero_id at index ${i} for match_id ${matchId}`, {
+          hero_id: player.hero_id,
+          type: typeof player.hero_id,
+        });
+        return NextResponse.json(
+          {
+            status: "error",
+            error: "invalid_raw_match_structure",
+            match_id: matchId,
+            details: `Player at index ${i} is missing or has invalid hero_id`,
+          },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Log structure for debugging
+    console.log(`[build-digest] Validated raw match structure for match_id ${matchId}`, {
+      match_id: rawMatch.match_id,
+      duration: rawMatch.duration,
+      radiant_win: rawMatch.radiant_win,
+      players_count: rawMatch.players.length,
+      has_start_time: rawMatch.start_time !== undefined,
+      has_objectives: rawMatch.objectives !== undefined,
+      has_teamfights: rawMatch.teamfights !== undefined,
+    });
+
+    // Type assertion after validation
+    const validatedRawMatch = rawMatch as RawMatch;
+
     // Build digest using ETL function
     let digest;
     try {
-      digest = buildDigestFromRaw(rawMatch);
+      digest = buildDigestFromRaw(validatedRawMatch);
     } catch (etlError) {
       const errorMessage = etlError instanceof Error ? etlError.message : String(etlError);
       console.error(`[build-digest] ETL error for match_id ${matchId}:`, errorMessage);
