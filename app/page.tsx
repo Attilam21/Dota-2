@@ -29,7 +29,7 @@ export default async function Home() {
       // Utente non loggato: redirect a login
       redirect('/login');
     }
-  } catch (error) {
+  } catch {
     // In caso di errore, redirect a login
     redirect('/login');
   }
