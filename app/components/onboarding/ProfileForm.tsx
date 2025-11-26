@@ -35,8 +35,14 @@ export function ProfileForm() {
     setLoading(true);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Utente non autenticato');
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.error('[ProfileForm] Auth error:', authError);
+        throw new Error('Utente non autenticato. Effettua il login.');
+      }
+
+      console.log('[ProfileForm] Updating profile for user:', user.id);
 
       const { error: updateError } = await supabase
         .from('user_profile')
@@ -44,16 +50,25 @@ export function ProfileForm() {
           in_game_name: inGameName,
           role_preferred: rolePreferred,
           region,
-          steam_id: steamId ? parseInt(steamId) : null,
+          steam_id: steamId ? parseInt(steamId, 10) : null,
           skill_self_eval: skillSelfEval,
           onboarding_status: 'avatar_pending',
         })
         .eq('id', user.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('[ProfileForm] Update error:', updateError);
+        // Errore più descrittivo
+        if (updateError.code === 'PGRST301' || updateError.message.includes('permission')) {
+          throw new Error('Permesso negato. Verifica di essere autenticato correttamente.');
+        }
+        throw updateError;
+      }
 
+      console.log('[ProfileForm] Profile updated successfully');
       router.push('/onboarding/avatar');
     } catch (err) {
+      console.error('[ProfileForm] Error:', err);
       setError(err instanceof Error ? err.message : 'Errore durante il salvataggio');
     } finally {
       setLoading(false);
