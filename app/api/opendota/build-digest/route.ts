@@ -116,7 +116,11 @@ export async function POST(request: NextRequest) {
       .upsert(digest.match, { onConflict: "match_id" });
 
     if (matchUpsertError) {
-      console.error(`[build-digest] Match digest upsert error for match_id ${matchId}:`, matchUpsertError);
+      console.error(`[build-digest] Match digest upsert error for match_id ${matchId}:`, {
+        code: matchUpsertError.code,
+        message: matchUpsertError.message,
+        details: matchUpsertError.details,
+      });
       return NextResponse.json(
         {
           status: "error",
@@ -144,7 +148,14 @@ export async function POST(request: NextRequest) {
       .upsert(digest.players, { onConflict: "match_id,player_slot" });
 
     if (playersUpsertError) {
-      console.error(`[build-digest] Player digests upsert error for match_id ${matchId}:`, playersUpsertError);
+      const samplePlayer = digest.players[0];
+      console.error(`[build-digest] Player digests upsert error for match_id ${matchId}:`, {
+        code: playersUpsertError.code,
+        message: playersUpsertError.message,
+        details: playersUpsertError.details,
+        sample_account_id: samplePlayer?.account_id,
+        sample_hero_id: samplePlayer?.hero_id,
+      });
       return NextResponse.json(
         {
           status: "error",
