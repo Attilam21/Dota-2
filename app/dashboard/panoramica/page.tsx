@@ -8,6 +8,8 @@ import { GamePhaseAnalysis } from '@/app/components/dashboard/GamePhaseAnalysis'
 import { RecentMatchesTable } from '@/app/components/dashboard/RecentMatchesTable';
 import { CoachingSection } from '@/app/components/dashboard/CoachingSection';
 
+export const dynamic = 'force-dynamic';
+
 export default async function PanoramicaPage() {
   const supabase = await createClient();
   

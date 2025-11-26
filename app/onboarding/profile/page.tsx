@@ -1,5 +1,7 @@
 import { ProfileForm } from '@/app/components/onboarding/ProfileForm';
 
+export const dynamic = 'force-dynamic';
+
 export default function OnboardingProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center p-4">

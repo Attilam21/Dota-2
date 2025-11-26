@@ -1,5 +1,7 @@
 import { ImportMatchesForm } from '@/app/components/onboarding/ImportMatchesForm';
 
+export const dynamic = 'force-dynamic';
+
 export default function OnboardingImportPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-4">
