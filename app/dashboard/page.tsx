@@ -10,43 +10,31 @@ export const dynamic = 'force-dynamic';
  * Styled with dark theme and card-based layout
  */
 export default async function DashboardPage() {
-  // CRITICAL: Unconditional demo access - bypass all authentication checks
-  // This ensures the dashboard loads even if createClient() throws NEXT_REDIRECT
-  // The try/catch is designed to catch ANY error including NEXT_REDIRECT from cookies() or createClient()
+  // DEMO MODE: For demo users, we skip authentication entirely
+  // This page is accessible without login for demo purposes
   let user = null;
   
-  // Attempt authentication check, but NEVER throw errors - always allow demo access
+  // Only attempt authentication if we're in a server context that supports it
+  // For demo mode, we skip this entirely to avoid any potential errors
   try {
-    try {
-      const supabase = await createClient();
-      if (supabase) {
-        try {
-          const authResult = await supabase.auth.getUser();
-          // Only set user if we have a valid result AND no error
-          if (authResult?.data?.user && !authResult.error) {
-            user = authResult.data.user;
-          }
-        } catch (authError: unknown) {
-          // Silently fail - allow demo access
-          // This catches NEXT_REDIRECT and any other auth errors
-          console.log('[dashboard] Auth check failed, showing demo dashboard');
-        }
+    const supabase = await createClient();
+    if (supabase) {
+      const authResult = await supabase.auth.getUser();
+      // Only set user if we have a valid result AND no error
+      if (authResult?.data?.user && !authResult.error) {
+        user = authResult.data.user;
+        console.log('[dashboard] Authenticated user found:', user.id);
       }
-    } catch (clientError: unknown) {
-      // Explicitly catch ANY error from createClient() (including NEXT_REDIRECT)
-      // Log but don't throw - allow demo access
-      console.log('[dashboard] createClient failed, allowing demo access');
-      user = null;
     }
-  } catch (outerError: unknown) {
-    // Final safety net - catch ANY error that might have been missed
-    console.log('[dashboard] Outer error caught, allowing demo access');
+  } catch (error: unknown) {
+    // Silently fail - this is expected for demo users without authentication
+    // No need to log - this is normal behavior for unauthenticated access
     user = null;
   }
   
-  // If no user, show demo dashboard with placeholder data
+  // If no user, show demo dashboard (this is the primary use case for demo mode)
   if (!user) {
-    console.log('[dashboard] Rendering demo dashboard for unauthenticated user');
+    console.log('[dashboard] Rendering demo dashboard - no authentication required');
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
         <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -57,16 +45,17 @@ export default async function DashboardPage() {
             </h1>
             <div className="space-y-2">
               <p className="text-green-400 font-semibold text-lg">
-                ✅ Dashboard Caricata con successo - Reindirizzamento Funzionante
+                ✅ Dashboard Demo Caricata con Successo
               </p>
-              <p className="text-blue-400 text-sm">
-                🎮 Demo Mode Attivo - Analisi partita caricata
+              <p className="text-blue-400 text-sm font-medium">
+                🎮 Modalità Demo Attiva - Nessun Login Richiesto
               </p>
               <p className="text-gray-400">
                 Benvenuto, <span className="text-white font-semibold">Demo Player</span>
               </p>
               <p className="text-gray-500 text-sm">
-                Modalità demo - <span className="text-purple-400">Registrati</span> per accedere a tutte le funzionalità
+                Hai inserito l&apos;ID e caricato l&apos;analisi della partita. 
+                <span className="text-purple-400"> Registrati</span> per salvare i tuoi dati e accedere a tutte le funzionalità.
               </p>
             </div>
           </div>
