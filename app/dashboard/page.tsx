@@ -73,6 +73,9 @@ export default async function DashboardPage() {
                   💡 La dashboard è accessibile senza autenticazione per la modalità demo.
                 </p>
               </div>
+              
+              {/* Client Component for Verification */}
+              <DashboardClient />
             </div>
           </div>
 
