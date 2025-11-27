@@ -21,8 +21,7 @@ export function LaneEarlyGame({ match, playerData, players }: LaneEarlyGameProps
   const xpAt10: number | null = isNumber(xpAt10Value) ? xpAt10Value : null;
   
   // Winrate in lane (mock per ora, da calcolare da dati storici)
-  const winrateInLaneValue: unknown = null; // Da implementare con query su partite precedenti
-  const winrateInLane: number | null = isNumber(winrateInLaneValue) ? winrateInLaneValue : null;
+  const winrateInLane: number | null = null; // Da implementare con query su partite precedenti
 
   return (
     <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
@@ -33,7 +32,7 @@ export function LaneEarlyGame({ match, playerData, players }: LaneEarlyGameProps
         <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
           <p className="text-gray-400 text-sm mb-2">Winrate in Lane</p>
           <p className="text-white text-2xl font-bold">
-            {winrateInLane !== null ? `${winrateInLane.toFixed(1)}%` : 'N/A'}
+            {winrateInLane !== null && typeof winrateInLane === 'number' ? `${winrateInLane.toFixed(1)}%` : 'N/A'}
           </p>
           {winrateInLane === null && (
             <p className="text-gray-500 text-xs mt-1">non disponibile</p>
