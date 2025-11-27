@@ -10,8 +10,8 @@
     "query:db": "tsx scripts/query-supabase.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.48.0",
-    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.49.0",
+    "@supabase/ssr": "^0.5.3",
     "next": "16.0.4",
     "react": "19.2.0",
     "react-dom": "19.2.0",
