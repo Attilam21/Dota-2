@@ -7,12 +7,18 @@ export const dynamic = 'force-dynamic';
 /**
  * API Route to fetch match data for demo dashboard
  * Used by DashboardClient to load match details from Supabase
+ * 
+ * CRITICAL: This endpoint accepts GET requests only
  */
 export async function GET(request: NextRequest) {
   try {
+    console.log('[demo/get-match-data] GET request received');
+    
     const { searchParams } = new URL(request.url);
     const matchId = searchParams.get('match_id');
     const accountId = searchParams.get('account_id');
+
+    console.log('[demo/get-match-data] Params:', { matchId, accountId });
 
     if (!matchId) {
       return NextResponse.json(
@@ -43,6 +49,8 @@ export async function GET(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+    console.log('[demo/get-match-data] Fetching match digest for match_id:', matchIdNum);
+
     // Fetch match digest
     const { data: matchDigest, error: matchError } = await supabase
       .from('matches_digest')
@@ -52,6 +60,8 @@ export async function GET(request: NextRequest) {
 
     if (matchError) {
       console.error('[demo/get-match-data] Error fetching match digest:', matchError);
+    } else {
+      console.log('[demo/get-match-data] Match digest found:', !!matchDigest);
     }
 
     // Fetch player digest if account_id is provided
@@ -59,6 +69,8 @@ export async function GET(request: NextRequest) {
     if (accountId) {
       const accountIdNum = parseInt(accountId, 10);
       if (!isNaN(accountIdNum) && accountIdNum > 0) {
+        console.log('[demo/get-match-data] Fetching player digest for account_id:', accountIdNum);
+        
         const { data: playerData, error: playerError } = await supabase
           .from('players_digest')
           .select('*')
@@ -70,6 +82,7 @@ export async function GET(request: NextRequest) {
           console.error('[demo/get-match-data] Error fetching player digest:', playerError);
         } else {
           playerDigest = playerData;
+          console.log('[demo/get-match-data] Player digest found:', !!playerDigest);
         }
       }
     }
@@ -92,3 +105,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Explicitly reject other methods
+export async function POST() {
+  return NextResponse.json(
+    {
+      status: 'error',
+      error: 'method_not_allowed',
+      details: 'This endpoint only accepts GET requests',
+    },
+    { status: 405 }
+  );
+}
