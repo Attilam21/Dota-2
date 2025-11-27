@@ -95,10 +95,13 @@ export function DemoForm() {
       console.log('[DemoForm] Match loaded successfully:', data);
 
       // CRITICAL: Explicit client-side navigation to dashboard after successful API response (status 200)
-      // Clean navigation using router.push only - no complex fallbacks
+      // Use window.location.href for guaranteed navigation that cannot be interrupted
       if (response.status === 200 && data.status === 'ok') {
         console.log('[DemoForm] Redirecting to dashboard...');
-        router.push('/dashboard');
+        // Use window.location.href for full page reload - ensures dashboard is rendered correctly
+        window.location.href = '/dashboard';
+        // Return early to prevent finally block from executing before navigation
+        return;
       } else {
         throw new Error('Unexpected response status or data format');
       }

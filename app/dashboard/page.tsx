@@ -10,16 +10,29 @@ export const dynamic = 'force-dynamic';
  * Styled with dark theme and card-based layout
  */
 export default async function DashboardPage() {
-  // CRITICAL: Safely handle unauthenticated users for demo access
-  // Wrap createClient in try/catch to prevent NEXT_REDIRECT errors
+  // CRITICAL: Completely bypass authentication check for demo access
+  // Wrap entire auth check in try/catch with explicit error handling
+  // This catches ANY error including NEXT_REDIRECT from cookies() or createClient()
   let user = null;
+  
   try {
     const supabase = await createClient();
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    user = authUser;
+    if (supabase) {
+      try {
+        const authResult = await supabase.auth.getUser();
+        // Only set user if we have a valid result AND no error
+        if (authResult.data?.user && !authResult.error) {
+          user = authResult.data.user;
+        }
+      } catch (authError) {
+        // Silently fail - allow demo access
+        console.log('[dashboard] Auth check failed, showing demo dashboard:', authError);
+      }
+    }
   } catch (error) {
-    // If createClient fails (no cookies, invalid session, etc.), allow demo access
-    console.log('[dashboard] No valid session, showing demo dashboard');
+    // Explicitly catch ANY error (including NEXT_REDIRECT)
+    // Log but don't throw - allow demo access
+    console.log('[dashboard] createClient failed, allowing demo access:', error);
     user = null;
   }
   
