@@ -293,3 +293,54 @@ All critical fixes have been applied. The route now:
 
 The code is production-ready and will provide clear error messages in Vercel logs for debugging data ingestion failures.
 
+---
+
+## Schema Fix Required: players_digest JSONB Columns
+
+### Issue
+The digest building phase was failing with error:
+```
+invalid input syntax for type integer: "{npc_dota_hero_mars":6138,...}"
+```
+
+This occurs when complex JSON objects from OpenDota (like `kills_per_hero`, `damage_targets`) are accidentally being inserted into INTEGER columns.
+
+### Solution Applied
+
+1. **Code Fix**: Enhanced `sanitizePlayerDigest()` to ensure:
+   - All numeric fields are validated and converted to `number | null` (never objects)
+   - JSONB fields (`items`, `position_metrics`) are validated as objects
+   - Any objects/arrays in numeric fields are logged and discarded
+
+2. **ETL Fix**: Enhanced `buildDigestFromRaw()` to use `safeNumber()` helper that:
+   - Validates all numeric values before assignment
+   - Logs warnings when objects are found in numeric fields
+   - Returns `null` for invalid types
+
+### SQL Migration Required
+
+**⚠️ ACTION REQUIRED:** Run the SQL migration in Supabase console:
+
+**File:** `supabase/FIX_PLAYERS_DIGEST_SCHEMA.sql`
+
+This migration:
+- Verifies `items` and `position_metrics` columns are JSONB (not INTEGER)
+- Adds optional JSONB columns for complex OpenDota stats (`kills_per_hero`, `damage_targets`)
+- Provides diagnostic output showing the final schema
+
+**To apply:**
+1. Open Supabase Dashboard → SQL Editor
+2. Copy and paste the contents of `supabase/FIX_PLAYERS_DIGEST_SCHEMA.sql`
+3. Execute the migration
+4. Verify the output shows all JSONB columns are correctly typed
+
+### Prevention
+
+The enhanced `sanitizePlayerDigest()` function now:
+- ✅ Explicitly filters out any objects/arrays from numeric fields
+- ✅ Validates JSONB fields are proper objects
+- ✅ Logs warnings when invalid types are detected
+- ✅ Ensures only whitelisted fields are sent to Supabase
+
+This prevents the error from occurring even if OpenDota returns unexpected data structures.
+

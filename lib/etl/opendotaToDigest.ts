@@ -161,28 +161,47 @@ export function buildDigestFromRaw(raw: RawMatch): { match: MatchDigest; players
     const isRadiant = player.player_slot < 128;
     const teamKills = isRadiant ? radiantKills : direKills;
 
+    // Helper: Safely extract numeric value, ensuring it's not an object
+    const safeNumber = (value: unknown): number | null => {
+      if (value === null || value === undefined) return null;
+      if (typeof value === "number") return value;
+      if (typeof value === "string") {
+        const parsed = Number.parseFloat(value);
+        return Number.isNaN(parsed) ? null : parsed;
+      }
+      // If it's an object or array, log warning and return null
+      if (typeof value === "object") {
+        console.warn(`[buildDigestFromRaw] Expected number but got object/array for player ${index}:`, {
+          value_type: Array.isArray(value) ? "array" : "object",
+          value_keys: typeof value === "object" && value !== null ? Object.keys(value).slice(0, 5) : [],
+        });
+        return null;
+      }
+      return null;
+    };
+
     const playerDigest: PlayerDigest = {
       match_id: raw.match_id,
       player_slot: player.player_slot,
       account_id: player.account_id ?? null,
       hero_id: player.hero_id,
-      kills: player.kills ?? null,
-      deaths: player.deaths ?? null,
-      assists: player.assists ?? null,
-      gold_per_min: player.gold_per_min ?? null,
-      xp_per_min: player.xp_per_min ?? null,
-      gold_spent: player.gold_spent ?? null,
-      last_hits: player.last_hits ?? null,
-      denies: player.denies ?? null,
-      net_worth: player.net_worth ?? null,
-      hero_damage: player.hero_damage ?? null,
-      tower_damage: player.tower_damage ?? null,
-      damage_taken: player.damage_taken ?? null,
-      teamfight_participation: player.teamfight_participation ?? null,
+      kills: safeNumber(player.kills),
+      deaths: safeNumber(player.deaths),
+      assists: safeNumber(player.assists),
+      gold_per_min: safeNumber(player.gold_per_min),
+      xp_per_min: safeNumber(player.xp_per_min),
+      gold_spent: safeNumber(player.gold_spent),
+      last_hits: safeNumber(player.last_hits),
+      denies: safeNumber(player.denies),
+      net_worth: safeNumber(player.net_worth),
+      hero_damage: safeNumber(player.hero_damage),
+      tower_damage: safeNumber(player.tower_damage),
+      damage_taken: safeNumber(player.damage_taken),
+      teamfight_participation: safeNumber(player.teamfight_participation),
       kda: calculateKDA(player.kills, player.deaths, player.assists),
       kill_participation: calculateKillParticipation(player.kills, player.assists, teamKills),
-      lane: player.lane ?? null,
-      lane_role: player.lane_role ?? null,
+      lane: safeNumber(player.lane),
+      lane_role: safeNumber(player.lane_role),
       vision_score: calculateVisionScore(player.observer_wards_placed, player.sentry_wards_placed),
       items: buildItemsObject(player),
       position_metrics: null, // Can be extended with position data if available
