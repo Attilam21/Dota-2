@@ -92,30 +92,47 @@ export function DemoForm() {
 
       console.log('[DemoForm] Match loaded successfully:', data);
       console.log('[DemoForm] Response status:', response.status);
-      console.log('[DemoForm] Data status:', data.status);
+      console.log('[DemoForm] Data status:', data?.status);
+      console.log('[DemoForm] Full data object:', JSON.stringify(data, null, 2));
 
       // CRITICAL: Explicit client-side navigation to dashboard after successful API response (status 200)
-      // Use window.location.href for guaranteed navigation that cannot be interrupted
-      if (response.status === 200 && data.status === 'ok') {
-        console.log('[DemoForm] ✅ Conditions met for redirect - Status 200 and data.status === "ok"');
+      // Check both response.ok and data.status for maximum compatibility
+      const isSuccess = response.ok && (response.status === 200 || response.status === 201);
+      const hasValidStatus = data && (data.status === 'ok' || data.status === 'success');
+      
+      console.log('[DemoForm] Redirect check:', {
+        isSuccess,
+        hasValidStatus,
+        responseStatus: response.status,
+        dataStatus: data?.status,
+      });
+
+      if (isSuccess && hasValidStatus) {
+        console.log('[DemoForm] ✅ Conditions met for redirect - Status OK and data.status valid');
         console.log('[DemoForm] 🚀 Executing window.location.href = "/dashboard"');
         
-        // Prevent finally block from executing
+        // Clear loading state before navigation
         setLoading(false);
         setError(null);
         
-        // Use window.location.href for full page reload - ensures dashboard is rendered correctly
-        window.location.href = '/dashboard';
+        // Small delay to ensure state updates are processed
+        setTimeout(() => {
+          // Use window.location.href for full page reload - ensures dashboard is rendered correctly
+          window.location.href = '/dashboard';
+        }, 100);
         
-        // This return should never execute due to navigation, but it's here for safety
+        // Return early to prevent finally block from executing
         return;
       } else {
         console.error('[DemoForm] ❌ Redirect conditions NOT met:', {
+          isSuccess,
+          hasValidStatus,
           responseStatus: response.status,
-          dataStatus: data.status,
+          responseOk: response.ok,
+          dataStatus: data?.status,
           fullData: data,
         });
-        throw new Error(`Unexpected response status or data format. Status: ${response.status}, Data status: ${data.status}`);
+        throw new Error(`Unexpected response status or data format. Status: ${response.status}, Data status: ${data?.status || 'missing'}`);
       }
     } catch (err) {
       console.error('[DemoForm] Error:', err);
