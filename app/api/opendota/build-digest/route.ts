@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 import { buildDigestFromRaw } from "@/lib/etl/opendotaToDigest";
 import { RawMatch } from "@/lib/types/opendota";
 import { sanitizePlayerDigest } from "@/lib/utils/sanitizePlayerDigest";
@@ -9,8 +8,24 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const preferredRegion = "fra1";
 
+// CRITICAL: Initialize Supabase admin client at module level to avoid hoisting issues
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  
+  // Ensure supabaseAdmin is available (defensive check)
+  if (!supabaseAdmin) {
+    console.error("[build-digest] supabaseAdmin client is not initialized");
+    return NextResponse.json(
+      {
+        status: "error",
+        error: "database_client_not_initialized",
+        details: "Supabase admin client failed to initialize",
+      },
+      { status: 500 }
+    );
+  }
 
   try {
     let body: { match_id?: number; user_id?: string };
