@@ -128,7 +128,18 @@ export function DemoForm() {
         
         // CRITICAL: Use window.location.replace() for immediate navigation
         // This prevents the back button from going back to the form
+        console.log('[DemoForm] 🚀 EXECUTING REDIRECT NOW - window.location.replace("/dashboard")');
+        
+        // Force immediate redirect - no delays, no conditions
         window.location.replace('/dashboard');
+        
+        // CRITICAL: This should never execute, but if it does, force navigation again
+        setTimeout(() => {
+          if (window.location.pathname !== '/dashboard') {
+            console.warn('[DemoForm] Redirect did not work, forcing again...');
+            window.location.href = '/dashboard';
+          }
+        }, 500);
         
         // Prevent any further execution
         return;

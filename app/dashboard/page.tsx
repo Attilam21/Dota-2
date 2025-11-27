@@ -9,8 +9,13 @@ export const runtime = 'nodejs';
  * Main Dashboard Page
  * Displays user profile overview with performance scores and active tasks
  * Styled with dark theme and card-based layout
+ * 
+ * CRITICAL: This page is ALWAYS accessible for demo mode
  */
 export default async function DashboardPage() {
+  // CRITICAL: Log immediately to confirm page is being rendered
+  console.log('[dashboard] ⚡ DashboardPage component STARTING - Route accessed successfully!');
+  
   // DEMO MODE: This page is ALWAYS accessible without authentication
   // We completely skip auth checks to ensure demo mode works
   let user = null;
@@ -25,18 +30,21 @@ export default async function DashboardPage() {
         if (authResult?.data?.user && !authResult.error) {
           user = authResult.data.user;
           isDemoMode = false;
+          console.log('[dashboard] ✅ Authenticated user found:', user.id);
         }
-      } catch {
-        // Ignore - demo mode
+      } catch (authError) {
+        // Ignore - demo mode (this is expected)
+        console.log('[dashboard] ℹ️ No authenticated user - showing demo mode');
       }
     }
-  } catch {
+  } catch (error) {
     // Ignore all errors - always allow demo access
+    console.log('[dashboard] ℹ️ Auth check failed - showing demo mode (expected for demo)');
   }
   
   // Always show dashboard - demo mode if no user, authenticated if user exists
   if (!user || isDemoMode) {
-    console.log('[dashboard] Rendering demo dashboard');
+    console.log('[dashboard] ✅ Rendering demo dashboard - NO AUTHENTICATION REQUIRED');
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
         <div className="container mx-auto px-4 py-8 max-w-7xl">
