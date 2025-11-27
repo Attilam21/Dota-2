@@ -10,29 +10,37 @@ export const dynamic = 'force-dynamic';
  * Styled with dark theme and card-based layout
  */
 export default async function DashboardPage() {
-  // CRITICAL: Completely bypass authentication check for demo access
-  // Wrap entire auth check in try/catch with explicit error handling
-  // This catches ANY error including NEXT_REDIRECT from cookies() or createClient()
+  // CRITICAL: Unconditional demo access - bypass all authentication checks
+  // This ensures the dashboard loads even if createClient() throws NEXT_REDIRECT
+  // The try/catch is designed to catch ANY error including NEXT_REDIRECT from cookies() or createClient()
   let user = null;
   
+  // Attempt authentication check, but NEVER throw errors - always allow demo access
   try {
-    const supabase = await createClient();
-    if (supabase) {
-      try {
-        const authResult = await supabase.auth.getUser();
-        // Only set user if we have a valid result AND no error
-        if (authResult.data?.user && !authResult.error) {
-          user = authResult.data.user;
+    try {
+      const supabase = await createClient();
+      if (supabase) {
+        try {
+          const authResult = await supabase.auth.getUser();
+          // Only set user if we have a valid result AND no error
+          if (authResult?.data?.user && !authResult.error) {
+            user = authResult.data.user;
+          }
+        } catch (authError: unknown) {
+          // Silently fail - allow demo access
+          // This catches NEXT_REDIRECT and any other auth errors
+          console.log('[dashboard] Auth check failed, showing demo dashboard');
         }
-      } catch (authError) {
-        // Silently fail - allow demo access
-        console.log('[dashboard] Auth check failed, showing demo dashboard:', authError);
       }
+    } catch (clientError: unknown) {
+      // Explicitly catch ANY error from createClient() (including NEXT_REDIRECT)
+      // Log but don't throw - allow demo access
+      console.log('[dashboard] createClient failed, allowing demo access');
+      user = null;
     }
-  } catch (error) {
-    // Explicitly catch ANY error (including NEXT_REDIRECT)
-    // Log but don't throw - allow demo access
-    console.log('[dashboard] createClient failed, allowing demo access:', error);
+  } catch (outerError: unknown) {
+    // Final safety net - catch ANY error that might have been missed
+    console.log('[dashboard] Outer error caught, allowing demo access');
     user = null;
   }
   
