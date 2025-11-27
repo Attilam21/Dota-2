@@ -12,15 +12,70 @@ export const dynamic = 'force-dynamic';
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  // Check authentication
+  // Check authentication - allow demo mode for unauthenticated users
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  
+  // If no user, show demo dashboard with placeholder data
   if (!user) {
-    redirect('/login');
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+        <div className="container mx-auto px-4 py-8 max-w-7xl">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold text-white mb-2">
+              Dashboard Demo
+            </h1>
+            <div className="space-y-2">
+              <p className="text-gray-400">
+                Benvenuto, <span className="text-white font-semibold">Demo Player</span>
+              </p>
+              <p className="text-gray-500 text-sm">
+                Modalità demo - <span className="text-purple-400">Registrati</span> per accedere a tutte le funzionalità
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Card 1: Performance Overview - Demo */}
+            <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8 border border-gray-700 shadow-2xl">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-white mb-2">Performance Overview</h2>
+                <p className="text-gray-400 text-sm">
+                  Metriche aggregate basate sulle tue ultime partite
+                </p>
+              </div>
+              <div className="text-center py-8 text-gray-400">
+                <p>Registrati per vedere le tue performance aggregate.</p>
+                <p className="text-sm mt-2">
+                  La demo mostra solo l&apos;analisi della tua ultima partita.
+                </p>
+              </div>
+            </div>
+
+            {/* Card 2: Task Status - Demo */}
+            <div className="bg-gray-800/50 backdrop-blur-lg rounded-2xl p-8 border border-gray-700 shadow-2xl">
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-white mb-2">Task Status</h2>
+                <p className="text-gray-400 text-sm">
+                  Le tue task di coaching attive
+                </p>
+              </div>
+              <div className="text-center py-8 text-gray-400">
+                <p>Nessun task attivo al momento.</p>
+                <p className="text-sm mt-2">
+                  <span className="text-purple-400">Registrati</span> per accedere alle task di coaching personalizzate.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  // Fetch profile overview
+  // Authenticated user - fetch profile overview
   let overview;
   try {
     overview = await getProfileOverview(user.id);
