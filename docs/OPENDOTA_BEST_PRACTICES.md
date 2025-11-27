@@ -72,116 +72,53 @@ interface OpenDotaClient {
 
 ### 1. **Struttura Tabelle Principali**
 
-```sql
--- Matches (già implementato)
-CREATE TABLE matches_digest (
-  match_id BIGINT PRIMARY KEY,
-  radiant_win BOOLEAN,
-  duration INTEGER,
-  game_mode INTEGER,
-  lobby_type INTEGER,
-  -- ... altri campi
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+`ercando su GitHub progetti open source che usano OpenDota e Supabase per analizzare le best practice:
+Cercando progetti più specifici su OpenDota e dashboard:
+Cercando il repository ufficiale di OpenDota e progetti popolari che usano l'API:
+Cercando il repository principale di OpenDota:
+Cercando il README e la struttura del progetto:
+Cercando progetti Next.js che usano OpenDota:
+Cercando progetti popolari che usano l'API di OpenDota e analizzando il codice:
+Esplorando i repository menzionati per analizzare il codice:
+Cercando file specifici che mostrano la gestione delle API e la struttura del database. Analizzando il repository core di OpenDota per la struttura del database:
+Creando un documento di analisi con le best practice trovate:
+OPENDOTA_BEST_PRACTICES.md
++397
+# OpenDota + Supabase: Best Practices e Analisi Progetti Open Source## 📚 Repository di Riferimento Analizzati### 1. **odota/core** - Piattaforma Dati OpenDota- **URL**: https://github.com/odota/core
+Creando un documento con esempi di codice pratici per il progetto:
+DASHBOARD_IMPLEMENTATION_GUIDE.md
++560
+# Guida Implementazione Dashboard - Dota 2## 🎯 ObiettivoCreare una dashboard completa per visualizzare e analizzare dati di Dota 2 usando OpenDota API e Supabase.## 📋 Fase 1: Setup Database Schema Completo
+Analisi completata
+Ho analizzato i progetti open source di OpenDota e creato due documenti:
+Documenti creati
+1. docs/OPENDOTA_BEST_PRACTICES.md
+Analisi dei repository: odota/core, odota/web, opendota_modeling
+Best practices per gestione API (rate limiting, caching)
+Schema database consigliato (heroes, players, materialized views)
+Pattern UI/UX da progetti esistenti
+Architettura consigliata per dashboard
+Checklist implementazione
+2. docs/DASHBOARD_IMPLEMENTATION_GUIDE.md
+Esempi di codice TypeScript/Next.js
+Schema SQL per tabelle aggiuntive (heroes, players)
+Client OpenDota con rate limiting
+API routes per dashboard (heroes, players, stats)
+Componenti React per UI
+Cron jobs per aggiornamenti automatici
+Insight principali
+Rate limiting: OpenDota ha limiti (60 req/min, 1000/ora). Usa caching e API key.
+Schema database: aggiungi tabelle heroes e players per performance.
+Materialized views: usa per statistiche aggregate (hero stats, win rates).
+Caching: match completati non cambiano → salvali in Supabase.
+UI pattern: struttura simile a odota/web (match overview, player stats, hero stats).
+Prossimi passi consigliati
+Implementa schema database completo (vedi SQL in DASHBOARD_IMPLEMENTATION_GUIDE.md)
+Crea API route per import heroes da OpenDota
+Implementa componenti UI base (MatchOverview, HeroStats)
+Crea pagine dashboard (matches, players, heroes)
+Vuoi che inizi a implementare una di queste parti?
 
--- Players (già implementato)
-CREATE TABLE players_digest (
-  id BIGSERIAL PRIMARY KEY,
-  match_id BIGINT REFERENCES matches_digest(match_id),
-  player_slot INTEGER,
-  account_id BIGINT,
-  hero_id INTEGER,
-  -- ... statistiche
-  items JSONB,
-  position_metrics JSONB,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(match_id, player_slot)
-);
-
--- Raccomandazioni aggiuntive:
--- 1. Tabelle per Heroes (cache locale)
-CREATE TABLE heroes (
-  id INTEGER PRIMARY KEY,
-  name TEXT,
-  localized_name TEXT,
-  primary_attr TEXT,
-  attack_type TEXT,
-  roles TEXT[],
-  img TEXT,
-  icon TEXT,
-  base_health INTEGER,
-  base_mana INTEGER,
-  -- ... altri attributi
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 2. Tabelle per Players (aggregazione statistiche)
-CREATE TABLE players (
-  account_id BIGINT PRIMARY KEY,
-  personaname TEXT,
-  avatar TEXT,
-  last_match_time TIMESTAMPTZ,
-  total_matches INTEGER DEFAULT 0,
-  wins INTEGER DEFAULT 0,
-  losses INTEGER DEFAULT 0,
-  win_rate NUMERIC(5,2),
-  -- ... altre statistiche aggregate
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);
-
--- 3. Tabelle per Match History (per query veloci)
-CREATE TABLE match_history (
-  id BIGSERIAL PRIMARY KEY,
-  match_id BIGINT REFERENCES matches_digest(match_id),
-  account_id BIGINT REFERENCES players(account_id),
-  hero_id INTEGER,
-  won BOOLEAN,
-  kills INTEGER,
-  deaths INTEGER,
-  assists INTEGER,
-  match_date TIMESTAMPTZ,
-  -- Index per query veloci
-  INDEX idx_account_date (account_id, match_date DESC),
-  INDEX idx_hero_date (hero_id, match_date DESC)
-);
-```
-
-### 2. **Indici per Performance**
-
-```sql
--- Indici consigliati per query dashboard
-CREATE INDEX idx_players_digest_match_id ON players_digest(match_id);
-CREATE INDEX idx_players_digest_account_id ON players_digest(account_id) WHERE account_id IS NOT NULL;
-CREATE INDEX idx_players_digest_hero_id ON players_digest(hero_id);
-CREATE INDEX idx_matches_digest_date ON matches_digest(created_at DESC);
-
--- Indice composito per query comuni
-CREATE INDEX idx_players_match_hero ON players_digest(match_id, hero_id, account_id);
-```
-
-### 3. **Materialized Views per Dashboard**
-
-```sql
--- View per statistiche eroi aggregate
-CREATE MATERIALIZED VIEW hero_stats AS
-SELECT 
-  hero_id,
-  COUNT(*) as total_matches,
-  SUM(CASE WHEN radiant_win = (player_slot < 128) THEN 1 ELSE 0 END) as wins,
-  AVG(kills) as avg_kills,
-  AVG(deaths) as avg_deaths,
-  AVG(assists) as avg_assists,
-  AVG(gold_per_min) as avg_gpm,
-  AVG(xp_per_min) as avg_xpm
-FROM players_digest pd
-JOIN matches_digest md ON pd.match_id = md.match_id
-GROUP BY hero_id;
-
--- Refresh periodico (via cron job o Supabase Edge Function)
-REFRESH MATERIALIZED VIEW hero_stats;
-```
 
 ## 🎨 Dashboard - Pattern UI/UX da Progetti Open Source
 
