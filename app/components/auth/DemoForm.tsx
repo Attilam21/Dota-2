@@ -95,22 +95,10 @@ export function DemoForm() {
       console.log('[DemoForm] Match loaded successfully:', data);
 
       // CRITICAL: Explicit client-side navigation to dashboard after successful API response (status 200)
-      // Use window.location for reliable navigation in case router.push fails
+      // Clean navigation using router.push only - no complex fallbacks
       if (response.status === 200 && data.status === 'ok') {
         console.log('[DemoForm] Redirecting to dashboard...');
-        // Try router.push first, fallback to window.location
-        try {
-          router.push('/dashboard');
-          // Force navigation after a short delay to ensure it happens
-          setTimeout(() => {
-            if (window.location.pathname !== '/dashboard') {
-              window.location.href = '/dashboard';
-            }
-          }, 100);
-        } catch (navError) {
-          console.error('[DemoForm] Router navigation failed, using window.location:', navError);
-          window.location.href = '/dashboard';
-        }
+        router.push('/dashboard');
       } else {
         throw new Error('Unexpected response status or data format');
       }
