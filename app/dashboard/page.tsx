@@ -10,12 +10,18 @@ export const dynamic = 'force-dynamic';
  * Styled with dark theme and card-based layout
  */
 export default async function DashboardPage() {
-  const supabase = await createClient();
-
-  // Check authentication - allow demo mode for unauthenticated users
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // CRITICAL: Safely handle unauthenticated users for demo access
+  // Wrap createClient in try/catch to prevent NEXT_REDIRECT errors
+  let user = null;
+  try {
+    const supabase = await createClient();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    user = authUser;
+  } catch (error) {
+    // If createClient fails (no cookies, invalid session, etc.), allow demo access
+    console.log('[dashboard] No valid session, showing demo dashboard');
+    user = null;
+  }
   
   // If no user, show demo dashboard with placeholder data
   if (!user) {
