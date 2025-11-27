@@ -40,7 +40,14 @@ export default async function DashboardPage() {
     // This is expected for demo users
   }
   
-  // Always show dashboard - demo mode if no user, authenticated if user exists
+  // CRITICAL: If user is authenticated, redirect to /dashboard/panoramica
+  // This ensures authenticated users see the full dashboard
+  if (user && !isDemoMode) {
+    console.log('[dashboard] ✅ Authenticated user - redirecting to /dashboard/panoramica');
+    redirect('/dashboard/panoramica');
+  }
+  
+  // Always show dashboard - demo mode if no user
   if (!user || isDemoMode) {
     console.log('[dashboard] ✅ Rendering demo dashboard - NO AUTHENTICATION REQUIRED');
     return (

@@ -58,7 +58,8 @@ export default async function Home() {
     }
 
     if (profile.onboarding_status === 'complete') {
-      redirect('/dashboard/panoramica');
+      // Redirect to /dashboard - it will handle redirect to /dashboard/panoramica for authenticated users
+      redirect('/dashboard');
     } else if (profile.onboarding_status) {
       const route = profile.onboarding_status.replace('_', '/');
       redirect(`/onboarding/${route}`);
