@@ -4,17 +4,46 @@ import { createClient } from '@/lib/supabase/server';
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const supabase = await createClient();
+  // CRITICAL: Handle demo mode - if no auth, redirect to login (not dashboard)
+  // But catch NEXT_REDIRECT errors silently to avoid breaking demo flow
+  let user = null;
   
   try {
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const supabase = await createClient();
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
     
     // Se non c'è utente o errore di autenticazione, vai a login
-    if (!user || authError) {
+    if (!authUser || authError) {
       redirect('/login');
     }
+    
+    user = authUser;
+  } catch (error: unknown) {
+    // CRITICAL: Catch NEXT_REDIRECT and other errors
+    // NEXT_REDIRECT is thrown by createClient() when no session exists
+    // This is expected for demo users, so we redirect to login
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isNextRedirect = errorMessage.includes('NEXT_REDIRECT') || 
+                          (error as any)?.digest?.includes('NEXT_REDIRECT');
+    
+    if (isNextRedirect) {
+      // NEXT_REDIRECT means no valid session - redirect to login (this is expected)
+      redirect('/login');
+    } else {
+      // Other errors - log and redirect to login
+      console.error('[Home] Unexpected error:', error);
+      redirect('/login');
+    }
+  }
+  
+  // If we reach here, user is authenticated
+  if (!user) {
+    redirect('/login');
+  }
 
+  try {
     // Utente loggato: controlla onboarding status
+    const supabase = await createClient();
     const { data: profile, error: profileError } = await supabase
       .from('user_profile')
       .select('onboarding_status')
@@ -36,9 +65,18 @@ export default async function Home() {
     } else {
       redirect('/onboarding/profile');
     }
-  } catch (error) {
-    // In caso di errore, redirect a login
-    console.error('[Home] Error:', error);
-    redirect('/login');
+  } catch (error: unknown) {
+    // Handle errors in profile fetch
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const isNextRedirect = errorMessage.includes('NEXT_REDIRECT') || 
+                          (error as any)?.digest?.includes('NEXT_REDIRECT');
+    
+    if (isNextRedirect) {
+      // NEXT_REDIRECT during profile fetch - redirect to login
+      redirect('/login');
+    } else {
+      console.error('[Home] Error fetching profile:', error);
+      redirect('/login');
+    }
   }
 }
