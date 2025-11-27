@@ -6,14 +6,19 @@ interface LaneEarlyGameProps {
   players: any[];
 }
 
+// Helper function per type guard
+function isNumber(value: unknown): value is number {
+  return typeof value === 'number' && !isNaN(value);
+}
+
 export function LaneEarlyGame({ match, playerData, players }: LaneEarlyGameProps) {
   // Calcola CS a 10 minuti (se disponibile nei dati)
   // Per ora usiamo dati mock, poi integreremo con dati reali da position_metrics
   const csAt10Value = (playerData?.position_metrics as any)?.cs_at_10;
-  const csAt10: number | null = typeof csAt10Value === 'number' ? csAt10Value : null;
+  const csAt10: number | null = isNumber(csAt10Value) ? csAt10Value : null;
   
   const xpAt10Value = (playerData?.position_metrics as any)?.xp_at_10;
-  const xpAt10: number | null = typeof xpAt10Value === 'number' ? xpAt10Value : null;
+  const xpAt10: number | null = isNumber(xpAt10Value) ? xpAt10Value : null;
   
   // Winrate in lane (mock per ora, da calcolare da dati storici)
   const winrateInLane: number | null = null; // Da implementare con query su partite precedenti
@@ -27,7 +32,7 @@ export function LaneEarlyGame({ match, playerData, players }: LaneEarlyGameProps
         <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
           <p className="text-gray-400 text-sm mb-2">Winrate in Lane</p>
           <p className="text-white text-2xl font-bold">
-            {winrateInLane !== null && typeof winrateInLane === 'number' ? `${winrateInLane.toFixed(1)}%` : 'N/A'}
+            {isNumber(winrateInLane) ? `${winrateInLane.toFixed(1)}%` : 'N/A'}
           </p>
           {winrateInLane === null && (
             <p className="text-gray-500 text-xs mt-1">non disponibile</p>
@@ -38,7 +43,7 @@ export function LaneEarlyGame({ match, playerData, players }: LaneEarlyGameProps
         <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
           <p className="text-gray-400 text-sm mb-2">CS a 10 min</p>
           <p className="text-white text-2xl font-bold">
-            {csAt10 !== null && typeof csAt10 === 'number' ? csAt10.toFixed(1) : 'N/A'}
+            {isNumber(csAt10) ? csAt10.toFixed(1) : 'N/A'}
           </p>
           {csAt10 === null && (
             <p className="text-gray-500 text-xs mt-1">non disponibile</p>
@@ -49,7 +54,7 @@ export function LaneEarlyGame({ match, playerData, players }: LaneEarlyGameProps
         <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
           <p className="text-gray-400 text-sm mb-2">XP a 10 min</p>
           <p className="text-white text-2xl font-bold">
-            {xpAt10 !== null ? xpAt10.toLocaleString() : 'N/A'}
+            {isNumber(xpAt10) ? xpAt10.toLocaleString() : 'N/A'}
           </p>
           {xpAt10 === null && (
             <p className="text-gray-500 text-xs mt-1">non disponibile</p>
@@ -66,4 +71,3 @@ export function LaneEarlyGame({ match, playerData, players }: LaneEarlyGameProps
     </div>
   );
 }
-
