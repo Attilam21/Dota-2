@@ -21,9 +21,8 @@ export async function loadPlayerLastMatch(formData: FormData) {
 
   try {
     // Get the app URL (use environment variable or construct from request)
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
     console.log('[demo action] Loading last match for account_id:', accountIdNum);
     console.log('[demo action] Using app URL:', appUrl);
