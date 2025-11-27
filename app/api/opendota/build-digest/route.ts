@@ -356,20 +356,21 @@ export async function POST(request: NextRequest) {
         finalPlayer.damage_targets = null;
       }
       
-      // Log JSONB fields for debugging (first player only)
-      if (finalPlayer.player_slot === sanitizedPlayers[0]?.player_slot) {
-        console.log(`[build-digest] JSONB fields serialized for player ${finalPlayer.player_slot}:`, {
-          items_type: typeof finalPlayer.items,
-          items_is_null: finalPlayer.items === null,
-          kills_per_hero_type: typeof finalPlayer.kills_per_hero,
-          kills_per_hero_is_null: finalPlayer.kills_per_hero === null,
-          damage_targets_type: typeof finalPlayer.damage_targets,
-          damage_targets_is_null: finalPlayer.damage_targets === null,
-        });
-      }
-      
       return finalPlayer;
     });
+    
+    // Log JSONB fields for debugging (first player only) - AFTER map completes
+    if (sanitizedPlayers.length > 0) {
+      const firstPlayer = sanitizedPlayers[0];
+      console.log(`[build-digest] JSONB fields serialized for player ${firstPlayer.player_slot}:`, {
+        items_type: typeof firstPlayer.items,
+        items_is_null: firstPlayer.items === null,
+        kills_per_hero_type: typeof firstPlayer.kills_per_hero,
+        kills_per_hero_is_null: firstPlayer.kills_per_hero === null,
+        damage_targets_type: typeof firstPlayer.damage_targets,
+        damage_targets_is_null: firstPlayer.damage_targets === null,
+      });
+    }
 
     // Log payload keys before upsert (without full JSON)
     const sampleKeys = sanitizedPlayers[0] ? Object.keys(sanitizedPlayers[0]) : [];
