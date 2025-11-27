@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { getProfileOverview } from '@/lib/services/profileService';
 
 export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 /**
  * Main Dashboard Page
