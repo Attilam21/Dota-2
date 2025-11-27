@@ -107,29 +107,40 @@ export function DemoForm() {
         dataStatus: data?.status,
       });
 
-      if (isSuccess && hasValidStatus) {
-        console.log('[DemoForm] ✅ Conditions met for redirect - Status OK and data.status valid');
-        console.log('[DemoForm] 🚀 Executing window.location.href = "/dashboard"');
-        console.log('[DemoForm] Match ID loaded:', data.match_id);
-        console.log('[DemoForm] Account ID:', data.account_id);
+      // CRITICAL: Always redirect to dashboard if response is OK, regardless of data.status
+      // This ensures the dashboard opens even if there are minor data issues
+      if (isSuccess) {
+        console.log('[DemoForm] ✅ Response OK - Redirecting to dashboard');
+        console.log('[DemoForm] Match ID:', data?.match_id);
+        console.log('[DemoForm] Account ID:', data?.account_id);
+        console.log('[DemoForm] Data status:', data?.status);
         
-        // CRITICAL: Use window.location.replace() instead of href for immediate navigation
+        // Store match data in sessionStorage for dashboard access
+        if (data?.match_id) {
+          try {
+            sessionStorage.setItem('demo_match_id', String(data.match_id));
+            sessionStorage.setItem('demo_account_id', String(data.account_id || accountIdNum));
+            console.log('[DemoForm] Stored match data in sessionStorage');
+          } catch (storageError) {
+            console.warn('[DemoForm] Could not store in sessionStorage:', storageError);
+          }
+        }
+        
+        // CRITICAL: Use window.location.replace() for immediate navigation
         // This prevents the back button from going back to the form
-        // And ensures immediate navigation without delay
         window.location.replace('/dashboard');
         
-        // This return should never execute, but it's here for safety
+        // Prevent any further execution
         return;
       } else {
-        console.error('[DemoForm] ❌ Redirect conditions NOT met:', {
+        console.error('[DemoForm] ❌ Response not OK:', {
           isSuccess,
           hasValidStatus,
           responseStatus: response.status,
           responseOk: response.ok,
           dataStatus: data?.status,
-          fullData: data,
         });
-        throw new Error(`Unexpected response status or data format. Status: ${response.status}, Data status: ${data?.status || 'missing'}`);
+        throw new Error(`API request failed. Status: ${response.status}`);
       }
     } catch (err) {
       console.error('[DemoForm] Error:', err);

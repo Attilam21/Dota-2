@@ -10,31 +10,32 @@ export const dynamic = 'force-dynamic';
  * Styled with dark theme and card-based layout
  */
 export default async function DashboardPage() {
-  // DEMO MODE: For demo users, we skip authentication entirely
-  // This page is accessible without login for demo purposes
+  // DEMO MODE: This page is ALWAYS accessible without authentication
+  // We completely skip auth checks to ensure demo mode works
   let user = null;
+  let isDemoMode = true;
   
-  // Only attempt authentication if we're in a server context that supports it
-  // For demo mode, we skip this entirely to avoid any potential errors
+  // Try to get user, but NEVER block if it fails
   try {
     const supabase = await createClient();
     if (supabase) {
-      const authResult = await supabase.auth.getUser();
-      // Only set user if we have a valid result AND no error
-      if (authResult?.data?.user && !authResult.error) {
-        user = authResult.data.user;
-        console.log('[dashboard] Authenticated user found:', user.id);
+      try {
+        const authResult = await supabase.auth.getUser();
+        if (authResult?.data?.user && !authResult.error) {
+          user = authResult.data.user;
+          isDemoMode = false;
+        }
+      } catch {
+        // Ignore - demo mode
       }
     }
-  } catch (error: unknown) {
-    // Silently fail - this is expected for demo users without authentication
-    // No need to log - this is normal behavior for unauthenticated access
-    user = null;
+  } catch {
+    // Ignore all errors - always allow demo access
   }
   
-  // If no user, show demo dashboard (this is the primary use case for demo mode)
-  if (!user) {
-    console.log('[dashboard] Rendering demo dashboard - no authentication required');
+  // Always show dashboard - demo mode if no user, authenticated if user exists
+  if (!user || isDemoMode) {
+    console.log('[dashboard] Rendering demo dashboard');
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
         <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -44,19 +45,24 @@ export default async function DashboardPage() {
               Dashboard Demo
             </h1>
             <div className="space-y-2">
-              <p className="text-green-400 font-semibold text-lg">
-                ✅ Dashboard Demo Caricata con Successo
+              <p className="text-green-400 font-semibold text-xl animate-pulse">
+                ✅ Dashboard Demo Caricata con Successo!
               </p>
               <p className="text-blue-400 text-sm font-medium">
                 🎮 Modalità Demo Attiva - Nessun Login Richiesto
               </p>
-              <p className="text-gray-400">
+              <p className="text-gray-400 text-lg">
                 Benvenuto, <span className="text-white font-semibold">Demo Player</span>
               </p>
-              <p className="text-gray-500 text-sm">
+              <p className="text-gray-500 text-sm mt-2">
                 Hai inserito l&apos;ID e caricato l&apos;analisi della partita. 
-                <span className="text-purple-400"> Registrati</span> per salvare i tuoi dati e accedere a tutte le funzionalità.
+                <span className="text-purple-400 font-semibold"> Registrati</span> per salvare i tuoi dati e accedere a tutte le funzionalità.
               </p>
+              <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                <p className="text-green-400 text-xs">
+                  💡 La dashboard è accessibile senza autenticazione per la modalità demo.
+                </p>
+              </div>
             </div>
           </div>
 
