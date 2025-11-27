@@ -129,17 +129,28 @@ export function DemoForm() {
         // CRITICAL: Use window.location.replace() for immediate navigation
         // This prevents the back button from going back to the form
         console.log('[DemoForm] 🚀 EXECUTING REDIRECT NOW - window.location.replace("/dashboard")');
+        console.log('[DemoForm] Current URL:', window.location.href);
+        console.log('[DemoForm] Current pathname:', window.location.pathname);
         
         // Force immediate redirect - no delays, no conditions
-        window.location.replace('/dashboard');
+        // Use absolute URL to ensure it works in all contexts
+        const dashboardUrl = `${window.location.origin}/dashboard`;
+        console.log('[DemoForm] Redirecting to:', dashboardUrl);
         
-        // CRITICAL: This should never execute, but if it does, force navigation again
+        // Try replace first (cleaner navigation)
+        window.location.replace(dashboardUrl);
+        
+        // CRITICAL: Fallback - if replace doesn't work, use href
+        // This ensures navigation happens even if replace fails
         setTimeout(() => {
           if (window.location.pathname !== '/dashboard') {
-            console.warn('[DemoForm] Redirect did not work, forcing again...');
-            window.location.href = '/dashboard';
+            console.warn('[DemoForm] ⚠️ Replace did not work, trying href...');
+            console.warn('[DemoForm] Current pathname after replace:', window.location.pathname);
+            window.location.href = dashboardUrl;
+          } else {
+            console.log('[DemoForm] ✅ Redirect successful!');
           }
-        }, 500);
+        }, 100);
         
         // Prevent any further execution
         return;

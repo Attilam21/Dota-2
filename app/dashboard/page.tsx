@@ -18,29 +18,26 @@ export default async function DashboardPage() {
   console.log('[dashboard] ⚡ DashboardPage component STARTING - Route accessed successfully!');
   
   // DEMO MODE: This page is ALWAYS accessible without authentication
-  // We completely skip auth checks to ensure demo mode works
+  // We completely skip ALL auth checks to ensure demo mode works
   let user = null;
   let isDemoMode = true;
   
-  // Try to get user, but NEVER block if it fails
+  // CRITICAL: Skip ALL Supabase calls for demo mode to avoid ANY errors
+  // Only try auth if we're absolutely sure it won't break
   try {
-    const supabase = await createClient();
+    // Only attempt if we're in a safe context
+    const supabase = await createClient().catch(() => null);
     if (supabase) {
-      try {
-        const authResult = await supabase.auth.getUser();
-        if (authResult?.data?.user && !authResult.error) {
-          user = authResult.data.user;
-          isDemoMode = false;
-          console.log('[dashboard] ✅ Authenticated user found:', user.id);
-        }
-      } catch (authError) {
-        // Ignore - demo mode (this is expected)
-        console.log('[dashboard] ℹ️ No authenticated user - showing demo mode');
+      const authResult = await supabase.auth.getUser().catch(() => null);
+      if (authResult?.data?.user && !authResult.error) {
+        user = authResult.data.user;
+        isDemoMode = false;
+        console.log('[dashboard] ✅ Authenticated user found:', user.id);
       }
     }
   } catch (error) {
-    // Ignore all errors - always allow demo access
-    console.log('[dashboard] ℹ️ Auth check failed - showing demo mode (expected for demo)');
+    // Ignore ALL errors - always allow demo access
+    // This is expected for demo users
   }
   
   // Always show dashboard - demo mode if no user, authenticated if user exists
