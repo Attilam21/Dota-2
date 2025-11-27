@@ -72,7 +72,8 @@ export async function POST(request: NextRequest) {
     console.log(`[demo/load-player-last-match] Processing account_id: ${accountId}`);
 
     // Step 1: Get last match from OpenDota
-    const opendotaApiKey = process.env.OPENDOTA_API_KEY;
+    // Use CHIAVE_API_DOTA as specified (fallback to OPENDOTA_API_KEY for backward compatibility)
+    const opendotaApiKey = process.env.CHIAVE_API_DOTA || process.env.OPENDOTA_API_KEY;
     const matchesUrl = `https://api.opendota.com/api/players/${accountId}/matches?limit=1${opendotaApiKey ? `&api_key=${opendotaApiKey}` : ""}`;
 
     console.log(`[demo/load-player-last-match] Fetching matches from OpenDota for account_id: ${accountId}`);

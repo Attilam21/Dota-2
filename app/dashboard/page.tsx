@@ -301,10 +301,14 @@ export default async function DashboardPage() {
                     {task.target_value !== null && task.current_value !== null && (
                       <div className="mt-3 flex items-center justify-between text-sm">
                         <span className="text-gray-400">
-                          Obiettivo: <span className="text-white font-medium">{task.target_value.toFixed(1)}</span>
+                          Obiettivo: <span className="text-white font-medium">
+                            {typeof task.target_value === 'number' ? task.target_value.toFixed(1) : 'N/A'}
+                          </span>
                         </span>
                         <span className="text-gray-400">
-                          Attuale: <span className="text-white font-medium">{task.current_value.toFixed(1)}</span>
+                          Attuale: <span className="text-white font-medium">
+                            {typeof task.current_value === 'number' ? task.current_value.toFixed(1) : 'N/A'}
+                          </span>
                         </span>
                       </div>
                     )}
