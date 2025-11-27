@@ -9,11 +9,11 @@ interface LaneEarlyGameProps {
 export function LaneEarlyGame({ match, playerData, players }: LaneEarlyGameProps) {
   // Calcola CS a 10 minuti (se disponibile nei dati)
   // Per ora usiamo dati mock, poi integreremo con dati reali da position_metrics
-  const csAt10 = playerData?.position_metrics?.cs_at_10 || null;
-  const xpAt10 = playerData?.position_metrics?.xp_at_10 || null;
+  const csAt10: number | null = (playerData?.position_metrics as any)?.cs_at_10 || null;
+  const xpAt10: number | null = (playerData?.position_metrics as any)?.xp_at_10 || null;
   
   // Winrate in lane (mock per ora, da calcolare da dati storici)
-  const winrateInLane = null; // Da implementare con query su partite precedenti
+  const winrateInLane: number | null = null; // Da implementare con query su partite precedenti
 
   return (
     <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
