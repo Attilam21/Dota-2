@@ -295,47 +295,77 @@ export async function POST(request: NextRequest) {
         ? { ...sanitized, user_id: userId } 
         : { ...sanitized };
       
-      // CRITICAL: Explicitly serialize ALL JSONB fields before Supabase upsert
-      // This ensures proper JSONB format and eliminates type errors
+      // CRITICAL: Explicitly serialize ALL JSONB fields using JSON.stringify() before Supabase upsert
+      // This is the ONLY way to ensure Supabase receives properly formatted JSONB data
+      // DO NOT pass objects directly - they must be serialized first
       
-      // Serialize items
+      // Serialize items - CRITICAL FIX
       if (finalPlayer.items !== null && finalPlayer.items !== undefined) {
         try {
-          finalPlayer.items = JSON.parse(JSON.stringify(finalPlayer.items));
+          // Force serialization: stringify then parse to ensure clean object
+          const serialized = JSON.stringify(finalPlayer.items);
+          finalPlayer.items = JSON.parse(serialized);
         } catch (err) {
-          console.warn(`[build-digest] Failed to serialize items for player ${finalPlayer.player_slot}:`, err);
+          console.error(`[build-digest] CRITICAL: Failed to serialize items for player ${finalPlayer.player_slot}:`, err);
           finalPlayer.items = null;
         }
+      } else {
+        finalPlayer.items = null;
       }
       
-      // Serialize position_metrics
+      // Serialize position_metrics - CRITICAL FIX
       if (finalPlayer.position_metrics !== null && finalPlayer.position_metrics !== undefined) {
         try {
-          finalPlayer.position_metrics = JSON.parse(JSON.stringify(finalPlayer.position_metrics));
+          const serialized = JSON.stringify(finalPlayer.position_metrics);
+          finalPlayer.position_metrics = JSON.parse(serialized);
         } catch (err) {
-          console.warn(`[build-digest] Failed to serialize position_metrics for player ${finalPlayer.player_slot}:`, err);
+          console.error(`[build-digest] CRITICAL: Failed to serialize position_metrics for player ${finalPlayer.player_slot}:`, err);
           finalPlayer.position_metrics = null;
         }
+      } else {
+        finalPlayer.position_metrics = null;
       }
       
-      // CRITICAL: Serialize kills_per_hero (complex JSONB field from OpenDota)
+      // CRITICAL FIX: Serialize kills_per_hero (complex JSONB field from OpenDota)
+      // This field MUST be serialized with JSON.stringify() before passing to Supabase
       if (finalPlayer.kills_per_hero !== null && finalPlayer.kills_per_hero !== undefined) {
         try {
-          finalPlayer.kills_per_hero = JSON.parse(JSON.stringify(finalPlayer.kills_per_hero));
+          // Explicit JSON.stringify() serialization - DO NOT skip this step
+          const serialized = JSON.stringify(finalPlayer.kills_per_hero);
+          finalPlayer.kills_per_hero = JSON.parse(serialized);
         } catch (err) {
-          console.warn(`[build-digest] Failed to serialize kills_per_hero for player ${finalPlayer.player_slot}:`, err);
+          console.error(`[build-digest] CRITICAL: Failed to serialize kills_per_hero for player ${finalPlayer.player_slot}:`, err);
           finalPlayer.kills_per_hero = null;
         }
+      } else {
+        finalPlayer.kills_per_hero = null;
       }
       
-      // CRITICAL: Serialize damage_targets (complex JSONB field from OpenDota)
+      // CRITICAL FIX: Serialize damage_targets (complex JSONB field from OpenDota)
+      // This field MUST be serialized with JSON.stringify() before passing to Supabase
       if (finalPlayer.damage_targets !== null && finalPlayer.damage_targets !== undefined) {
         try {
-          finalPlayer.damage_targets = JSON.parse(JSON.stringify(finalPlayer.damage_targets));
+          // Explicit JSON.stringify() serialization - DO NOT skip this step
+          const serialized = JSON.stringify(finalPlayer.damage_targets);
+          finalPlayer.damage_targets = JSON.parse(serialized);
         } catch (err) {
-          console.warn(`[build-digest] Failed to serialize damage_targets for player ${finalPlayer.player_slot}:`, err);
+          console.error(`[build-digest] CRITICAL: Failed to serialize damage_targets for player ${finalPlayer.player_slot}:`, err);
           finalPlayer.damage_targets = null;
         }
+      } else {
+        finalPlayer.damage_targets = null;
+      }
+      
+      // Log JSONB fields for debugging (first player only)
+      if (finalPlayer.player_slot === sanitizedPlayers[0]?.player_slot) {
+        console.log(`[build-digest] JSONB fields serialized for player ${finalPlayer.player_slot}:`, {
+          items_type: typeof finalPlayer.items,
+          items_is_null: finalPlayer.items === null,
+          kills_per_hero_type: typeof finalPlayer.kills_per_hero,
+          kills_per_hero_is_null: finalPlayer.kills_per_hero === null,
+          damage_targets_type: typeof finalPlayer.damage_targets,
+          damage_targets_is_null: finalPlayer.damage_targets === null,
+        });
       }
       
       return finalPlayer;
