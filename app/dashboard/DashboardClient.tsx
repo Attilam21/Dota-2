@@ -37,10 +37,26 @@ export function DashboardClient() {
     console.log('[DashboardClient] Current URL:', window.location.href);
     console.log('[DashboardClient] Current pathname:', window.location.pathname);
     
-    // Get data from sessionStorage
+    // Get data from cookies (set by server action) or sessionStorage (fallback)
     try {
-      const storedMatchId = sessionStorage.getItem('demo_match_id');
-      const storedAccountId = sessionStorage.getItem('demo_account_id');
+      // Try cookies first (set by server action)
+      const getCookie = (name: string) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop()?.split(';').shift();
+        return null;
+      };
+      
+      let storedMatchId = getCookie('demo_match_id');
+      let storedAccountId = getCookie('demo_account_id');
+      
+      // Fallback to sessionStorage if cookies not available
+      if (!storedMatchId) {
+        storedMatchId = sessionStorage.getItem('demo_match_id');
+      }
+      if (!storedAccountId) {
+        storedAccountId = sessionStorage.getItem('demo_account_id');
+      }
       
       if (storedMatchId) {
         setMatchId(storedMatchId);
