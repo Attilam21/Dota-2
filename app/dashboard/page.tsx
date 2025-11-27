@@ -28,6 +28,9 @@ export default async function DashboardPage() {
               Dashboard Demo
             </h1>
             <div className="space-y-2">
+              <p className="text-green-400 font-semibold text-lg">
+                ✅ Dashboard Caricata
+              </p>
               <p className="text-gray-400">
                 Benvenuto, <span className="text-white font-semibold">Demo Player</span>
               </p>
