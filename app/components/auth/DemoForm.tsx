@@ -46,24 +46,39 @@ export function DemoForm() {
       console.log('[DemoForm] Response statusText:', response.statusText);
       console.log('[DemoForm] Response headers:', Object.fromEntries(response.headers.entries()));
 
-      // Controlla lo status PRIMA di parsare JSON
-      if (response.status === 404) {
-        // Se è 404, potrebbe essere che l'endpoint non esiste o c'è un problema di routing
-        const text = await response.text().catch(() => 'No response body');
-        console.error('[DemoForm] 404 Error - Response text:', text);
-        throw new Error('Endpoint non trovato (404). Verifica che il deployment sia completato e che la route esista.');
-      }
-
-      // Controlla se la risposta è JSON valida
+      // Controlla se la risposta è JSON valida (anche per 404)
       let data;
       try {
         const responseText = await response.text();
         console.log('[DemoForm] Response text (first 500 chars):', responseText.substring(0, 500));
-        data = JSON.parse(responseText);
+        
+        // Prova a parsare JSON anche per 404, perché l'API potrebbe restituire JSON con dettagli
+        if (responseText.trim()) {
+          data = JSON.parse(responseText);
+        } else {
+          // Se non c'è testo, è probabilmente un 404 di routing
+          if (response.status === 404) {
+            throw new Error('Endpoint non trovato (404). Verifica che il deployment sia completato e che la route esista.');
+          }
+          throw new Error(`Errore del server (${response.status}). Nessuna risposta dal server.`);
+        }
       } catch (jsonError) {
-        // Se la risposta non è JSON, potrebbe essere un errore 500 generico
+        // Se non è JSON valido, potrebbe essere un errore di routing
+        if (response.status === 404 && !(jsonError instanceof Error && jsonError.message.includes('Endpoint'))) {
+          console.error('[DemoForm] 404 Error - Response is not JSON:', jsonError);
+          throw new Error('Endpoint non trovato (404). Verifica che il deployment sia completato e che la route esista.');
+        }
+        // Se è un altro errore di parsing
         console.error('[DemoForm] JSON parse error:', jsonError);
         throw new Error(`Errore del server (${response.status}). La risposta non è JSON valido.`);
+      }
+
+      // Se è 404 ma abbiamo JSON, è un errore logico dell'API (es. "no matches found")
+      if (response.status === 404 && data) {
+        // L'API ha restituito un errore logico, mostra il messaggio dell'API
+        const errorMessage = data.details || data.error || 'Nessuna partita trovata';
+        console.log('[DemoForm] API returned 404 with error:', data);
+        throw new Error(errorMessage);
       }
 
       if (!response.ok) {
