@@ -8,6 +8,7 @@ function epochToISO(epoch: number | undefined): string | null {
 }
 
 // Helper: Safely extract numeric value, ensuring it's not an object/array
+// Silently handles objects/arrays (common for JSONB fields from OpenDota)
 function safeNumber(value: unknown): number | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "number" && !Number.isNaN(value)) return value;
@@ -15,15 +16,10 @@ function safeNumber(value: unknown): number | null {
     const parsed = Number.parseFloat(value);
     return Number.isNaN(parsed) ? null : parsed;
   }
-  // If it's an object or array, log warning and return null
+  // If it's an object or array, silently return null (likely a JSONB field)
+  // These are handled separately by safeJSONBObject() for fields like damage_targets, kills_per_hero
+  // No warning needed - this is expected behavior for complex OpenDota fields
   if (typeof value === "object") {
-    console.warn(`[buildDigestFromRaw] Expected number but got object/array:`, {
-      value_type: Array.isArray(value) ? "array" : "object",
-      value_keys: typeof value === "object" && value !== null ? Object.keys(value).slice(0, 5) : [],
-      value_sample: typeof value === "object" && value !== null 
-        ? JSON.stringify(value).substring(0, 100) 
-        : null,
-    });
     return null;
   }
   return null;
