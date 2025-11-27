@@ -110,18 +110,15 @@ export function DemoForm() {
       if (isSuccess && hasValidStatus) {
         console.log('[DemoForm] ✅ Conditions met for redirect - Status OK and data.status valid');
         console.log('[DemoForm] 🚀 Executing window.location.href = "/dashboard"');
+        console.log('[DemoForm] Match ID loaded:', data.match_id);
+        console.log('[DemoForm] Account ID:', data.account_id);
         
-        // Clear loading state before navigation
-        setLoading(false);
-        setError(null);
+        // CRITICAL: Use window.location.replace() instead of href for immediate navigation
+        // This prevents the back button from going back to the form
+        // And ensures immediate navigation without delay
+        window.location.replace('/dashboard');
         
-        // Small delay to ensure state updates are processed
-        setTimeout(() => {
-          // Use window.location.href for full page reload - ensures dashboard is rendered correctly
-          window.location.href = '/dashboard';
-        }, 100);
-        
-        // Return early to prevent finally block from executing
+        // This return should never execute, but it's here for safety
         return;
       } else {
         console.error('[DemoForm] ❌ Redirect conditions NOT met:', {
@@ -137,7 +134,6 @@ export function DemoForm() {
     } catch (err) {
       console.error('[DemoForm] Error:', err);
       setError(err instanceof Error ? err.message : 'Errore durante il caricamento della partita');
-    } finally {
       setLoading(false);
     }
   };
