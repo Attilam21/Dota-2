@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getProfileOverview } from '@/lib/services/profileService';
+import { DashboardClient } from './DashboardClient';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
