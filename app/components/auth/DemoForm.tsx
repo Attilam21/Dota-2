@@ -17,7 +17,7 @@ export function DemoForm() {
     try {
       const accountIdNum = parseInt(accountId, 10);
       if (isNaN(accountIdNum) || accountIdNum <= 0) {
-        setError('Inserisci un Account ID valido (numero positivo)');
+        setError('Inserisci un OpenDota Account ID valido (numero positivo)');
         return;
       }
 
@@ -109,14 +109,14 @@ export function DemoForm() {
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-white mb-2">Demo - Prova Gratuita</h2>
         <p className="text-gray-400 text-sm">
-          Inserisci il tuo Steam Account ID per vedere l&apos;analisi della tua ultima partita senza registrazione
+          Inserisci il tuo OpenDota Account ID per vedere l&apos;analisi della tua ultima partita senza registrazione
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="account_id" className="block text-sm font-medium text-gray-300 mb-2">
-            Steam Account ID
+            OpenDota Account ID
           </label>
           <input
             id="account_id"
@@ -128,15 +128,7 @@ export function DemoForm() {
             placeholder="123456789"
           />
           <p className="mt-2 text-xs text-gray-500">
-            Trova il tuo Account ID su{' '}
-            <a
-              href="https://steamid.io"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-purple-400 hover:text-purple-300"
-            >
-              steamid.io
-            </a>
+            Il tuo OpenDota Account ID è lo stesso del tuo Steam Account ID. Puoi trovarlo sul tuo profilo OpenDota.
           </p>
         </div>
 
