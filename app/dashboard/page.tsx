@@ -15,15 +15,14 @@ export const runtime = 'nodejs';
  * CRITICAL: This page is ALWAYS accessible for demo mode
  * Supports demo mode via query parameters: ?demo=true&player_id=X or ?demo=true&match_id=X
  */
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams?: { demo?: string; player_id?: string; match_id?: string };
+export default async function DashboardPage(props: {
+  searchParams?: Promise<{ demo?: string; player_id?: string; match_id?: string }>;
 }) {
   // CRITICAL: Log immediately to confirm page is being rendered
   console.log('[dashboard] ⚡ DashboardPage component STARTING - Route accessed successfully!');
   
   // Check if demo mode is requested via query params
+  const searchParams = await props.searchParams;
   const isDemoQuery = searchParams?.demo === 'true';
   const playerId = searchParams?.player_id || null;
   const matchId = searchParams?.match_id || null;
