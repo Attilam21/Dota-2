@@ -94,8 +94,26 @@ export function DemoForm() {
 
       console.log('[DemoForm] Match loaded successfully:', data);
 
-      // Redirect to dashboard after successful digest creation
-      router.push('/dashboard');
+      // CRITICAL: Explicit client-side navigation to dashboard after successful API response (status 200)
+      // Use window.location for reliable navigation in case router.push fails
+      if (response.status === 200 && data.status === 'ok') {
+        console.log('[DemoForm] Redirecting to dashboard...');
+        // Try router.push first, fallback to window.location
+        try {
+          router.push('/dashboard');
+          // Force navigation after a short delay to ensure it happens
+          setTimeout(() => {
+            if (window.location.pathname !== '/dashboard') {
+              window.location.href = '/dashboard';
+            }
+          }, 100);
+        } catch (navError) {
+          console.error('[DemoForm] Router navigation failed, using window.location:', navError);
+          window.location.href = '/dashboard';
+        }
+      } else {
+        throw new Error('Unexpected response status or data format');
+      }
     } catch (err) {
       console.error('[DemoForm] Error:', err);
       setError(err instanceof Error ? err.message : 'Errore durante il caricamento della partita');

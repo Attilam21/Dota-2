@@ -46,9 +46,16 @@ export default async function DashboardPage() {
           <h1 className="text-4xl font-bold text-white mb-2">
             Dashboard
           </h1>
-          <p className="text-gray-400">
-            Benvenuto, {overview.profile.in_game_name || overview.profile.nickname || 'Player'}
-          </p>
+          <div className="space-y-2">
+            <p className="text-gray-400">
+              Benvenuto, <span className="text-white font-semibold">{overview.profile.in_game_name || overview.profile.nickname || 'Player'}</span>
+            </p>
+            {overview.profile.steam_id && (
+              <p className="text-gray-500 text-sm">
+                OpenDota Account ID: <span className="text-purple-400 font-mono">{overview.profile.steam_id}</span>
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
