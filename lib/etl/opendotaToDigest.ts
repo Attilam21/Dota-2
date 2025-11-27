@@ -7,21 +7,43 @@ function epochToISO(epoch: number | undefined): string | null {
   return new Date(epoch * 1000).toISOString();
 }
 
-// Helper: calculate KDA
-function calculateKDA(kills: number | undefined, deaths: number | undefined, assists: number | undefined): number | null {
-  if (kills === undefined || deaths === undefined || assists === undefined) return null;
-  if (deaths === 0) return kills + assists;
-  return (kills + assists) / deaths;
+// Helper: Safely extract numeric value
+function safeNumber(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number" && !Number.isNaN(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  // If it's an object or array, return null
+  if (typeof value === "object") {
+    return null;
+  }
+  return null;
 }
 
-// Helper: calculate kill participation
+// Helper: calculate KDA (with safe number extraction)
+function calculateKDA(kills: unknown, deaths: unknown, assists: unknown): number | null {
+  const safeKills = safeNumber(kills);
+  const safeDeaths = safeNumber(deaths);
+  const safeAssists = safeNumber(assists);
+  
+  if (safeKills === null || safeDeaths === null || safeAssists === null) return null;
+  if (safeDeaths === 0) return safeKills + safeAssists;
+  return (safeKills + safeAssists) / safeDeaths;
+}
+
+// Helper: calculate kill participation (with safe number extraction)
 function calculateKillParticipation(
-  playerKills: number | undefined,
-  playerAssists: number | undefined,
+  playerKills: unknown,
+  playerAssists: unknown,
   totalTeamKills: number
 ): number | null {
-  if (playerKills === undefined || playerAssists === undefined || totalTeamKills === 0) return null;
-  return (playerKills + playerAssists) / totalTeamKills;
+  const safeKills = safeNumber(playerKills);
+  const safeAssists = safeNumber(playerAssists);
+  
+  if (safeKills === null || safeAssists === null || totalTeamKills === 0) return null;
+  return (safeKills + safeAssists) / totalTeamKills;
 }
 
 // Helper: build items object
@@ -37,14 +59,17 @@ function buildItemsObject(player: RawPlayer): Record<string, unknown> {
   return Object.keys(items).length > 0 ? items : {};
 }
 
-// Helper: calculate vision score
+// Helper: calculate vision score (with safe number extraction)
 function calculateVisionScore(
-  observerWards: number | undefined,
-  sentryWards: number | undefined
+  observerWards: unknown,
+  sentryWards: unknown
 ): number | null {
-  if (observerWards === undefined && sentryWards === undefined) return null;
-  const obs = observerWards || 0;
-  const sentry = sentryWards || 0;
+  const safeObs = safeNumber(observerWards);
+  const safeSentry = safeNumber(sentryWards);
+  
+  if (safeObs === null && safeSentry === null) return null;
+  const obs = safeObs || 0;
+  const sentry = safeSentry || 0;
   return obs + sentry;
 }
 
@@ -72,33 +97,53 @@ function buildObjectivesSummary(objectives: Array<Record<string, unknown>> | und
   return summary;
 }
 
-// Helper: build teamfight summary
+// Helper: build teamfight summary (with safe number extraction)
 function buildTeamfightSummary(teamfights: Array<Record<string, unknown>> | undefined): Record<string, unknown> | null {
   if (!teamfights || teamfights.length === 0) return null;
   
   return {
     count: teamfights.length,
     total_duration: teamfights.reduce((sum, tf) => {
-      const duration = tf.duration as number;
+      const duration = safeNumber(tf.duration);
       return sum + (duration || 0);
     }, 0),
   };
 }
 
-// Helper: build economy summary
+// Helper: build economy summary (with safe number extraction)
 function buildEconomySummary(players: RawPlayer[]): Record<string, unknown> | null {
   if (!players || players.length === 0) return null;
   
   const radiantGold = players
-    .filter((p) => p.player_slot < 128)
-    .reduce((sum, p) => sum + (p.net_worth || 0), 0);
+    .filter((p) => {
+      const slot = safeNumber(p.player_slot);
+      return slot !== null && slot < 128;
+    })
+    .reduce((sum, p) => {
+      const netWorth = safeNumber(p.net_worth);
+      return sum + (netWorth || 0);
+    }, 0);
   
   const direGold = players
-    .filter((p) => p.player_slot >= 128)
-    .reduce((sum, p) => sum + (p.net_worth || 0), 0);
+    .filter((p) => {
+      const slot = safeNumber(p.player_slot);
+      return slot !== null && slot >= 128;
+    })
+    .reduce((sum, p) => {
+      const netWorth = safeNumber(p.net_worth);
+      return sum + (netWorth || 0);
+    }, 0);
   
-  const totalGold = players.reduce((sum, p) => sum + (p.gold_spent || 0), 0);
-  const avgGPM = players.reduce((sum, p) => sum + (p.gold_per_min || 0), 0) / players.length;
+  const totalGold = players.reduce((sum, p) => {
+    const goldSpent = safeNumber(p.gold_spent);
+    return sum + (goldSpent || 0);
+  }, 0);
+  
+  const gpmSum = players.reduce((sum, p) => {
+    const gpm = safeNumber(p.gold_per_min);
+    return sum + (gpm || 0);
+  }, 0);
+  const avgGPM = players.length > 0 ? gpmSum / players.length : 0;
   
   return {
     radiant_total_networth: radiantGold,
@@ -139,14 +184,26 @@ export function buildDigestFromRaw(raw: RawMatch): { match: MatchDigest; players
     economy_summary: buildEconomySummary(raw.players),
   };
 
-  // Calculate total team kills for kill participation
+  // Calculate total team kills for kill participation (with safe number extraction)
   const radiantKills = raw.players
-    .filter((p) => p.player_slot < 128)
-    .reduce((sum, p) => sum + (p.kills || 0), 0);
+    .filter((p) => {
+      const slot = safeNumber(p.player_slot);
+      return slot !== null && slot < 128;
+    })
+    .reduce((sum, p) => {
+      const kills = safeNumber(p.kills);
+      return sum + (kills || 0);
+    }, 0);
   
   const direKills = raw.players
-    .filter((p) => p.player_slot >= 128)
-    .reduce((sum, p) => sum + (p.kills || 0), 0);
+    .filter((p) => {
+      const slot = safeNumber(p.player_slot);
+      return slot !== null && slot >= 128;
+    })
+    .reduce((sum, p) => {
+      const kills = safeNumber(p.kills);
+      return sum + (kills || 0);
+    }, 0);
 
   // Build PlayerDigest array with validation
   const players: PlayerDigest[] = raw.players.map((player, index) => {
@@ -158,33 +215,26 @@ export function buildDigestFromRaw(raw: RawMatch): { match: MatchDigest; players
       throw new Error(`Player at index ${index} has invalid hero_id: ${player.hero_id}`);
     }
 
-    const isRadiant = player.player_slot < 128;
+    // Safely extract player_slot
+    const safePlayerSlot = safeNumber(player.player_slot);
+    if (safePlayerSlot === null) {
+      throw new Error(`Player at index ${index} has invalid player_slot: ${player.player_slot}`);
+    }
+    
+    const isRadiant = safePlayerSlot < 128;
     const teamKills = isRadiant ? radiantKills : direKills;
 
-    // Helper: Safely extract numeric value, ensuring it's not an object
-    const safeNumber = (value: unknown): number | null => {
-      if (value === null || value === undefined) return null;
-      if (typeof value === "number") return value;
-      if (typeof value === "string") {
-        const parsed = Number.parseFloat(value);
-        return Number.isNaN(parsed) ? null : parsed;
-      }
-      // If it's an object or array, log warning and return null
-      if (typeof value === "object") {
-        console.warn(`[buildDigestFromRaw] Expected number but got object/array for player ${index}:`, {
-          value_type: Array.isArray(value) ? "array" : "object",
-          value_keys: typeof value === "object" && value !== null ? Object.keys(value).slice(0, 5) : [],
-        });
-        return null;
-      }
-      return null;
-    };
+    // Safely extract hero_id
+    const safeHeroId = safeNumber(player.hero_id);
+    if (safeHeroId === null) {
+      throw new Error(`Player at index ${index} has invalid hero_id: ${player.hero_id}`);
+    }
 
     const playerDigest: PlayerDigest = {
       match_id: raw.match_id,
-      player_slot: player.player_slot,
-      account_id: player.account_id ?? null,
-      hero_id: player.hero_id,
+      player_slot: safePlayerSlot,
+      account_id: safeNumber(player.account_id),
+      hero_id: safeHeroId,
       kills: safeNumber(player.kills),
       deaths: safeNumber(player.deaths),
       assists: safeNumber(player.assists),
