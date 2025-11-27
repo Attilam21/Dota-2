@@ -251,3 +251,37 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// Handler per metodi non supportati (Next.js App Router gestisce automaticamente, ma è esplicito)
+export async function GET() {
+  return NextResponse.json(
+    {
+      status: "error",
+      error: "method_not_allowed",
+      details: "This endpoint only accepts POST requests",
+    },
+    { status: 405 }
+  );
+}
+
+export async function PUT() {
+  return NextResponse.json(
+    {
+      status: "error",
+      error: "method_not_allowed",
+      details: "This endpoint only accepts POST requests",
+    },
+    { status: 405 }
+  );
+}
+
+export async function DELETE() {
+  return NextResponse.json(
+    {
+      status: "error",
+      error: "method_not_allowed",
+      details: "This endpoint only accepts POST requests",
+    },
+    { status: 405 }
+  );
+}
+

@@ -34,10 +34,27 @@ export function DemoForm() {
         }),
       });
 
-      const data = await response.json();
+      // Controlla se la risposta è JSON valida
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        // Se la risposta non è JSON, potrebbe essere un errore 404/500 generico
+        if (response.status === 404) {
+          throw new Error('Endpoint non trovato. Verifica che il deployment sia completato.');
+        }
+        throw new Error(`Errore del server (${response.status}). Riprova più tardi.`);
+      }
 
       if (!response.ok) {
-        throw new Error(data.details || data.error || 'Errore nel caricamento della partita');
+        // Log dettagliato per debugging
+        console.error('[DemoForm] API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          error: data.error,
+          details: data.details,
+        });
+        throw new Error(data.details || data.error || `Errore nel caricamento della partita (${response.status})`);
       }
 
       console.log('[DemoForm] Match loaded successfully:', data);
