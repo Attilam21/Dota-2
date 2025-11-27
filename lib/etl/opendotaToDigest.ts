@@ -7,7 +7,7 @@ function epochToISO(epoch: number | undefined): string | null {
   return new Date(epoch * 1000).toISOString();
 }
 
-// Helper: Safely extract numeric value
+// Helper: Safely extract numeric value, ensuring it's not an object/array
 function safeNumber(value: unknown): number | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "number" && !Number.isNaN(value)) return value;
@@ -15,8 +15,15 @@ function safeNumber(value: unknown): number | null {
     const parsed = Number.parseFloat(value);
     return Number.isNaN(parsed) ? null : parsed;
   }
-  // If it's an object or array, return null
+  // If it's an object or array, log warning and return null
   if (typeof value === "object") {
+    console.warn(`[buildDigestFromRaw] Expected number but got object/array:`, {
+      value_type: Array.isArray(value) ? "array" : "object",
+      value_keys: typeof value === "object" && value !== null ? Object.keys(value).slice(0, 5) : [],
+      value_sample: typeof value === "object" && value !== null 
+        ? JSON.stringify(value).substring(0, 100) 
+        : null,
+    });
     return null;
   }
   return null;
@@ -207,28 +214,31 @@ export function buildDigestFromRaw(raw: RawMatch): { match: MatchDigest; players
 
   // Build PlayerDigest array with validation
   const players: PlayerDigest[] = raw.players.map((player, index) => {
-    // Validate required player fields
-    if (typeof player.player_slot !== "number") {
-      throw new Error(`Player at index ${index} has invalid player_slot: ${player.player_slot}`);
-    }
-    if (typeof player.hero_id !== "number") {
-      throw new Error(`Player at index ${index} has invalid hero_id: ${player.hero_id}`);
-    }
-
-    // Safely extract player_slot
+    // Safely extract required player fields
     const safePlayerSlot = safeNumber(player.player_slot);
     if (safePlayerSlot === null) {
-      throw new Error(`Player at index ${index} has invalid player_slot: ${player.player_slot}`);
+      console.error(`[buildDigestFromRaw] Player at index ${index} has invalid player_slot:`, {
+        player_slot: player.player_slot,
+        type: typeof player.player_slot,
+        is_object: typeof player.player_slot === "object",
+        is_array: Array.isArray(player.player_slot),
+      });
+      throw new Error(`Player at index ${index} has invalid player_slot: ${JSON.stringify(player.player_slot)}`);
+    }
+    
+    const safeHeroId = safeNumber(player.hero_id);
+    if (safeHeroId === null) {
+      console.error(`[buildDigestFromRaw] Player at index ${index} has invalid hero_id:`, {
+        hero_id: player.hero_id,
+        type: typeof player.hero_id,
+        is_object: typeof player.hero_id === "object",
+        is_array: Array.isArray(player.hero_id),
+      });
+      throw new Error(`Player at index ${index} has invalid hero_id: ${JSON.stringify(player.hero_id)}`);
     }
     
     const isRadiant = safePlayerSlot < 128;
     const teamKills = isRadiant ? radiantKills : direKills;
-
-    // Safely extract hero_id
-    const safeHeroId = safeNumber(player.hero_id);
-    if (safeHeroId === null) {
-      throw new Error(`Player at index ${index} has invalid hero_id: ${player.hero_id}`);
-    }
 
     const playerDigest: PlayerDigest = {
       match_id: raw.match_id,
