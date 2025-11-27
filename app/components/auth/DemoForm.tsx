@@ -91,17 +91,31 @@ export function DemoForm() {
       }
 
       console.log('[DemoForm] Match loaded successfully:', data);
+      console.log('[DemoForm] Response status:', response.status);
+      console.log('[DemoForm] Data status:', data.status);
 
       // CRITICAL: Explicit client-side navigation to dashboard after successful API response (status 200)
       // Use window.location.href for guaranteed navigation that cannot be interrupted
       if (response.status === 200 && data.status === 'ok') {
-        console.log('[DemoForm] Redirecting to dashboard...');
+        console.log('[DemoForm] ✅ Conditions met for redirect - Status 200 and data.status === "ok"');
+        console.log('[DemoForm] 🚀 Executing window.location.href = "/dashboard"');
+        
+        // Prevent finally block from executing
+        setLoading(false);
+        setError(null);
+        
         // Use window.location.href for full page reload - ensures dashboard is rendered correctly
         window.location.href = '/dashboard';
-        // Return early to prevent finally block from executing before navigation
+        
+        // This return should never execute due to navigation, but it's here for safety
         return;
       } else {
-        throw new Error('Unexpected response status or data format');
+        console.error('[DemoForm] ❌ Redirect conditions NOT met:', {
+          responseStatus: response.status,
+          dataStatus: data.status,
+          fullData: data,
+        });
+        throw new Error(`Unexpected response status or data format. Status: ${response.status}, Data status: ${data.status}`);
       }
     } catch (err) {
       console.error('[DemoForm] Error:', err);

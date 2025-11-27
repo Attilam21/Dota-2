@@ -46,6 +46,7 @@ export default async function DashboardPage() {
   
   // If no user, show demo dashboard with placeholder data
   if (!user) {
+    console.log('[dashboard] Rendering demo dashboard for unauthenticated user');
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
         <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -57,6 +58,9 @@ export default async function DashboardPage() {
             <div className="space-y-2">
               <p className="text-green-400 font-semibold text-lg">
                 ✅ Dashboard Caricata con successo - Reindirizzamento Funzionante
+              </p>
+              <p className="text-blue-400 text-sm">
+                🎮 Demo Mode Attivo - Analisi partita caricata
               </p>
               <p className="text-gray-400">
                 Benvenuto, <span className="text-white font-semibold">Demo Player</span>
