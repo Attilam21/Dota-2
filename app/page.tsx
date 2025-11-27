@@ -4,8 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  // CRITICAL: Handle demo mode - if no auth, redirect to login (not dashboard)
-  // But catch NEXT_REDIRECT errors silently to avoid breaking demo flow
+  // CRITICAL: For demo access, users can go directly to /demo
+  // This page handles authenticated users only
   let user = null;
   
   try {

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import { getProfileOverview } from '@/lib/services/profileService';
 import { DashboardClient } from './DashboardClient';
+import { DemoDashboard } from './DemoDashboard';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -12,10 +13,26 @@ export const runtime = 'nodejs';
  * Styled with dark theme and card-based layout
  * 
  * CRITICAL: This page is ALWAYS accessible for demo mode
+ * Supports demo mode via query parameters: ?demo=true&player_id=X or ?demo=true&match_id=X
  */
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: { demo?: string; player_id?: string; match_id?: string };
+}) {
   // CRITICAL: Log immediately to confirm page is being rendered
   console.log('[dashboard] ⚡ DashboardPage component STARTING - Route accessed successfully!');
+  
+  // Check if demo mode is requested via query params
+  const isDemoQuery = searchParams?.demo === 'true';
+  const playerId = searchParams?.player_id || null;
+  const matchId = searchParams?.match_id || null;
+  
+  if (isDemoQuery && (playerId || matchId)) {
+    console.log('[dashboard] 🎮 Demo mode via query params:', { playerId, matchId });
+    // Render client component for demo mode
+    return <DemoDashboard playerId={playerId} matchId={matchId} />;
+  }
   
   // DEMO MODE: This page is ALWAYS accessible without authentication
   // We completely skip ALL auth checks to ensure demo mode works
