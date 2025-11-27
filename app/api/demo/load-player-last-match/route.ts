@@ -31,13 +31,19 @@ async function fetchWithTimeout(
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
+  
+  // Log method and URL for debugging
+  console.log("[load-player-last-match] POST request received. URL:", request.url);
+  console.log("[load-player-last-match] Request method:", request.method);
 
   try {
     // Parse request body
     let body: { account_id?: number; user_id?: string };
     try {
       body = await request.json();
-    } catch {
+      console.log("[load-player-last-match] Request body parsed:", { account_id: body.account_id });
+    } catch (parseError) {
+      console.error("[load-player-last-match] Failed to parse request body:", parseError);
       return NextResponse.json(
         {
           status: "error",
@@ -200,29 +206,46 @@ export async function POST(request: NextRequest) {
     const digestResult = await digestResponse.json();
     console.log(`[demo/load-player-last-match] Digest built:`, digestResult);
 
-    // Step 4: Get player data from digest
-    const { data: playerData, error: playerError } = await supabaseAdmin
-      .from("players_digest")
-      .select("*")
-      .eq("match_id", matchId)
-      .eq("account_id", accountId)
-      .single();
+    // Step 4: Get player data from digest (with error handling)
+    let playerData = null;
+    let matchData = null;
+    
+    try {
+      // CRITICAL: Wrap database operations in try/catch to prevent 500 errors
+      const { data: playerDataResult, error: playerError } = await supabaseAdmin
+        .from("players_digest")
+        .select("*")
+        .eq("match_id", matchId)
+        .eq("account_id", accountId)
+        .single();
 
-    if (playerError || !playerData) {
-      console.error(`[demo/load-player-last-match] Player data not found:`, playerError);
-      // Non è un errore critico, possiamo restituire i dati della partita comunque
+      if (playerError) {
+        console.warn(`[demo/load-player-last-match] Player data not found (non-critical):`, playerError);
+      } else {
+        playerData = playerDataResult;
+      }
+    } catch (dbError) {
+      console.error(`[demo/load-player-last-match] Database error fetching player data:`, dbError);
+      // Non è un errore critico, continuiamo senza player_data
     }
 
-    // Get match data from digest
-    const { data: matchData, error: matchError } = await supabaseAdmin
-      .from("matches_digest")
-      .select("*")
-      .eq("match_id", matchId)
-      .single();
+    // Get match data from digest (with error handling)
+    try {
+      // CRITICAL: Wrap database operations in try/catch to prevent 500 errors
+      const { data: matchDataResult, error: matchError } = await supabaseAdmin
+        .from("matches_digest")
+        .select("*")
+        .eq("match_id", matchId)
+        .single();
 
-    if (matchError || !matchData) {
-      console.error(`[demo/load-player-last-match] Match data not found:`, matchError);
-      // Non è un errore critico, possiamo restituire i dati base
+      if (matchError) {
+        console.warn(`[demo/load-player-last-match] Match data not found (non-critical):`, matchError);
+      } else {
+        matchData = matchDataResult;
+      }
+    } catch (dbError) {
+      console.error(`[demo/load-player-last-match] Database error fetching match data:`, dbError);
+      // Non è un errore critico, continuiamo senza match_data
     }
 
     const duration = Date.now() - startTime;
@@ -232,8 +255,8 @@ export async function POST(request: NextRequest) {
       status: "ok",
       account_id: accountId,
       match_id: matchId,
-      player_data: playerData || null,
-      match_data: matchData || null,
+      player_data: playerData,
+      match_data: matchData,
       import_result: importResult,
       digest_result: digestResult,
       duration_ms: duration,
@@ -252,12 +275,14 @@ export async function POST(request: NextRequest) {
 }
 
 // Handler per metodi non supportati (Next.js App Router gestisce automaticamente, ma è esplicito)
-export async function GET() {
+export async function GET(request: NextRequest) {
+  console.warn("[load-player-last-match] GET request received - method not allowed. URL:", request.url);
+  console.warn("[load-player-last-match] This endpoint only accepts POST requests");
   return NextResponse.json(
     {
       status: "error",
       error: "method_not_allowed",
-      details: "This endpoint only accepts POST requests",
+      details: "Questo endpoint accetta solo richieste POST",
     },
     { status: 405 }
   );
@@ -268,7 +293,7 @@ export async function PUT() {
     {
       status: "error",
       error: "method_not_allowed",
-      details: "This endpoint only accepts POST requests",
+      details: "Questo endpoint accetta solo richieste POST",
     },
     { status: 405 }
   );
@@ -279,7 +304,7 @@ export async function DELETE() {
     {
       status: "error",
       error: "method_not_allowed",
-      details: "This endpoint only accepts POST requests",
+      details: "Questo endpoint accetta solo richieste POST",
     },
     { status: 405 }
   );

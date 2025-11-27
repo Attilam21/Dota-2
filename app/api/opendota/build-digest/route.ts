@@ -260,13 +260,29 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert match digest (con user_id se fornito)
-    const matchData = {
-      ...digest.match,
-      ...(userId && { user_id: userId }),
-    };
-    const { error: matchUpsertError } = await supabaseAdmin
-      .from("matches_digest")
-      .upsert(matchData, { onConflict: "match_id" });
+    // CRITICAL: Wrap database operations in try/catch to prevent 500 errors
+    let matchUpsertError;
+    try {
+      const matchData = {
+        ...digest.match,
+        ...(userId && { user_id: userId }),
+      };
+      const result = await supabaseAdmin
+        .from("matches_digest")
+        .upsert(matchData, { onConflict: "match_id" });
+      matchUpsertError = result.error;
+    } catch (dbError) {
+      console.error(`[build-digest] Database exception during match digest upsert for match_id ${matchId}:`, dbError);
+      return NextResponse.json(
+        {
+          status: "error",
+          error: "match_digest_upsert_failed",
+          match_id: matchId,
+          details: dbError instanceof Error ? dbError.message : "Database error during match digest upsert",
+        },
+        { status: 500 }
+      );
+    }
 
     if (matchUpsertError) {
       console.error(`[build-digest] Match digest upsert error for match_id ${matchId}:`, {
@@ -286,13 +302,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert player digests (delete existing and insert new for this match)
-    const { error: deleteError } = await supabaseAdmin
-      .from("players_digest")
-      .delete()
-      .eq("match_id", matchId);
+    // CRITICAL: Wrap database operations in try/catch to prevent 500 errors
+    try {
+      const { error: deleteError } = await supabaseAdmin
+        .from("players_digest")
+        .delete()
+        .eq("match_id", matchId);
 
-    if (deleteError) {
-      console.error(`[build-digest] Failed to delete existing player digests for match_id ${matchId}:`, deleteError);
+      if (deleteError) {
+        console.warn(`[build-digest] Failed to delete existing player digests for match_id ${matchId} (non-critical):`, deleteError);
+        // Continue anyway, upsert will handle conflicts
+      }
+    } catch (dbError) {
+      console.warn(`[build-digest] Database exception during player digest delete for match_id ${matchId} (non-critical):`, dbError);
       // Continue anyway, upsert will handle conflicts
     }
 
@@ -390,9 +412,25 @@ export async function POST(request: NextRequest) {
     const sampleKeys = sanitizedPlayers[0] ? Object.keys(sanitizedPlayers[0]) : [];
     console.log(`[build-digest] BEFORE UPSERT - match_id ${matchId}, players_count: ${sanitizedPlayers.length}, sample_keys: [${sampleKeys.join(", ")}]`);
 
-    const { error: playersUpsertError } = await supabaseAdmin
-      .from("players_digest")
-      .upsert(sanitizedPlayers, { onConflict: "match_id,player_slot" });
+    // CRITICAL: Wrap database operations in try/catch to prevent 500 errors
+    let playersUpsertError;
+    try {
+      const result = await supabaseAdmin
+        .from("players_digest")
+        .upsert(sanitizedPlayers, { onConflict: "match_id,player_slot" });
+      playersUpsertError = result.error;
+    } catch (dbError) {
+      console.error(`[build-digest] Database exception during player digest upsert for match_id ${matchId}:`, dbError);
+      return NextResponse.json(
+        {
+          status: "error",
+          error: "player_digest_upsert_failed",
+          match_id: matchId,
+          details: dbError instanceof Error ? dbError.message : "Database error during player digest upsert",
+        },
+        { status: 500 }
+      );
+    }
 
     if (playersUpsertError) {
       const samplePlayer = sanitizedPlayers[0];
