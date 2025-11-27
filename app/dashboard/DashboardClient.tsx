@@ -81,8 +81,14 @@ export function DashboardClient() {
 
       const apiUrl = `/api/demo/get-match-data?${params.toString()}`;
       console.log('[DashboardClient] Fetching match data from:', apiUrl);
+      console.log('[DashboardClient] Using GET method for:', apiUrl);
 
-      const response = await fetch(apiUrl);
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       const data = await response.json();
 
       if (!response.ok) {
