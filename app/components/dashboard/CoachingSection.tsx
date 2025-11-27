@@ -26,7 +26,7 @@ export async function CoachingSection({ userId }: CoachingSectionProps) {
 
       {tasks && tasks.length > 0 ? (
         <div className="space-y-4">
-          {tasks.map((task) => (
+          {tasks.map((task: any) => (
             <div
               key={task.id}
               className="bg-gray-900/50 rounded-lg p-6 border border-gray-700"
