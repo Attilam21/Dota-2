@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildDigestFromRaw } from "@/lib/etl/opendotaToDigest";
 import { RawMatch } from "@/lib/types/opendota";
 import { sanitizePlayerDigest } from "@/lib/utils/sanitizePlayerDigest";
+// CRITICAL: Import Supabase admin client at top level with other imports to avoid hoisting issues
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 // Forzatura runtime Node.js
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const preferredRegion = "fra1";
-
-// CRITICAL: Initialize Supabase admin client at module level to avoid hoisting issues
-import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
