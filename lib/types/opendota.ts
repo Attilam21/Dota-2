@@ -27,6 +27,9 @@ export interface RawPlayer {
   item_4?: number;
   item_5?: number;
   item_neutral?: number;
+  // Complex JSONB fields from OpenDota
+  kills_per_hero?: Record<string, number> | unknown;
+  damage_targets?: Record<string, number> | unknown;
 }
 
 export interface RawMatch {
@@ -87,5 +90,8 @@ export interface PlayerDigest {
   vision_score: number | null;
   items: Record<string, unknown> | null;
   position_metrics: Record<string, unknown> | null;
+  // Complex JSONB fields
+  kills_per_hero: Record<string, unknown> | null;
+  damage_targets: Record<string, unknown> | null;
 }
 

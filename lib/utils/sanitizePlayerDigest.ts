@@ -92,6 +92,9 @@ export function sanitizePlayerDigest(player: PlayerDigest): PlayerDigest {
     vision_score: ensureNumber(player.vision_score),
     items: ensureJSONB(player.items),
     position_metrics: ensureJSONB(player.position_metrics),
+    // CRITICAL: Ensure kills_per_hero and damage_targets are properly serialized
+    kills_per_hero: ensureJSONB(player.kills_per_hero),
+    damage_targets: ensureJSONB(player.damage_targets),
   };
 }
 

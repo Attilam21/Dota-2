@@ -295,7 +295,10 @@ export async function POST(request: NextRequest) {
         ? { ...sanitized, user_id: userId } 
         : { ...sanitized };
       
-      // Explicitly serialize JSONB fields
+      // CRITICAL: Explicitly serialize ALL JSONB fields before Supabase upsert
+      // This ensures proper JSONB format and eliminates type errors
+      
+      // Serialize items
       if (finalPlayer.items !== null && finalPlayer.items !== undefined) {
         try {
           finalPlayer.items = JSON.parse(JSON.stringify(finalPlayer.items));
@@ -305,12 +308,33 @@ export async function POST(request: NextRequest) {
         }
       }
       
+      // Serialize position_metrics
       if (finalPlayer.position_metrics !== null && finalPlayer.position_metrics !== undefined) {
         try {
           finalPlayer.position_metrics = JSON.parse(JSON.stringify(finalPlayer.position_metrics));
         } catch (err) {
           console.warn(`[build-digest] Failed to serialize position_metrics for player ${finalPlayer.player_slot}:`, err);
           finalPlayer.position_metrics = null;
+        }
+      }
+      
+      // CRITICAL: Serialize kills_per_hero (complex JSONB field from OpenDota)
+      if (finalPlayer.kills_per_hero !== null && finalPlayer.kills_per_hero !== undefined) {
+        try {
+          finalPlayer.kills_per_hero = JSON.parse(JSON.stringify(finalPlayer.kills_per_hero));
+        } catch (err) {
+          console.warn(`[build-digest] Failed to serialize kills_per_hero for player ${finalPlayer.player_slot}:`, err);
+          finalPlayer.kills_per_hero = null;
+        }
+      }
+      
+      // CRITICAL: Serialize damage_targets (complex JSONB field from OpenDota)
+      if (finalPlayer.damage_targets !== null && finalPlayer.damage_targets !== undefined) {
+        try {
+          finalPlayer.damage_targets = JSON.parse(JSON.stringify(finalPlayer.damage_targets));
+        } catch (err) {
+          console.warn(`[build-digest] Failed to serialize damage_targets for player ${finalPlayer.player_slot}:`, err);
+          finalPlayer.damage_targets = null;
         }
       }
       

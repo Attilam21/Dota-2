@@ -66,6 +66,44 @@ function buildItemsObject(player: RawPlayer): Record<string, unknown> {
   return Object.keys(items).length > 0 ? items : {};
 }
 
+// Helper: safely extract JSONB object from raw player data
+// Ensures the value is a valid object (not array, not primitive)
+function safeJSONBObject(value: unknown): Record<string, unknown> | null {
+  if (value === null || value === undefined) return null;
+  
+  // Must be an object, not an array
+  if (typeof value === "object" && !Array.isArray(value) && value !== null) {
+    // Validate it's a proper object by attempting serialization
+    try {
+      const serialized = JSON.stringify(value);
+      const parsed = JSON.parse(serialized);
+      if (typeof parsed === "object" && !Array.isArray(parsed) && parsed !== null) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch (err) {
+      console.warn(`[buildDigestFromRaw] Failed to serialize JSONB object:`, {
+        error: err instanceof Error ? err.message : String(err),
+        value_type: typeof value,
+        value_sample: typeof value === "object" && value !== null 
+          ? JSON.stringify(value).substring(0, 100) 
+          : null,
+      });
+      return null;
+    }
+  }
+  
+  // If it's an array or primitive, log warning and return null
+  if (typeof value === "object" && Array.isArray(value)) {
+    console.warn(`[buildDigestFromRaw] Expected JSONB object but got array:`, {
+      array_length: value.length,
+      array_sample: JSON.stringify(value).substring(0, 100),
+    });
+    return null;
+  }
+  
+  return null;
+}
+
 // Helper: calculate vision score (with safe number extraction)
 function calculateVisionScore(
   observerWards: unknown,
@@ -265,6 +303,9 @@ export function buildDigestFromRaw(raw: RawMatch): { match: MatchDigest; players
       vision_score: calculateVisionScore(player.observer_wards_placed, player.sentry_wards_placed),
       items: buildItemsObject(player),
       position_metrics: null, // Can be extended with position data if available
+      // CRITICAL: Extract and validate complex JSONB fields
+      kills_per_hero: safeJSONBObject(player.kills_per_hero),
+      damage_targets: safeJSONBObject(player.damage_targets),
     };
 
     // Sanitize to remove any potential extra fields
