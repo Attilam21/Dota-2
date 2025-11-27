@@ -23,27 +23,47 @@ export function DemoForm() {
 
       console.log('[DemoForm] Loading last match for account_id:', accountIdNum);
 
+      // Costruisci l'URL assoluto per evitare problemi di routing in produzione
+      const apiUrl = `${window.location.origin}/api/demo/load-player-last-match`;
+      const requestBody = {
+        account_id: accountIdNum,
+      };
+
+      console.log('[DemoForm] Making POST request to:', apiUrl);
+      console.log('[DemoForm] Request body:', requestBody);
+
       // Chiama l'endpoint demo per caricare l'ultima partita
-      const response = await fetch('/api/demo/load-player-last-match', {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          account_id: accountIdNum,
-        }),
+        body: JSON.stringify(requestBody),
       });
+
+      console.log('[DemoForm] Response status:', response.status);
+      console.log('[DemoForm] Response statusText:', response.statusText);
+      console.log('[DemoForm] Response headers:', Object.fromEntries(response.headers.entries()));
+
+      // Controlla lo status PRIMA di parsare JSON
+      if (response.status === 404) {
+        // Se è 404, potrebbe essere che l'endpoint non esiste o c'è un problema di routing
+        const text = await response.text().catch(() => 'No response body');
+        console.error('[DemoForm] 404 Error - Response text:', text);
+        throw new Error('Endpoint non trovato (404). Verifica che il deployment sia completato e che la route esista.');
+      }
 
       // Controlla se la risposta è JSON valida
       let data;
       try {
-        data = await response.json();
+        const responseText = await response.text();
+        console.log('[DemoForm] Response text (first 500 chars):', responseText.substring(0, 500));
+        data = JSON.parse(responseText);
       } catch (jsonError) {
-        // Se la risposta non è JSON, potrebbe essere un errore 404/500 generico
-        if (response.status === 404) {
-          throw new Error('Endpoint non trovato. Verifica che il deployment sia completato.');
-        }
-        throw new Error(`Errore del server (${response.status}). Riprova più tardi.`);
+        // Se la risposta non è JSON, potrebbe essere un errore 500 generico
+        console.error('[DemoForm] JSON parse error:', jsonError);
+        throw new Error(`Errore del server (${response.status}). La risposta non è JSON valido.`);
       }
 
       if (!response.ok) {
