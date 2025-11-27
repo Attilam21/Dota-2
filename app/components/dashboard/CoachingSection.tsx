@@ -64,7 +64,7 @@ export async function CoachingSection({ userId }: CoachingSectionProps) {
               </div>
               {task.target_value && task.current_value && typeof task.target_value === 'number' && typeof task.current_value === 'number' && (
                 <div className="mt-3 text-sm text-gray-400">
-                  Obiettivo: {task.target_value.toFixed(1)} | Attuale: {task.current_value.toFixed(1)}
+                  Obiettivo: {typeof task.target_value === 'number' ? task.target_value.toFixed(1) : 'N/A'} | Attuale: {typeof task.current_value === 'number' ? task.current_value.toFixed(1) : 'N/A'}
                 </div>
               )}
             </div>

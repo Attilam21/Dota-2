@@ -50,7 +50,7 @@ export async function DashboardHero({ profile, userId }: DashboardHeroProps) {
         <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
           <p className="text-gray-400 text-sm mb-1">Winrate</p>
           <p className="text-2xl font-bold text-white">
-            {stats?.winrate ? `${stats.winrate.toFixed(1)}%` : 'N/A'}
+            {stats?.winrate && typeof stats.winrate === 'number' ? `${stats.winrate.toFixed(1)}%` : 'N/A'}
           </p>
           <p className="text-xs text-gray-500 mt-1">Ultime 20 partite</p>
         </div>
@@ -58,7 +58,7 @@ export async function DashboardHero({ profile, userId }: DashboardHeroProps) {
         <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
           <p className="text-gray-400 text-sm mb-1">KDA Medio</p>
           <p className="text-2xl font-bold text-white">
-            {stats?.avg_kda ? stats.avg_kda.toFixed(2) : 'N/A'}
+            {stats?.avg_kda && typeof stats.avg_kda === 'number' ? stats.avg_kda.toFixed(2) : 'N/A'}
           </p>
           <p className="text-xs text-gray-500 mt-1">Ultime 20 partite</p>
         </div>

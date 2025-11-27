@@ -21,7 +21,7 @@ export async function KPICards({ userId }: KPICardsProps) {
           <span className="text-green-400 text-sm">+2.5%</span>
         </div>
         <p className="text-3xl font-bold text-white mb-1">
-          {stats?.winrate ? `${stats.winrate.toFixed(1)}%` : '0%'}
+          {stats?.winrate && typeof stats.winrate === 'number' ? `${stats.winrate.toFixed(1)}%` : '0%'}
         </p>
         <p className="text-xs text-gray-500">Ultime 20 partite incluse</p>
       </div>
@@ -32,7 +32,7 @@ export async function KPICards({ userId }: KPICardsProps) {
           <span className="text-green-400 text-sm">+0.3</span>
         </div>
         <p className="text-3xl font-bold text-white mb-1">
-          {stats?.avg_kda ? stats.avg_kda.toFixed(2) : '0.00'}
+          {stats?.avg_kda && typeof stats.avg_kda === 'number' ? stats.avg_kda.toFixed(2) : '0.00'}
         </p>
         <p className="text-xs text-gray-500">Ultime 20 partite incluse</p>
       </div>
