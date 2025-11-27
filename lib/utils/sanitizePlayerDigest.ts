@@ -33,11 +33,36 @@ export function sanitizePlayerDigest(player: PlayerDigest): PlayerDigest {
   };
 
   // Helper: Ensure value is a valid JSONB object or null
+  // CRITICAL: This function explicitly serializes objects to JSON strings
+  // to ensure Supabase receives properly formatted JSONB data
   const ensureJSONB = (value: unknown): Record<string, unknown> | null => {
     if (value === null || value === undefined) return null;
+    
+    // If it's already a valid object, serialize it explicitly
     if (typeof value === "object" && !Array.isArray(value) && value !== null) {
-      return value as Record<string, unknown>;
+      try {
+        // Force JSON serialization to ensure proper JSONB format
+        const serialized = JSON.stringify(value);
+        // Parse back to ensure it's valid JSON
+        return JSON.parse(serialized) as Record<string, unknown>;
+      } catch (err) {
+        console.warn(`[sanitizePlayerDigest] Failed to serialize JSONB value:`, err);
+        return null;
+      }
     }
+    
+    // If it's a string, try to parse it as JSON
+    if (typeof value === "string") {
+      try {
+        const parsed = JSON.parse(value);
+        if (typeof parsed === "object" && !Array.isArray(parsed) && parsed !== null) {
+          return parsed as Record<string, unknown>;
+        }
+      } catch {
+        // Not valid JSON string, return null
+      }
+    }
+    
     // If it's not a valid object, return null
     return null;
   };

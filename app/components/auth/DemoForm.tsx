@@ -94,8 +94,8 @@ export function DemoForm() {
 
       console.log('[DemoForm] Match loaded successfully:', data);
 
-      // Redirect alla dashboard demo con i dati della partita
-      router.push(`/demo/match/${data.match_id}?account_id=${accountIdNum}`);
+      // Redirect to dashboard after successful digest creation
+      router.push('/dashboard');
     } catch (err) {
       console.error('[DemoForm] Error:', err);
       setError(err instanceof Error ? err.message : 'Errore durante il caricamento della partita');

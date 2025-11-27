@@ -284,10 +284,37 @@ export async function POST(request: NextRequest) {
 
     // Sanitize payload: ensure only valid PlayerDigest properties are sent
     // This is a double-check in case any extra fields slipped through the ETL
+    // CRITICAL: Force JSON.stringify() for all JSONB fields before Supabase insertion
     // Aggiungi user_id se fornito
     const sanitizedPlayers = digest.players.map((player) => {
       const sanitized = sanitizePlayerDigest(player);
-      return userId ? { ...sanitized, user_id: userId } : sanitized;
+      
+      // Force explicit JSON serialization for JSONB columns
+      // This ensures Supabase receives properly formatted JSONB data
+      const finalPlayer: Record<string, unknown> = userId 
+        ? { ...sanitized, user_id: userId } 
+        : { ...sanitized };
+      
+      // Explicitly serialize JSONB fields
+      if (finalPlayer.items !== null && finalPlayer.items !== undefined) {
+        try {
+          finalPlayer.items = JSON.parse(JSON.stringify(finalPlayer.items));
+        } catch (err) {
+          console.warn(`[build-digest] Failed to serialize items for player ${finalPlayer.player_slot}:`, err);
+          finalPlayer.items = null;
+        }
+      }
+      
+      if (finalPlayer.position_metrics !== null && finalPlayer.position_metrics !== undefined) {
+        try {
+          finalPlayer.position_metrics = JSON.parse(JSON.stringify(finalPlayer.position_metrics));
+        } catch (err) {
+          console.warn(`[build-digest] Failed to serialize position_metrics for player ${finalPlayer.player_slot}:`, err);
+          finalPlayer.position_metrics = null;
+        }
+      }
+      
+      return finalPlayer;
     });
 
     // Log payload keys before upsert (without full JSON)

@@ -67,8 +67,9 @@ export async function linkSteamAccount(
     }
 
     // Update user profile with steam_id
+    // Using English table name: profiles
     const { data, error } = await supabase
-      .from('user_profile')
+      .from('profiles')
       .update({
         steam_id: steamId,
         updated_at: new Date().toISOString(),
@@ -114,8 +115,9 @@ export async function getProfileOverview(
     const supabase = await createClient();
 
     // Fetch user profile
+    // Using English table name: profiles
     const { data: profile, error: profileError } = await supabase
-      .from('user_profile')
+      .from('profiles')
       .select('*')
       .eq('id', userId)
       .single();
@@ -142,8 +144,9 @@ export async function getProfileOverview(
     }
 
     // Fetch top 3 most recent active tasks
+    // Using English table name: tasks
     const { data: tasks, error: tasksError } = await supabase
-      .from('coaching_tasks')
+      .from('tasks')
       .select('*')
       .eq('user_id', userId)
       .eq('status', 'active')
